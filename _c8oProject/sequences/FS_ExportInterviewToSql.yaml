@@ -1,0 +1,36 @@
+comment: Export métier — vérifie le document CouchDB puis enregistre en SQL (Interview_Save)
+↓Get_Couch [steps.TransactionStep-1779374001001]: 
+  sourceTransaction: VoxUrssafV2.voxurssafv2_fullsync.GetDocument
+  ↓docid [variables.StepVariable-1779374001002]: 
+↓Init_Schema [steps.TransactionStep-1779374001003]: 
+  sourceTransaction: VoxUrssafV2.voxurssaf.Interview_InitSchema
+↓Save_SQL [steps.TransactionStep-1779374001004]: 
+  sourceTransaction: VoxUrssafV2.voxurssaf.Interview_Save_Tx
+  ↓interview_id [variables.StepVariable-1779374001005]: 
+  ↓event_id [variables.StepVariable-1779374001006]: 
+  ↓status [variables.StepVariable-1779374001007]: 
+  ↓created_at [variables.StepVariable-1779374001008]: 
+  ↓device_id [variables.StepVariable-1779374001009]: 
+  ↓participant_label [variables.StepVariable-1779374001010]: 
+  ↓zone [variables.StepVariable-1779374001011]: 
+  ↓answers_json [variables.StepVariable-1779374001012]: 
+  ↓photos_json [variables.StepVariable-1779374001013]: 
+↓Copy [steps.XMLCopyStep-1779374001014]: 
+  sourceDefinition: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+      - com.twinsoft.convertigo.beans.common.XMLVector: 
+        - java.lang.String: 
+          - ↑value: 1779374001004
+        - java.lang.String: 
+          - ↑value: ./document/*
+↓interview_id [variables.RequestableVariable-1779374001020]: 
+↓docid [variables.RequestableVariable-1779374001021]: 
+↓event_id [variables.RequestableVariable-1779374001022]: 
+↓status [variables.RequestableVariable-1779374001023]: 
+↓created_at [variables.RequestableVariable-1779374001024]: 
+↓device_id [variables.RequestableVariable-1779374001025]: 
+↓participant_label [variables.RequestableVariable-1779374001026]: 
+↓zone [variables.RequestableVariable-1779374001027]: 
+↓answers_json [variables.RequestableVariable-1779374001028]: 
+↓photos_json [variables.RequestableVariable-1779374001029]: 

@@ -1,0 +1,171 @@
+comment: Navigation pilule style voxUrssafReact (Accueil, Questions, FAB, Profil)
+↓current [ngx.components.UICompVariable-1779290000101]: 
+  comment: Onglet actif (home, questions, profile)
+  value: '''home'''
+↓PillFooter [ngx.components.UIElement-1779290000102]: 
+  tagName: div
+  ↓AttrClass [ngx.components.UIAttribute-1779290000103]: 
+    attrName: class
+    attrValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+        - MobileSmartSourceType: plain:vu-bottom-pill-wrap
+  ↓PillBar [ngx.components.UIElement-1779290000104]: 
+    tagName: div
+    ↓AttrClass [ngx.components.UIAttribute-1779290000105]: 
+      attrName: class
+      attrValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: plain:vu-bottom-pill
+    ↓BtnHome [ngx.components.UIElement-1779290000110]: 
+      tagName: button
+      ↓AttrType [ngx.components.UIAttribute-1779290000111]: 
+        attrName: type
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:button
+      ↓AttrClass [ngx.components.UIAttribute-1779290000112]: 
+        attrName: '[class]'
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: 'script:''vu-pill-btn '' + (this.current === ''home'' ? ''vu-pill-btn--active'' : '''')'
+      ↓Event [ngx.components.UIControlEvent-1779290000113]: 
+        ↓GoHome [ngx.components.UIDynamicAction-1779290000114]: 
+          beanData: '{"ionBean":"RootPageAction","page":"plain:Page"}'
+      ↓Icon [ngx.components.UIDynamicElement-1779290000115]: 
+        beanData: '{"ionBean":"Icon","IconName":"plain:home"}'
+        tagName: ion-icon
+    ↓BtnQuestions [ngx.components.UIElement-1779290000120]: 
+      tagName: button
+      ↓AttrType [ngx.components.UIAttribute-1779290000121]: 
+        attrName: type
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:button
+      ↓AttrClass [ngx.components.UIAttribute-1779290000122]: 
+        attrName: '[class]'
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: 'script:''vu-pill-btn '' + (this.current === ''questions'' ? ''vu-pill-btn--active'' : '''')'
+      ↓Event [ngx.components.UIControlEvent-1779290000123]: 
+        ↓GoQuestions [ngx.components.UIDynamicAction-1779290000124]: 
+          beanData: '{"ionBean":"RootPageAction","page":"plain:InterviewQuestions"}'
+      ↓Icon [ngx.components.UIDynamicElement-1779290000125]: 
+        beanData: '{"ionBean":"Icon","IconName":"plain:help-circle"}'
+        tagName: ion-icon
+    ↓BtnFab [ngx.components.UIElement-1779290000130]: 
+      tagName: button
+      ↓AttrType [ngx.components.UIAttribute-1779290000131]: 
+        attrName: type
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:button
+      ↓AttrClass [ngx.components.UIAttribute-1779290000132]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:vu-pill-fab
+      ↓Event [ngx.components.UIControlEvent-1779290000133]: 
+        ↓GoSetup [ngx.components.UIDynamicAction-1779290000134]: 
+          beanData: '{"ionBean":"PushPageAction","page":"plain:InterviewSetup"}'
+      ↓Icon [ngx.components.UIDynamicElement-1779290000135]: 
+        beanData: '{"ionBean":"Icon","IconName":"plain:add"}'
+        tagName: ion-icon
+    ↓BtnProfile [ngx.components.UIElement-1779290000140]: 
+      tagName: button
+      ↓AttrType [ngx.components.UIAttribute-1779290000141]: 
+        attrName: type
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:button
+      ↓AttrClass [ngx.components.UIAttribute-1779290000142]: 
+        attrName: '[class]'
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: 'script:''vu-pill-btn '' + (this.current === ''profile'' ? ''vu-pill-btn--active'' : '''')'
+      ↓Event [ngx.components.UIControlEvent-1779290000143]: 
+        ↓GoProfile [ngx.components.UIDynamicAction-1779290000144]: 
+          beanData: '{"ionBean":"RootPageAction","page":"plain:InterviewProfile"}'
+      ↓Icon [ngx.components.UIDynamicElement-1779290000145]: 
+        beanData: '{"ionBean":"Icon","IconName":"plain:person"}'
+        tagName: ion-icon
+↓Style [ngx.components.UIStyle-1779290000150]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          '.vu-bottom-pill-wrap {
+            position: fixed;
+            bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(90%, 420px);
+            max-width: calc(100vw - 32px);
+            z-index: 60;
+            pointer-events: none;
+            box-sizing: border-box;
+          }
+          .vu-bottom-pill {
+            pointer-events: auto;
+            background: #1c1c1e;
+            border-radius: 999px;
+            padding: 8px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            min-height: 56px;
+          }
+          .vu-pill-btn {
+            flex: 1;
+            border: none;
+            background: transparent;
+            color: #94a3b8;
+            padding: 12px;
+            min-height: 44px;
+            border-radius: 999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+          }
+          .vu-pill-btn--active { color: #fff; }
+          .vu-pill-btn ion-icon { font-size: 22px; }
+          .vu-pill-fab {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: #0050AA;
+            color: #fff;
+            border: 4px solid #f8f9fa;
+            margin-top: -32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 25px rgba(0,80,170,0.4);
+            cursor: pointer;
+            flex: 0 0 auto;
+          }
+          .vu-pill-fab ion-icon { font-size: 24px; }
+          @media (min-width: 768px) {
+            .vu-bottom-pill-wrap {
+              width: min(90%, 520px);
+            }
+          }
+          @media (min-width: 1024px) {
+            .vu-bottom-pill-wrap {
+              width: min(520px, 42vw);
+              max-width: 1200px;
+            }
+          }
+          '

@@ -1,5 +1,5 @@
 ↑isRoot: true
-comment: Default home page
+comment: Accueil — interface voxUrssafReact
 icon: home
 preloadPriority: high
 scriptContent: 
@@ -7,255 +7,528 @@ scriptContent:
     - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
     - com.twinsoft.convertigo.beans.common.FormatedContent: 
       →: |
-        /*Begin_c8o_PageImport*/
+        '/*Begin_c8o_PageImport*/
         /*End_c8o_PageImport*/
         /*Begin_c8o_PageDeclaration*/
         	/*End_c8o_PageDeclaration*/
         /*Begin_c8o_PageConstructor*/
         		/*End_c8o_PageConstructor*/
         /*Begin_c8o_PageFunction*/
-        	/*End_c8o_PageFunction*/
-        
+        	public getStore(): any {
+        		return this.global.interviewStore;
+        	}
+        	public async loadHome(): Promise<void> {
+        		const app: any = this.router.sharedObject;
+        		if (app && app.initVuApp) { app.initVuApp(); }
+        		const store = this.getStore();
+        		if (store && store.whenReady) { await store.whenReady(); }
+        		this.local.interviews = store ? store.listForHome() : [];
+        		this.local.recent = (this.local.interviews || []).slice(0, 3);
+        		this.local.totalNotes = store ? store.countTotalNotes() : 0;
+        	}
+        	public goInterview(iv: any): void {
+        		if (!iv || !this.getStore()) { return; }
+        		this.getStore().resumeInterview(iv);
+        		this.angularRouter.navigate(["/interview-active"]);
+        	}
+        	public async syncAll(): Promise<void> {
+        		const store = this.getStore();
+        		if (!store) { return; }
+        		const n = await store.syncAllPending(this);
+        		const toastCtrl = this.getInstance(ToastController);
+        		const toast = await toastCtrl.create({
+        			message: n > 0 ? (n + " interview(s) synchronisée(s)") : "Aucune interview à synchroniser",
+        			duration: 2500,
+        			position: "bottom",
+        			color: n > 0 ? "success" : "medium"
+        		});
+        		await toast.present();
+        		this.loadHome();
+        	}
+        	public hasInterviewMeta(iv: any): boolean {
+        		return !!(iv && (iv.intervieweeRole || iv.intervieweeCompany));
+        	}
+        	/*End_c8o_PageFunction*/'
 segment: home
-title: Home
-↓Header [ngx.components.UIDynamicElement-1779283399695]: 
-  beanData: '{"ionBean":"Header"}'
-  comment: Top page header container
-  tagName: ion-header
-  ↓ToolBar [ngx.components.UIDynamicElement-1779283399696]: 
-    beanData: '{"ionBean":"ToolBar"}'
-    comment: Main toolbar displayed in the header
-    tagName: ion-toolbar
-    ↓ButtonSet1 [ngx.components.UIDynamicElement-1779283399697]: 
-      beanData: '{"ionBean":"ButtonSet","SetPosition":"plain:start"}'
-      comment: Left toolbar button group
-      tagName: ion-buttons
-      ↓BackButton [ngx.components.UIDynamicElement-1779283399698]: 
-        beanData: '{"ionBean":"BackButton"}'
-        comment: Navigates to the previous page when available
-        tagName: ion-back-button
-      ↓MenuButton [ngx.components.UIDynamicElement-1779283399699]: 
-        beanData: '{"ionBean":"MenuButton"}'
-        comment: Toggles the side navigation menu
-        tagName: ion-menu-button
-    ↓BarTitle [ngx.components.UIDynamicElement-1779283399700]: 
-      beanData: '{"ionBean":"BarTitle"}'
-      comment: Title container displayed in the toolbar
-      tagName: ion-title
-      ↓Text [ngx.components.UIText-1779283399701]: 
-        comment: Translated page title key
-        i18n: true
-        textValue: 
+title: Accueil
+↓Content [ngx.components.UIDynamicElement-1779290001001]: 
+  beanData: '{"ionBean":"Content"}'
+  tagName: ion-content
+  ↓AttrClass [ngx.components.UIAttribute-1779290001002]: 
+    attrName: class
+    attrValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+        - MobileSmartSourceType: plain:vu-page
+  ↓Shell [ngx.components.UIElement-1779290001003]: 
+    tagName: div
+    ↓AttrClass [ngx.components.UIAttribute-1779290001004]: 
+      attrName: class
+      attrValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: plain:vu-app-shell
+    ↓HomeHeader [ngx.components.UIElement-1779290001010]: 
+      tagName: div
+      ↓AttrClass [ngx.components.UIAttribute-1779290001011]: 
+        attrName: class
+        attrValue: 
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-            - MobileSmartSourceType: plain:Home
-    ↓ButtonSet2 [ngx.components.UIDynamicElement-1779283399702]: 
-      beanData: '{"ionBean":"ButtonSet","SetPosition":"plain:end"}'
-      comment: Right toolbar button group
-      tagName: ion-buttons
-      ↓ThemeSwitchButton [ngx.components.UIDynamicElement-1779283399703]: 
-        beanData: '{"ionBean":"Button","IonFill":"plain:clear"}'
-        comment: Toggles between light and dark themes
-        tagName: ion-button
-        ↓Class [ngx.components.UIAttribute-1779283399704]: 
+            - MobileSmartSourceType: plain:vu-home-header
+      ↓Avatar [ngx.components.UIElement-1779290001012]: 
+        tagName: div
+        ↓AttrClass [ngx.components.UIAttribute-1779290001013]: 
           attrName: class
           attrValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:toolbar-theme-button
-          comment: CSS class used to style the theme button
-        ↓Aria [ngx.components.UIAttribute-1779283399705]: 
-          attrName: aria-label
-          attrValue: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: 'script:(this.global && this.global.themeDark) ? this.translate.instant(''Theme_Switch_To_Light'') : this.translate.instant(''Theme_Switch_To_Dark'')'
-          comment: Accessibility label describing the next theme action
-        ↓Event [ngx.components.UIControlEvent-1779283399706]: 
-          comment: Click handler for theme switching
-          ↓SetTheme [ngx.components.UIDynamicAction-1779283399707]: 
-            beanData: '{"ionBean":"SetThemeAction","dark":"script:!(this.global && this.global.themeDark)"}'
-            comment: Applies the opposite theme mode
-        ↓ThemeIcon [ngx.components.UIDynamicElement-1779283399708]: 
-          beanData: '{"ionBean":"Icon","IconName":"script:this?.global?.themeDark ? ''sunny-outline'' : ''moon-outline''"}'
-          comment: Dynamic icon reflecting the active theme
+              - MobileSmartSourceType: plain:vu-avatar
+        ↓Icon [ngx.components.UIDynamicElement-1779290001014]: 
+          beanData: '{"ionBean":"Icon","IconName":"plain:person"}'
           tagName: ion-icon
-          ↓IconName [ngx.components.UIAttribute-1779283399709]: 
-            attrName: '[name]'
+      ↓Greeting [ngx.components.UIElement-1779290001015]: 
+        tagName: div
+        ↓Sub [ngx.components.UIElement-1779290001016]: 
+          tagName: p
+          ↓AttrClass [ngx.components.UIAttribute-1779290001017]: 
+            attrName: class
             attrValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: 'script:(this.global && this.global.themeDark) ? ''sunny-outline'' : ''moon-outline'''
-            comment: Binds the icon name to the current theme state
-      ↓LanguageSelector [ngx.components.UIDynamicElement-1779283399710]: 
-        beanData: |
-          '{
-           "ionBean": "Select",
-           "ControlName": "plain:name1770915137820",
-           "Justify": "plain:start"
-          }'
-        comment: Language selector displayed in the toolbar
-        tagName: ion-select
-        ↓Class [ngx.components.UIAttribute-1779283399711]: 
+                - MobileSmartSourceType: plain:vu-greeting-sub
+          ↓Text [ngx.components.UIText-1779290001018]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Bonjour
+        ↓Title [ngx.components.UIElement-1779290001019]: 
+          tagName: h1
+          ↓AttrClass [ngx.components.UIAttribute-1779290001020]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-greeting-title
+          ↓Text [ngx.components.UIText-1779290001021]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:global?.investigatorName || 'Enquêteur Terrain'
+    ↓Main [ngx.components.UIElement-1779290001030]: 
+      tagName: div
+      ↓AttrClass [ngx.components.UIAttribute-1779290001031]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:vu-scroll-main vu-home-body
+      ↓HeroCard [ngx.components.UIElement-1779290001040]: 
+        tagName: div
+        ↓AttrClass [ngx.components.UIAttribute-1779290001041]: 
           attrName: class
           attrValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:toolbar-lang-select
-          comment: CSS class used to style the language selector
-        ↓Aria [ngx.components.UIAttribute-1779283399712]: 
-          attrName: aria-label
+              - MobileSmartSourceType: plain:vu-hero-card
+        ↓Event [ngx.components.UIControlEvent-1779290001042]: 
+          ↓GoSetup [ngx.components.UIDynamicAction-1779290001043]: 
+            beanData: '{"ionBean":"PushPageAction","page":"plain:InterviewSetup"}'
+        ↓HeroTop [ngx.components.UIElement-1779290001044]: 
+          tagName: div
+          ↓AttrClass [ngx.components.UIAttribute-1779290001045]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-flex-between
+          ↓HeroText [ngx.components.UIElement-1779290001046]: 
+            tagName: div
+            ↓Badge [ngx.components.UIElement-1779290001047]: 
+              tagName: span
+              ↓AttrClass [ngx.components.UIAttribute-1779290001048]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:vu-hero-badge
+              ↓Text [ngx.components.UIText-1779290001049]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:Nouveau
+            ↓HeroTitle [ngx.components.UIElement-1779290001050]: 
+              tagName: h2
+              ↓AttrClass [ngx.components.UIAttribute-1779290001051]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:vu-hero-title
+              ↓Text [ngx.components.UIText-1779290001052]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:Démarrer une Nouvelle Interview
+          ↓HeroPlus [ngx.components.UIElement-1779290001053]: 
+            tagName: div
+            ↓AttrClass [ngx.components.UIAttribute-1779290001054]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-hero-plus
+            ↓Icon [ngx.components.UIDynamicElement-1779290001055]: 
+              beanData: '{"ionBean":"Icon","IconName":"plain:add"}'
+              tagName: ion-icon
+      ↓SectionRecent [ngx.components.UIElement-1779290001060]: 
+        tagName: div
+        ↓AttrClass [ngx.components.UIAttribute-1779290001059]: 
+          attrName: class
           attrValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: script:'Language' | translate
-          comment: Accessibility label for language selection
-        ↓Interface [ngx.components.UIAttribute-1779283399713]: 
-          attrName: '[interface]'
+              - MobileSmartSourceType: plain:vu-section-recent
+        ↓SectionHead [ngx.components.UIElement-1779290001061]: 
+          tagName: div
+          ↓AttrClass [ngx.components.UIAttribute-1779290001062]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-section-head-row
+          ↓Title [ngx.components.UIElement-1779290001063]: 
+            tagName: h2
+            ↓AttrClass [ngx.components.UIAttribute-1779290001064]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-section-title
+            ↓Text [ngx.components.UIText-1779290001065]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:Interviews Récentes
+          ↓LinkAll [ngx.components.UIElement-1779290001066]: 
+            tagName: span
+            ↓AttrClass [ngx.components.UIAttribute-1779290001067]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-link-action
+            ↓AttrIf [ngx.components.UIAttribute-1779290001068]: 
+              attrName: '*ngIf'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:local?.interviews?.length > 0
+            ↓Event [ngx.components.UIControlEvent-1779290001069]: 
+              ↓GoAll [ngx.components.UIDynamicAction-1779290001070]: 
+                beanData: '{"ionBean":"PushPageAction","page":"plain:InterviewAll"}'
+            ↓Text [ngx.components.UIText-1779290001071]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:Voir tout
+        ↓CardList [ngx.components.UIElement-1779290001088]: 
+          tagName: div
+          ↓AttrClass [ngx.components.UIAttribute-1779290001089]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-card-list
+          ↓EmptyCard [ngx.components.UIElement-1779290001080]: 
+            tagName: div
+            ↓AttrClass [ngx.components.UIAttribute-1779290001081]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-card vu-empty-card
+            ↓AttrIf [ngx.components.UIAttribute-1779290001082]: 
+              attrName: '*ngIf'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:!local?.recent?.length
+            ↓Text1 [ngx.components.UIText-1779290001083]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:Aucune capture
+            ↓Text2 [ngx.components.UIText-1779290001084]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:Vos interviews apparaîtront ici.
+          ↓CardItem [ngx.components.UIElement-1779290001090]: 
+            tagName: div
+            ↓AttrClass [ngx.components.UIAttribute-1779290001091]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-card
+            ↓AttrFor [ngx.components.UIAttribute-1779290001092]: 
+              attrName: '*ngFor'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:let iv of local.recent
+            ↓AttrClick [ngx.components.UIAttribute-1779290001094]: 
+              attrName: (click)
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:goInterview(iv)
+            ↓Accent [ngx.components.UIElement-1779290001097]: 
+              tagName: div
+              ↓AttrClass [ngx.components.UIAttribute-1779290001098]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:vu-card-accent
+            ↓Body [ngx.components.UIElement-1779290001099]: 
+              tagName: div
+              ↓AttrClass [ngx.components.UIAttribute-1779290001100]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:vu-card-body
+              ↓Date [ngx.components.UIElement-1779290001101]: 
+                tagName: span
+                ↓AttrClass [ngx.components.UIAttribute-1779290001102]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:vu-card-date
+                ↓Text [ngx.components.UIText-1779290001103]: 
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:iv.dateLabel
+              ↓Name [ngx.components.UIElement-1779290001104]: 
+                tagName: h3
+                ↓AttrClass [ngx.components.UIAttribute-1779290001105]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:vu-card-name
+                ↓Text [ngx.components.UIText-1779290001106]: 
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:iv.intervieweeName
+              ↓Meta [ngx.components.UIElement-1779290001107]: 
+                tagName: p
+                ↓AttrClass [ngx.components.UIAttribute-1779290001108]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:vu-card-meta
+                ↓AttrIf [ngx.components.UIAttribute-1779290001109]: 
+                  attrName: '*ngIf'
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:hasInterviewMeta(iv)
+                ↓Text [ngx.components.UIText-1779290001110]: 
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: 'script:(iv.intervieweeRole || '''') + (iv.intervieweeRole && iv.intervieweeCompany ? '' • '' : '''') + (iv.intervieweeCompany || '''')'
+              ↓Notes [ngx.components.UIElement-1779290001111]: 
+                tagName: span
+                ↓AttrClass [ngx.components.UIAttribute-1779290001112]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:vu-card-notes
+                ↓Icon [ngx.components.UIDynamicElement-1779290001113]: 
+                  beanData: '{"ionBean":"Icon","IconName":"plain:chatbubble"}'
+                  tagName: ion-icon
+                ↓Text [ngx.components.UIText-1779290001114]: 
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: 'script:iv.entryCount + '' note'' + (iv.entryCount > 1 ? ''s'' : '''')'
+      ↓SectionKpi [ngx.components.UIElement-1779290001120]: 
+        tagName: div
+        ↓AttrClass [ngx.components.UIAttribute-1779290001119]: 
+          attrName: class
           attrValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: script:'popover'
-          comment: Uses popover mode for option rendering
-        ↓Value [ngx.components.UIAttribute-1779283399714]: 
-          attrName: '[value]'
-          attrValue: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: script:this.global?.currentLanguage?.() ?? 'en'
-          comment: Current selected language bound to global state
-        ↓SelectedText [ngx.components.UIAttribute-1779283399715]: 
-          attrName: '[selectedText]'
-          attrValue: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: script:(this.global?.getLanguageLabelKey?.() ??  'Lang_English') | translate
-          comment: Localized label shown for the selected language
-        ↓ChangeEvent [ngx.components.UIControlEvent-1779283399716]: 
-          attrName: (ionChange)
-          comment: Triggered when the selected language changes
-          eventName: ionChange
-          ↓SetLanguage [ngx.components.UIDynamicAction-1779283399717]: 
-            beanData: |
-              '{
-               "ionBean": "SetLanguageAction",
-               "language": "script:event.detail.value",
-               "storageKey": "plain:c8o-lang",
-               "globalProperty": "plain:currentLanguage"
-              }'
-            comment: Persists and applies the selected language
-        ↓LangEN [ngx.components.UIDynamicElement-1779283399718]: 
-          beanData: '{"ionBean":"SelectOption","Value":"plain:en"}'
-          comment: English language option
-          tagName: ion-select-option
-          ↓Text [ngx.components.UIText-1779283399719]: 
-            comment: Translation key for the English option label
-            i18n: true
+              - MobileSmartSourceType: plain:vu-section-kpi
+        ↓Title [ngx.components.UIElement-1779290001121]: 
+          tagName: h2
+          ↓AttrClass [ngx.components.UIAttribute-1779290001122]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-section-title
+          ↓Text [ngx.components.UIText-1779290001123]: 
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:Lang_English
-        ↓LangFR [ngx.components.UIDynamicElement-1779283399720]: 
-          beanData: '{"ionBean":"SelectOption","Value":"plain:fr"}'
-          comment: French language option
-          tagName: ion-select-option
-          ↓Text [ngx.components.UIText-1779283399721]: 
-            comment: Translation key for the French option label
-            i18n: true
-            textValue: 
+                - MobileSmartSourceType: plain:Vue d'ensemble
+        ↓KpiGrid [ngx.components.UIElement-1779290001124]: 
+          tagName: div
+          ↓AttrClass [ngx.components.UIAttribute-1779290001125]: 
+            attrName: class
+            attrValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:Lang_French
-        ↓LangIT [ngx.components.UIDynamicElement-1779283399722]: 
-          beanData: '{"ionBean":"SelectOption","Value":"plain:it"}'
-          comment: Italian language option
-          tagName: ion-select-option
-          ↓Text [ngx.components.UIText-1779283399723]: 
-            comment: Translation key for the Italian option label
-            i18n: true
-            textValue: 
+                - MobileSmartSourceType: plain:vu-kpi-grid
+          ↓Kpi1 [ngx.components.UIElement-1779290001126]: 
+            tagName: div
+            ↓AttrClass [ngx.components.UIAttribute-1779290001127]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-kpi
+            ↓IconWrap [ngx.components.UIElement-1779290001128]: 
+              tagName: div
+              ↓AttrClass [ngx.components.UIAttribute-1779290001129]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:vu-kpi-icon
+              ↓Icon [ngx.components.UIDynamicElement-1779290001130]: 
+                beanData: '{"ionBean":"Icon","IconName":"plain:people"}'
+                tagName: ion-icon
+            ↓Val [ngx.components.UIElement-1779290001131]: 
+              tagName: div
+              ↓AttrClass [ngx.components.UIAttribute-1779290001132]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:vu-kpi-value
+              ↓Text [ngx.components.UIText-1779290001133]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:local?.interviews?.length || 0
+            ↓Lbl [ngx.components.UIElement-1779290001134]: 
+              tagName: p
+              ↓AttrClass [ngx.components.UIAttribute-1779290001135]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:vu-kpi-label
+              ↓Text [ngx.components.UIText-1779290001136]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:Interviews
+          ↓Kpi2 [ngx.components.UIElement-1779290001140]: 
+            tagName: div
+            ↓AttrClass [ngx.components.UIAttribute-1779290001141]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-kpi
+            ↓IconWrap [ngx.components.UIElement-1779290001142]: 
+              tagName: div
+              ↓AttrClass [ngx.components.UIAttribute-1779290001143]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:vu-kpi-icon
+              ↓Icon [ngx.components.UIDynamicElement-1779290001144]: 
+                beanData: '{"ionBean":"Icon","IconName":"plain:pulse"}'
+                tagName: ion-icon
+            ↓Val [ngx.components.UIElement-1779290001145]: 
+              tagName: div
+              ↓AttrClass [ngx.components.UIAttribute-1779290001146]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:vu-kpi-value
+              ↓Text [ngx.components.UIText-1779290001147]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:local?.totalNotes || 0
+            ↓Lbl [ngx.components.UIElement-1779290001148]: 
+              tagName: p
+              ↓AttrClass [ngx.components.UIAttribute-1779290001149]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:vu-kpi-label
+              ↓Text [ngx.components.UIText-1779290001150]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:Notes
+        ↓BtnSync [ngx.components.UIDynamicElement-1779290001155]: 
+          beanData: |
+            '{
+             "ionBean": "Button",
+             "IonColor": "plain:primary",
+             "IonExpand": "plain:block",
+             "IonFill": "plain:outline"
+            }'
+          tagName: ion-button
+          ↓AttrClass [ngx.components.UIAttribute-1779290001156]: 
+            attrName: class
+            attrValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:Lang_Italian
-        ↓LangES [ngx.components.UIDynamicElement-1779283399724]: 
-          beanData: '{"ionBean":"SelectOption","Value":"plain:es"}'
-          comment: Spanish language option
-          tagName: ion-select-option
-          ↓Text [ngx.components.UIText-1779283399725]: 
-            comment: Translation key for the Spanish option label
-            i18n: true
-            textValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:Lang_Spanish
-↓Content [ngx.components.UIDynamicElement-1779283399726]: 
-  beanData: '{"ionBean":"Content"}'
-  comment: Main scrollable content area for the home page
-  tagName: ion-content
-  ↓WelcomeCard [ngx.components.UIDynamicElement-1779283399727]: 
-    beanData: '{"ionBean":"Card"}'
-    comment: Introductory card shown on first page load
-    tagName: ion-card
-    ↓CardHeader [ngx.components.UIDynamicElement-1779283399728]: 
-      beanData: '{"ionBean":"CardHeader"}'
-      comment: Header section for the welcome card
-      tagName: ion-card-header
-      ↓CardTitle [ngx.components.UIDynamicElement-1779283399729]: 
-        beanData: '{"ionBean":"CardTitle"}'
-        comment: Title area of the welcome card
-        tagName: ion-card-title
-        ↓Text [ngx.components.UIText-1779283399730]: 
-          comment: Translation key for the welcome card title
-          i18n: true
-          textValue: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:Project_created
-    ↓CardContent [ngx.components.UIDynamicElement-1779283399731]: 
-      beanData: '{"ionBean":"CardContent"}'
-      comment: Body section containing onboarding instructions
-      tagName: ion-card-content
-      ↓ParagraphIntro [ngx.components.UIDynamicElement-1779283399732]: 
-        beanData: '{"ionBean":"Paragraph"}'
-        comment: Introductory onboarding sentence
-        tagName: p
-        ↓Text [ngx.components.UIText-1779283399733]: 
-          comment: Translation key for the introductory sentence
-          i18n: true
-          textValue: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:Start_building_your_app
-      ↓ParagraphStep1 [ngx.components.UIDynamicElement-1779283399734]: 
-        beanData: '{"ionBean":"Paragraph"}'
-        comment: First onboarding step description
-        tagName: p
-        ↓Text [ngx.components.UIText-1779283399735]: 
-          comment: Translation key for onboarding step 1
-          i18n: true
-          textValue: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:Add_your_first_page
-      ↓ParagraphStep2 [ngx.components.UIDynamicElement-1779283399736]: 
-        beanData: '{"ionBean":"Paragraph"}'
-        comment: Second onboarding step description
-        tagName: p
-        ↓Text [ngx.components.UIText-1779283399737]: 
-          comment: Translation key for onboarding step 2
-          i18n: true
-          textValue: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:Create_a_sequence_for_backend_logic
-      ↓ParagraphStep3 [ngx.components.UIDynamicElement-1779283399738]: 
-        beanData: '{"ionBean":"Paragraph"}'
-        comment: Third onboarding step description
-        tagName: p
-        ↓Text [ngx.components.UIText-1779283399739]: 
-          comment: Translation key for onboarding step 3
-          i18n: true
-          textValue: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:Run_and_preview_from_Studio
+                - MobileSmartSourceType: plain:vu-mt-16
+          ↓Event [ngx.components.UIControlEvent-1779290001157]: 
+            ↓Sync [ngx.components.UICustomAction-1779290001158]: 
+              actionValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                    →: |
+                      		page.syncAll().then(() => {
+                      			page.ref.markForCheck();
+                      			resolve();
+                      		}).catch((e) => reject(e));
+                      
+          ↓Label [ngx.components.UIDynamicElement-1779290001159]: 
+            beanData: '{"ionBean":"Label"}'
+            tagName: ion-label
+            ↓Text [ngx.components.UIText-1779290001160]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:Synchroniser avec le serveur
+↓BottomNav [ngx.components.UIUseShared-1779290001199]: 
+  sharedcomponent: VoxUrssafV2.Application.NgxApp.BottomNavPill
+  ↓current [ngx.components.UIUseVariable-1779290001198]: 
+    varValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+        - MobileSmartSourceType: script:'home'
+↓PageEvent [ngx.components.UIPageEvent-1779290001200]: 
+  ↓OnShow [ngx.components.UICustomAction-1779290001201]: 
+    actionValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+          →: |
+            		page.loadHome();
+            		resolve();
+            

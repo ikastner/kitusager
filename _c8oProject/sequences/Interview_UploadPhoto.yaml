@@ -1,0 +1,24 @@
+comment: Enregistre une photo d'interview (base64) sur le serveur SQL
+↓Init_Schema [steps.TransactionStep-1779372003001]: 
+  sourceTransaction: VoxUrssafV2.voxurssaf.Interview_InitSchema
+↓Save_Photo [steps.TransactionStep-1779372003002]: 
+  sourceTransaction: VoxUrssafV2.voxurssaf.Photo_Save_Tx
+  ↓photo_id [variables.StepVariable-1779372003003]: 
+  ↓interview_id [variables.StepVariable-1779372003004]: 
+  ↓sort_order [variables.StepVariable-1779372003005]: 
+  ↓mime_type [variables.StepVariable-1779372003006]: 
+  ↓content_base64 [variables.StepVariable-1779372003007]: 
+↓Copy [steps.XMLCopyStep-1779372003008]: 
+  sourceDefinition: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+      - com.twinsoft.convertigo.beans.common.XMLVector: 
+        - java.lang.String: 
+          - ↑value: 1779372003002
+        - java.lang.String: 
+          - ↑value: ./document/*
+↓photo_id [variables.RequestableVariable-1779372003009]: 
+↓interview_id [variables.RequestableVariable-1779372003010]: 
+↓sort_order [variables.RequestableVariable-1779372003011]: 
+↓mime_type [variables.RequestableVariable-1779372003012]: 
+↓content_base64 [variables.RequestableVariable-1779372003013]: 

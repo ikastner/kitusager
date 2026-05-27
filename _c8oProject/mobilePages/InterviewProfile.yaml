@@ -1,0 +1,202 @@
+comment: Profil enquêteur — voxUrssafReact profile
+icon: person
+scriptContent: 
+  - xmlizable: 
+    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+      →: |
+        '/*Begin_c8o_PageImport*/
+        /*End_c8o_PageImport*/
+        /*Begin_c8o_PageDeclaration*/
+        	public investigatorName: string = "";
+        	/*End_c8o_PageDeclaration*/
+        /*Begin_c8o_PageConstructor*/
+        		/*End_c8o_PageConstructor*/
+        /*Begin_c8o_PageFunction*/
+        	public async loadProfile(): Promise<void> {
+        		const store = this.global.interviewStore;
+        		if (store && store.whenReady) { await store.whenReady(); }
+        		this.investigatorName = store ? store.getInvestigatorName() : (this.global.investigatorName || "Enquêteur Terrain");
+        	}
+        	public async saveProfile(): Promise<void> {
+        		const store = this.global.interviewStore;
+        		const name = this.investigatorName || "Enquêteur Terrain";
+        		if (store) { store.setInvestigatorName(name); }
+        		this.global.investigatorName = name;
+        		const toastCtrl = this.getInstance(ToastController);
+        		const toast = await toastCtrl.create({ message: "Profil enregistré", duration: 2000, position: "bottom", color: "success" });
+        		await toast.present();
+        		this.angularRouter.navigate(["/"]);
+        	}
+        	/*End_c8o_PageFunction*/'
+segment: interview-profile
+title: Mon Profil
+↓Content [ngx.components.UIDynamicElement-1779290006001]: 
+  beanData: '{"ionBean":"Content"}'
+  tagName: ion-content
+  ↓AttrClass [ngx.components.UIAttribute-1779290006002]: 
+    attrName: class
+    attrValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+        - MobileSmartSourceType: plain:vu-page
+  ↓Shell [ngx.components.UIElement-1779290006003]: 
+    tagName: div
+    ↓AttrClass [ngx.components.UIAttribute-1779290006004]: 
+      attrName: class
+      attrValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: plain:vu-app-shell
+    ↓PageHeader [ngx.components.UIElement-1779290006010]: 
+      tagName: div
+      ↓AttrClass [ngx.components.UIAttribute-1779290006011]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:vu-page-header
+      ↓BackBtn [ngx.components.UIElement-1779290006012]: 
+        tagName: button
+        ↓AttrClass [ngx.components.UIAttribute-1779290006013]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-back-btn
+        ↓Event [ngx.components.UIControlEvent-1779290006014]: 
+          ↓Back [ngx.components.UIDynamicAction-1779290006015]: 
+            beanData: '{"ionBean":"RootPageAction","page":"plain:Page"}'
+        ↓Icon [ngx.components.UIDynamicElement-1779290006016]: 
+          beanData: '{"ionBean":"Icon","IconName":"plain:arrow-back"}'
+          tagName: ion-icon
+      ↓Title [ngx.components.UIElement-1779290006017]: 
+        tagName: h1
+        ↓AttrClass [ngx.components.UIAttribute-1779290006018]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-greeting-title
+        ↓Text [ngx.components.UIText-1779290006019]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:Mon Profil
+    ↓FormCard [ngx.components.UIElement-1779290006020]: 
+      tagName: div
+      ↓AttrClass [ngx.components.UIAttribute-1779290006021]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:vu-form-card
+      ↓AvatarCenter [ngx.components.UIElement-1779290006022]: 
+        tagName: div
+        ↓AttrClass [ngx.components.UIAttribute-1779290006023]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-avatar-center
+        ↓Avatar [ngx.components.UIElement-1779290006024]: 
+          tagName: div
+          ↓AttrClass [ngx.components.UIAttribute-1779290006025]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-avatar vu-avatar--xl
+          ↓Icon [ngx.components.UIDynamicElement-1779290006027]: 
+            beanData: '{"ionBean":"Icon","IconName":"plain:person"}'
+            tagName: ion-icon
+        ↓SubTitle [ngx.components.UIElement-1779290006028]: 
+          tagName: h2
+          ↓AttrClass [ngx.components.UIAttribute-1779290006029]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-greeting-title
+          ↓Text [ngx.components.UIText-1779290006030]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Paramètres Enquêteur
+      ↓Lbl [ngx.components.UIElement-1779290006031]: 
+        tagName: label
+        ↓AttrClass [ngx.components.UIAttribute-1779290006032]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-field-label
+        ↓Text [ngx.components.UIText-1779290006033]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:Nom affiché
+      ↓InName [ngx.components.UIDynamicElement-1779290006034]: 
+        beanData: |
+          '{
+           "ionBean": "Input",
+           "ControlName": "plain:investigatorName",
+           "DoubleBinding": "script:investigatorName",
+           "Placeholder": "plain:Votre nom..."
+          }'
+        tagName: ion-input
+        ↓AttrClass [ngx.components.UIAttribute-1779290006035]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-field
+      ↓BtnSave [ngx.components.UIDynamicElement-1779290006040]: 
+        beanData: |
+          '{
+           "ionBean": "Button",
+           "IonColor": "plain:primary",
+           "IonExpand": "plain:block"
+          }'
+        tagName: ion-button
+        ↓AttrClass [ngx.components.UIAttribute-1779290006041]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-btn-primary
+        ↓Event [ngx.components.UIControlEvent-1779290006042]: 
+          ↓Save [ngx.components.UICustomAction-1779290006043]: 
+            actionValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                  →: |
+                    		page.saveProfile();
+                    		resolve();
+                    
+        ↓Label [ngx.components.UIDynamicElement-1779290006044]: 
+          beanData: '{"ionBean":"Label"}'
+          tagName: ion-label
+          ↓Text [ngx.components.UIText-1779290006045]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Enregistrer
+↓BottomNav [ngx.components.UIUseShared-1779290006099]: 
+  sharedcomponent: VoxUrssafV2.Application.NgxApp.BottomNavPill
+  ↓current [ngx.components.UIUseVariable-1779290006098]: 
+    varValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+        - MobileSmartSourceType: script:'profile'
+↓PageEvent [ngx.components.UIPageEvent-1779290006100]: 
+  ↓OnShow [ngx.components.UICustomAction-1779290006101]: 
+    actionValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+          →: |
+            		page.loadProfile();
+            		resolve();
+            

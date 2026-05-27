@@ -1,0 +1,1087 @@
+comment: Capture terrain — feed + onglets texte/audio/photo
+icon: mic
+scriptContent: 
+  - xmlizable: 
+    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+      →: |
+        '/*Begin_c8o_PageImport*/
+        /*End_c8o_PageImport*/
+        /*Begin_c8o_PageDeclaration*/
+        	public currentQuestion: string = "Général / Contexte";
+        	public activeTab: string = "text";
+        	public textInput: string = "";
+        	public showSaveModal: boolean = false;
+        	public isRecording: boolean = false;
+        	public reviewingAudio: boolean = false;
+        	public audioTranscript: string = "";
+        	public showMicError: boolean = false;
+        	public micErrorMessage: string = "";
+        	public editingEntryId: string = "";
+        	public editEntryValue: string = "";
+        	/*End_c8o_PageDeclaration*/
+        /*Begin_c8o_PageConstructor*/
+        		/*End_c8o_PageConstructor*/
+        /*Begin_c8o_PageFunction*/
+        	public getStore(): any {
+        		return this.global.interviewStore;
+        	}
+        	public defaultQuestions(): string[] {
+        		return [
+        			"Général / Contexte",
+        			"Quels sont vos principaux défis actuels ?",
+        			"Comment utilisez-vous notre produit/service ?",
+        			"Qu'est-ce qui vous manque le plus aujourd'hui ?",
+        			"Quel est votre retour sur l'événement ?"
+        		];
+        	}
+        	public async loadActive(): Promise<void> {
+        		if (!this.local.questions || !this.local.questions.length) {
+        			this.local.questions = this.defaultQuestions();
+        		}
+        		if (!this.currentQuestion) {
+        			this.currentQuestion = "Général / Contexte";
+        		}
+        		const store = this.getStore();
+        		if (!store) { return; }
+        		if (store.whenReady) { await store.whenReady(); }
+        		let iv = store.getActiveInterview();
+        		if (!iv) {
+        			iv = store.createInterview("", "", "", "", "");
+        		}
+        		const qs = store.getQuestions();
+        		this.local.questions = (qs && qs.length) ? qs.slice() : this.defaultQuestions();
+        		this.local.entries = (iv.entries || []).slice();
+        		if (!this.currentQuestion || this.local.questions.indexOf(this.currentQuestion) < 0) {
+        			this.currentQuestion = this.local.questions[0] || "Général / Contexte";
+        		}
+        		const name = iv.intervieweeName || "";
+        		this.local.displayName = (name && name !== "Anonyme") ? name : "Intervenant Anonyme";
+        		this.local.displayRole = iv.intervieweeRole || "";
+        		this.local.displayCompany = iv.intervieweeCompany || "";
+        		this.local.displayContext = iv.context || "";
+        		const d = new Date();
+        		this.local.timeLabel = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        	}
+        	public setTab(tab: string): void {
+        		if (this.activeTab === "audio" && tab !== "audio" && this.isRecording) {
+        			this.global.stopSpeechListening(this);
+        			this.isRecording = false;
+        		}
+        		this.activeTab = tab;
+        	}
+        	public applySpeechReceived(data: any): void {
+        		if (!this.isRecording || this.reviewingAudio) { return; }
+        		if (data != null && typeof data === "object" && !Array.isArray(data)) {
+        			if (data.mode === "snapshot") {
+        				const committed = (data.final || "").trim();
+        				const interim = (data.interim || "").trim();
+        				let display = committed;
+        				if (interim) {
+        					display = (display ? display + " " : "") + interim + " (en cours...)";
+        				}
+        				this.audioTranscript = display.trim();
+        				return;
+        			}
+        			if ("final" in data || "interim" in data) {
+        				const committed = (data.final || "").trim();
+        				const interim = (data.interim || "").trim();
+        				let display = committed;
+        				if (interim) {
+        					display = (display ? display + " " : "") + interim + " (en cours...)";
+        				}
+        				this.audioTranscript = display.trim();
+        				return;
+        			}
+        		}
+        		const chunk = Array.isArray(data) ? data.join(" ") : String(data != null ? data : "");
+        		if (!chunk.trim()) { return; }
+        		this.audioTranscript = chunk.trim();
+        	}
+        	public async toggleRecording(): Promise<void> {
+        		if (this.isRecording) {
+        			this.global.stopSpeechListening(this);
+        			this.isRecording = false;
+        			this.audioTranscript = (this.audioTranscript || "").replace(/\s*\(en cours...\)$/i, "").trim();
+        			this.reviewingAudio = true;
+        			return;
+        		}
+        		this.audioTranscript = "";
+        		this.reviewingAudio = false;
+        		this.showMicError = false;
+        		this.micErrorMessage = "";
+        		try {
+        			await this.global.startSpeechListening(this);
+        			this.isRecording = true;
+        		} catch (e) {
+        			const msg = (typeof e === "string")
+        				? e
+        				: ((e && (e.message || e.error)) ? (e.message || e.error) : String(e));
+        			// Message plus précis : "not-allowed" => permission, sinon erreur technique WebSpeech/Cordova.
+        			if (msg && (msg.indexOf("not-allowed") >= 0 || msg.indexOf("service-not-allowed") >= 0 || msg.indexOf("NotAllowed") >= 0)) {
+        				this.micErrorMessage = "Accès micro refusé. Autorisez le microphone pour ce site.";
+        			} else if (msg && msg.indexOf("no-speech") >= 0) {
+        				this.micErrorMessage = "Aucun son détecté. Parlez après avoir démarré la dictée.";
+        			} else if (msg && msg.indexOf("audio-capture") >= 0) {
+        				this.micErrorMessage = "Micro indisponible (aucune entrée audio).";
+        			} else if (msg && msg.indexOf("network") >= 0) {
+        				this.micErrorMessage = "Erreur réseau de la dictée (Web Speech).";
+        			} else {
+        				this.micErrorMessage = "Erreur dictée : " + (msg || "inconnue");
+        			}
+        			this.showMicError = true;
+        			this.isRecording = false;
+        			setTimeout(() => { this.showMicError = false; this.ref.markForCheck(); }, 3000);
+        		}
+        	}
+        	public saveAudioDraft(): void {
+        		const t = (this.audioTranscript || "").trim();
+        		if (t) {
+        			this.addEntry("audio", t, "Audio attaché");
+        		} else {
+        			this.addEntry("audio", "Enregistrement audio (sans texte)", "Audio attaché");
+        		}
+        		this.audioTranscript = "";
+        		this.reviewingAudio = false;
+        	}
+        	public cancelAudioDraft(): void {
+        		this.audioTranscript = "";
+        		this.reviewingAudio = false;
+        	}
+        	public resolveCurrentQuestion(): string {
+        		const cur = (this.currentQuestion || "").trim();
+        		if (cur) { return cur; }
+        		const qs = (this.local && this.local.questions && this.local.questions.length)
+        			? this.local.questions
+        			: this.defaultQuestions();
+        		return String(qs[0] || "Général / Contexte").trim();
+        	}
+        	public entryQuestionLabel(entry: any): string {
+        		const q = (entry && entry.question) ? String(entry.question).trim() : "";
+        		if (q) { return q; }
+        		return this.resolveCurrentQuestion();
+        	}
+        	public addEntry(type: string, content: string, extra?: string): void {
+        		const d = new Date();
+        		const entry = {
+        			id: Date.now().toString(),
+        			type,
+        			content,
+        			extra: extra || null,
+        			question: this.resolveCurrentQuestion(),
+        			timeLabel: d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        		};
+        		if (!this.local.entries) { this.local.entries = []; }
+        		this.local.entries = [...this.local.entries, entry];
+        		const store = this.getStore();
+        		if (store) { store.appendEntryToActive(entry); }
+        	}
+        	public startEditEntry(entry: any): void {
+        		if (!entry) { return; }
+        		this.editingEntryId = String(entry.id || "");
+        		this.editEntryValue = String(entry.content || "");
+        	}
+        	public cancelEditEntry(): void {
+        		this.editingEntryId = "";
+        	}
+        	public saveEditEntry(): void {
+        		const id = String(this.editingEntryId || "");
+        		if (!id) { return; }
+        		const entry = (this.local?.entries || []).find((e: any) => String(e?.id || "") === id);
+        		if (!entry) { return; }
+        		const t = (this.editEntryValue || "").trim();
+        		entry.content = t;
+        		this.editingEntryId = "";
+        		const store = this.getStore();
+        		if (store) { store.setActiveEntries(this.local.entries || []); }
+        	}
+        	public deleteEntry(entry: any): void {
+        		if (!entry) { return; }
+        		const id = String(entry.id || "");
+        		if (!id) { return; }
+        		this.local.entries = (this.local.entries || []).filter((e: any) => String(e?.id || "") !== id);
+        		if (this.editingEntryId === id) {
+        			this.editingEntryId = "";
+        			this.editEntryValue = "";
+        		}
+        		const store = this.getStore();
+        		if (store) { store.setActiveEntries(this.local.entries || []); }
+        	}
+        	public recordingButtonLabel(): string {
+        		return this.isRecording ? "Stopper & Vérifier" : "Démarrer la dictée";
+        	}
+        	public recordingButtonColor(): string {
+        		return this.isRecording ? "danger" : "primary";
+        	}
+        	public recordingIconName(): string {
+        		return this.isRecording ? "stop-circle" : "mic";
+        	}
+        	public showToast(msg: string, color: string = "medium"): void {
+        		const toastCtrl = this.getInstance(ToastController);
+        		toastCtrl.create({ message: msg, duration: 2500, position: "bottom", color: color }).then(t => t.present());
+        	}
+        	public async confirmEndSession(): Promise<void> {
+        		const ctrl = this.getInstance(AlertController);
+        		const alert = await ctrl.create({
+        			header: "Terminer la session ?",
+        			message: "L''interview sera enregistrée sur cet appareil. Vous pourrez la rouvrir depuis l''accueil.",
+        			buttons: [
+        				{ text: "Annuler", role: "cancel" },
+        				{ text: "Confirmer", role: "confirm" }
+        			]
+        		});
+        		await alert.present();
+        		const res = await alert.onDidDismiss();
+        		if (res && res.role === "confirm") {
+        			const store = this.getStore();
+        			if (store) {
+        				store.setActiveEntries(this.local.entries || []);
+        				store.saveActiveInterview();
+        			}
+        			this.angularRouter.navigate(["/"]);
+        		}
+        	}
+        	public submitText(): void {
+        		const t = (this.textInput || "").trim();
+        		if (!t) { return; }
+        		this.addEntry("text", t);
+        		this.textInput = "";
+        	}
+        	public showRoleLine(): boolean {
+        		return !!(this.local?.displayRole || this.local?.displayCompany);
+        	}
+        	public isTextOrAudioEntry(entry: any): boolean {
+        		return entry && (entry.type === "text" || entry.type === "audio");
+        	}
+        	public isPhotoEntry(entry: any): boolean {
+        		return entry && entry.type === "photo";
+        	}
+        	public handlePhotoCapture(out: any): void {
+        		let raw = "";
+        		if (out != null && out !== undefined) {
+        			if (typeof out === "string") {
+        				raw = out;
+        			} else if (typeof URL !== "undefined" && out instanceof URL) {
+        				raw = out.href;
+        			} else if (typeof out === "object") {
+        				raw = out.dataURI || out.dataUrl || out.href || out.path || "";
+        			}
+        		}
+        		raw = (raw || "").trim();
+        		if (!raw) {
+        			this.showToast("Aucune photo capturée");
+        			return;
+        		}
+        		const imageUrl = raw.indexOf("data:") === 0 ? raw : "data:image/jpeg;base64," + raw;
+        		const name = "photo-" + Date.now() + ".jpg";
+        		this.addEntry("photo", "Photo capturée: " + name, imageUrl);
+        	}
+        	/*End_c8o_PageFunction*/'
+segment: interview-active
+title: Interview active
+↓Subscribe_Handler_Speech [ngx.components.UIEventSubscriber-1779290004300]: 
+  topic: speechReceived
+  ↓ApplySpeech [ngx.components.UICustomAction-1779290004301]: 
+    actionValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+          →: |
+            		page.applySpeechReceived(event);
+            		page.ref.markForCheck();
+            		resolve();
+            
+↓Content [ngx.components.UIDynamicElement-1779290004001]: 
+  beanData: '{"ionBean":"Content"}'
+  tagName: ion-content
+  ↓AttrClass [ngx.components.UIAttribute-1779290004002]: 
+    attrName: class
+    attrValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+        - MobileSmartSourceType: plain:vu-page
+  ↓Shell [ngx.components.UIElement-1779290004003]: 
+    tagName: div
+    ↓AttrClass [ngx.components.UIAttribute-1779290004004]: 
+      attrName: class
+      attrValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: plain:vu-app-shell vu-active-shell
+    ↓ActiveHeader [ngx.components.UIElement-1779290004010]: 
+      tagName: div
+      ↓AttrClass [ngx.components.UIAttribute-1779290004011]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:vu-active-header
+      ↓HeadRow [ngx.components.UIElement-1779290004012]: 
+        tagName: div
+        ↓AttrClass [ngx.components.UIAttribute-1779290004013]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-flex-between
+        ↓Info [ngx.components.UIElement-1779290004014]: 
+          tagName: div
+          ↓Name [ngx.components.UIElement-1779290004015]: 
+            tagName: h2
+            ↓AttrClass [ngx.components.UIAttribute-1779290004016]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-greeting-title
+            ↓Text [ngx.components.UIText-1779290004017]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:local?.displayName
+          ↓RoleLine [ngx.components.UIElement-1779290004018]: 
+            tagName: p
+            ↓AttrIf [ngx.components.UIAttribute-1779290004019]: 
+              attrName: '*ngIf'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:showRoleLine()
+            ↓AttrClass [ngx.components.UIAttribute-1779290004020]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-role-line
+            ↓Text [ngx.components.UIText-1779290004021]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: 'script:(local?.displayRole || '''') + (local?.displayRole && local?.displayCompany ? '' chez '' : '''') + (local?.displayCompany || '''')'
+          ↓BadgeRow [ngx.components.UIElement-1779290004022]: 
+            tagName: div
+            ↓AttrClass [ngx.components.UIAttribute-1779290004023]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-badge-row
+            ↓Loc [ngx.components.UIElement-1779290004024]: 
+              tagName: span
+              ↓AttrClass [ngx.components.UIAttribute-1779290004025]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:vu-badge-pill
+              ↓Icon [ngx.components.UIDynamicElement-1779290004026]: 
+                beanData: '{"ionBean":"Icon","IconName":"plain:location"}'
+                tagName: ion-icon
+              ↓Text [ngx.components.UIText-1779290004027]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:local?.displayContext || 'Lieu non défini'
+            ↓Time [ngx.components.UIElement-1779290004028]: 
+              tagName: span
+              ↓AttrClass [ngx.components.UIAttribute-1779290004029]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:vu-badge-pill
+              ↓Icon [ngx.components.UIDynamicElement-1779290004030]: 
+                beanData: '{"ionBean":"Icon","IconName":"plain:time"}'
+                tagName: ion-icon
+              ↓Text [ngx.components.UIText-1779290004031]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:local?.timeLabel
+        ↓BtnEnd [ngx.components.UIElement-1779290004032]: 
+          tagName: button
+          ↓AttrClass [ngx.components.UIAttribute-1779290004033]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-back-btn
+          ↓Event [ngx.components.UIControlEvent-1779290004034]: 
+            ↓End [ngx.components.UICustomAction-1779290004035]: 
+              actionValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                    →: |
+                      		page.confirmEndSession();
+                      		resolve();
+                      
+          ↓Icon [ngx.components.UIDynamicElement-1779290004036]: 
+            beanData: '{"ionBean":"Icon","IconName":"plain:checkmark-circle"}'
+            tagName: ion-icon
+      ↓SelectQ [ngx.components.UIDynamicElement-1779290004040]: 
+        beanData: |
+          '{
+           "ionBean": "Select",
+           "ControlName": "plain:currentQuestion",
+           "DoubleBinding": "script:currentQuestion",
+           "Interface": "plain:popover"
+          }'
+        tagName: ion-select
+        ↓AttrClass [ngx.components.UIAttribute-1779290004041]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-select-question
+        ↓QuestionOpt [ngx.components.UIElement-1779291005202]: 
+          tagName: ion-select-option
+          ↓AttrFor [ngx.components.UIAttribute-1779291005201]: 
+            attrName: '*ngFor'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:let q of local.questions
+          ↓AttrValue [ngx.components.UIAttribute-1779291005204]: 
+            attrName: value
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:q
+          ↓Text [ngx.components.UIText-1779291005203]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:q
+    ↓Feed [ngx.components.UIElement-1779290004050]: 
+      tagName: div
+      ↓AttrClass [ngx.components.UIAttribute-1779290004051]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:vu-scroll-main vu-active-main
+      ↓Empty [ngx.components.UIElement-1779290004053]: 
+        tagName: div
+        ↓AttrIf [ngx.components.UIAttribute-1779290004054]: 
+          attrName: '*ngIf'
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:!local?.entries?.length
+        ↓AttrClass [ngx.components.UIAttribute-1779290004055]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-empty-feed
+        ↓Text [ngx.components.UIText-1779290004056]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:L'interview est prête. Choisissez un format ci-dessous pour capturer.
+      ↓Entry [ngx.components.UIElement-1779290004060]: 
+        tagName: div
+        ↓AttrClass [ngx.components.UIAttribute-1779290004061]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-entry
+        ↓AttrFor [ngx.components.UIAttribute-1779290004062]: 
+          attrName: '*ngFor'
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:let entry of local.entries
+        ↓Badge [ngx.components.UIElement-1779290004063]: 
+          tagName: span
+          ↓AttrClass [ngx.components.UIAttribute-1779290004064]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-entry-badge
+          ↓Text [ngx.components.UIText-1779290004065]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:entryQuestionLabel(entry)
+        ↓Time [ngx.components.UIElement-1779290004066]: 
+          tagName: span
+          ↓AttrClass [ngx.components.UIAttribute-1779290004067]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-entry-time
+          ↓Text [ngx.components.UIText-1779290004068]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:entry.timeLabel
+        ↓BtnEditEntry [ngx.components.UIDynamicElement-1779291005001]: 
+          beanData: |
+            '{
+             "ionBean": "Button",
+             "IonFill": "plain:clear",
+             "IonSize": "plain:small"
+            }'
+          tagName: ion-button
+          ↓AttrIf [ngx.components.UIAttribute-1779291005002]: 
+            attrName: '*ngIf'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:isTextOrAudioEntry(entry) && editingEntryId !== (entry.id + '')
+          ↓AttrClass [ngx.components.UIAttribute-1779291005003]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-entry-btn vu-entry-btn--edit
+          ↓AttrClick [ngx.components.UIAttribute-1779291005004]: 
+            attrName: (click)
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:$event.stopPropagation(); startEditEntry(entry)
+          ↓Icon [ngx.components.UIDynamicElement-1779291005005]: 
+            beanData: '{"ionBean":"Icon","IconName":"plain:create-outline"}'
+            tagName: ion-icon
+        ↓BtnDeleteEntry [ngx.components.UIDynamicElement-1779291005010]: 
+          beanData: |
+            '{
+             "ionBean": "Button",
+             "IonFill": "plain:clear",
+             "IonSize": "plain:small",
+             "IonColor": "plain:danger"
+            }'
+          tagName: ion-button
+          ↓AttrIf [ngx.components.UIAttribute-1779291005011]: 
+            attrName: '*ngIf'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:editingEntryId !== (entry.id + '')
+          ↓AttrClass [ngx.components.UIAttribute-1779291005012]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-entry-btn vu-entry-btn--delete
+          ↓AttrClick [ngx.components.UIAttribute-1779291005013]: 
+            attrName: (click)
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:$event.stopPropagation(); deleteEntry(entry)
+          ↓Icon [ngx.components.UIDynamicElement-1779291005014]: 
+            beanData: '{"ionBean":"Icon","IconName":"plain:trash-outline"}'
+            tagName: ion-icon
+        ↓ContentTextView [ngx.components.UIElement-1779290004069]: 
+          tagName: p
+          ↓AttrIf [ngx.components.UIAttribute-1779290004070]: 
+            attrName: '*ngIf'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:isTextOrAudioEntry(entry) && editingEntryId !== (entry.id + '')
+          ↓AttrClass [ngx.components.UIAttribute-1779290004071]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-entry-content
+          ↓AttrClick [ngx.components.UIAttribute-1779291004071]: 
+            attrName: (click)
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:startEditEntry(entry)
+          ↓Text [ngx.components.UIText-1779290004072]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: 'script:entry.type === ''audio'' ? ''"'' + entry.content + ''"'' : entry.content'
+        ↓ContentTextEdit [ngx.components.UIElement-1779291004069]: 
+          tagName: div
+          ↓AttrIf [ngx.components.UIAttribute-1779291004070]: 
+            attrName: '*ngIf'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:isTextOrAudioEntry(entry) && editingEntryId === (entry.id + '')
+          ↓AttrClass [ngx.components.UIAttribute-1779291004072]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-edit-row vu-flex-row-start
+          ↓EditArea [ngx.components.UIDynamicElement-1779291004073]: 
+            beanData: |
+              '{
+               "ionBean": "TextArea",
+               "ControlName": "plain:editEntryValue",
+               "DoubleBinding": "script:editEntryValue",
+               "AutoGrow": "plain:true",
+               "Fill": "plain:outline"
+              }'
+            tagName: ion-textarea
+          ↓BtnSave [ngx.components.UIDynamicElement-1779291004074]: 
+            beanData: '{"ionBean":"Button","IonColor":"plain:primary","IonSize":"plain:small"}'
+            tagName: ion-button
+            ↓Event [ngx.components.UIControlEvent-1779291004075]: 
+              ↓Save [ngx.components.UICustomAction-1779291004076]: 
+                actionValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                      →: |
+                        		page.saveEditEntry();
+                        		page.ref.markForCheck();
+                        		resolve();
+                        
+            ↓Text [ngx.components.UIText-1779291004077]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:OK
+          ↓BtnCancel [ngx.components.UIDynamicElement-1779291004078]: 
+            beanData: '{"ionBean":"Button","IonColor":"plain:medium","IonSize":"plain:small","IonFill":"plain:clear"}'
+            tagName: ion-button
+            ↓Event [ngx.components.UIControlEvent-1779291004079]: 
+              ↓Cancel [ngx.components.UICustomAction-1779291004080]: 
+                actionValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                      →: |
+                        		page.cancelEditEntry();
+                        		page.ref.markForCheck();
+                        		resolve();
+                        
+            ↓Text [ngx.components.UIText-1779291004081]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:Annuler
+        ↓ContentPhoto [ngx.components.UIElement-1779290004350]: 
+          tagName: div
+          ↓AttrIf [ngx.components.UIAttribute-1779290004351]: 
+            attrName: '*ngIf'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:isPhotoEntry(entry)
+          ↓AttrClass [ngx.components.UIAttribute-1779290004352]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-entry-photo-wrap
+          ↓Img [ngx.components.UIDynamicElement-1779290004353]: 
+            beanData: '{"ionBean":"Image"}'
+            tagName: ion-img
+            ↓AttrIf [ngx.components.UIAttribute-1779290004354]: 
+              attrName: '*ngIf'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:entry.extra
+            ↓AttrClass [ngx.components.UIAttribute-1779290004355]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-entry-photo
+            ↓AttrSrc [ngx.components.UIAttribute-1779290004356]: 
+              attrName: '[src]'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:entry.extra
+    ↓CapturePanel [ngx.components.UIElement-1779290004080]: 
+      tagName: div
+      ↓AttrClass [ngx.components.UIAttribute-1779290004081]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:vu-capture-panel
+      ↓TabText [ngx.components.UIElement-1779290004082]: 
+        tagName: div
+        ↓AttrIf [ngx.components.UIAttribute-1779290004083]: 
+          attrName: '*ngIf'
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:activeTab === 'text'
+        ↓Row [ngx.components.UIElement-1779290004084]: 
+          tagName: div
+          ↓AttrClass [ngx.components.UIAttribute-1779290004085]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-input-row
+          ↓In [ngx.components.UIDynamicElement-1779290004086]: 
+            beanData: |
+              '{
+               "ionBean": "Input",
+               "ControlName": "plain:textInput",
+               "DoubleBinding": "script:textInput",
+               "Placeholder": "plain:Tapez une note ici..."
+              }'
+            tagName: ion-input
+            ↓AttrClass [ngx.components.UIAttribute-1779290004087]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-capture-input
+          ↓BtnSend [ngx.components.UIDynamicElement-1779290004088]: 
+            beanData: '{"ionBean":"Button","IonColor":"plain:primary"}'
+            tagName: ion-button
+            ↓Event [ngx.components.UIControlEvent-1779290004089]: 
+              ↓Submit [ngx.components.UICustomAction-1779290004090]: 
+                actionValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                      →: |
+                        		page.submitText();
+                        		resolve();
+                        
+            ↓Icon [ngx.components.UIDynamicElement-1779290004091]: 
+              beanData: '{"ionBean":"Icon","IconName":"plain:send"}'
+              tagName: ion-icon
+      ↓TabAudio [ngx.components.UIElement-1779290004092]: 
+        tagName: div
+        ↓AttrIf [ngx.components.UIAttribute-1779290004093]: 
+          attrName: '*ngIf'
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:activeTab === 'audio'
+        ↓AttrClass [ngx.components.UIAttribute-1779290004310]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-audio-panel
+        ↓MicError [ngx.components.UIElement-1779290004311]: 
+          tagName: div
+          ↓AttrIf [ngx.components.UIAttribute-1779290004312]: 
+            attrName: '*ngIf'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:showMicError
+          ↓AttrClass [ngx.components.UIAttribute-1779290004313]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-mic-error
+          ↓Text [ngx.components.UIText-1779290004314]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:{{ micErrorMessage || "Autorisez l'accès au microphone." }}
+        ↓RecordBlock [ngx.components.UIElement-1779290004315]: 
+          tagName: div
+          ↓AttrIf [ngx.components.UIAttribute-1779290004316]: 
+            attrName: '*ngIf'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:!reviewingAudio
+          ↓RecordingHint [ngx.components.UIElement-1779290004317]: 
+            tagName: div
+            ↓AttrIf [ngx.components.UIAttribute-1779290004318]: 
+              attrName: '*ngIf'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:isRecording
+            ↓AttrClass [ngx.components.UIAttribute-1779290004319]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-recording-hint
+            ↓Badge [ngx.components.UIElement-1779290004320]: 
+              tagName: span
+              ↓AttrClass [ngx.components.UIAttribute-1779290004321]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:vu-recording-badge
+              ↓Dot [ngx.components.UIElement-1779290004322]: 
+                tagName: span
+                ↓AttrClass [ngx.components.UIAttribute-1779290004323]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:vu-recording-dot
+              ↓Lbl [ngx.components.UIText-1779290004324]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:Écoute en cours...
+            ↓Preview [ngx.components.UIElement-1779290004325]: 
+              tagName: p
+              ↓AttrClass [ngx.components.UIAttribute-1779290004326]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:vu-audio-preview
+              ↓Text [ngx.components.UIText-1779290004327]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:(audioTranscript || "Parlez maintenant...")
+          ↓BtnMic [ngx.components.UIDynamicElement-1779290004094]: 
+            beanData: |
+              '{
+               "ionBean": "Button",
+               "IonColor": "script:recordingButtonColor()",
+               "IonExpand": "plain:block"
+              }'
+            tagName: ion-button
+            ↓Event [ngx.components.UIControlEvent-1779290004095]: 
+              ↓Toggle [ngx.components.UICustomAction-1779290004096]: 
+                actionValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                      →: |
+                        		page.toggleRecording().then(() => {
+                        			page.ref.markForCheck();
+                        			resolve();
+                        		}).catch((e) => reject(e));
+                        
+            ↓Icon [ngx.components.UIDynamicElement-1779290004328]: 
+              beanData: '{"ionBean":"Icon","IconName":"script:recordingIconName()"}'
+              tagName: ion-icon
+            ↓Label [ngx.components.UIDynamicElement-1779290004097]: 
+              beanData: '{"ionBean":"Label"}'
+              tagName: ion-label
+              ↓Text [ngx.components.UIText-1779290004098]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:recordingButtonLabel()
+        ↓ReviewBlock [ngx.components.UIElement-1779290004329]: 
+          tagName: div
+          ↓AttrIf [ngx.components.UIAttribute-1779290004330]: 
+            attrName: '*ngIf'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:reviewingAudio
+          ↓ReviewLbl [ngx.components.UIText-1779290004331]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Corriger le texte
+          ↓ReviewArea [ngx.components.UIDynamicElement-1779290004332]: 
+            beanData: |
+              '{
+               "ionBean": "TextArea",
+               "ControlName": "plain:audioTranscript",
+               "DoubleBinding": "script:audioTranscript",
+               "AutoGrow": "plain:true",
+               "Fill": "plain:outline",
+               "Placeholder": "plain:Transcription vide..."
+              }'
+            tagName: ion-textarea
+          ↓ReviewActions [ngx.components.UIElement-1779290004333]: 
+            tagName: div
+            ↓AttrClass [ngx.components.UIAttribute-1779290004334]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-audio-actions
+            ↓BtnCancel [ngx.components.UIDynamicElement-1779290004335]: 
+              beanData: |
+                '{
+                 "ionBean": "Button",
+                 "IonColor": "plain:medium",
+                 "IonFill": "plain:outline"
+                }'
+              tagName: ion-button
+              ↓Event [ngx.components.UIControlEvent-1779290004336]: 
+                ↓Cancel [ngx.components.UICustomAction-1779290004337]: 
+                  actionValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                        →: |
+                          		page.cancelAudioDraft();
+                          		page.ref.markForCheck();
+                          		resolve();
+                          
+              ↓Lbl [ngx.components.UIDynamicElement-1779290004338]: 
+                beanData: '{"ionBean":"Label"}'
+                tagName: ion-label
+                ↓Text [ngx.components.UIText-1779290004339]: 
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:Annuler
+            ↓BtnValidate [ngx.components.UIDynamicElement-1779290004340]: 
+              beanData: '{"ionBean":"Button","IonColor":"plain:primary"}'
+              tagName: ion-button
+              ↓Event [ngx.components.UIControlEvent-1779290004341]: 
+                ↓Save [ngx.components.UICustomAction-1779290004342]: 
+                  actionValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                        →: |
+                          		page.saveAudioDraft();
+                          		page.ref.markForCheck();
+                          		resolve();
+                          
+              ↓Lbl [ngx.components.UIDynamicElement-1779290004343]: 
+                beanData: '{"ionBean":"Label"}'
+                tagName: ion-label
+                ↓Text [ngx.components.UIText-1779290004344]: 
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:Valider
+      ↓TabPhoto [ngx.components.UIElement-1779290004099]: 
+        tagName: div
+        ↓AttrIf [ngx.components.UIAttribute-1779290004100]: 
+          attrName: '*ngIf'
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:activeTab === 'photo'
+        ↓BtnCam [ngx.components.UIDynamicElement-1779290004101]: 
+          beanData: |
+            '{
+             "ionBean": "Button",
+             "IonColor": "plain:dark",
+             "IonExpand": "plain:block"
+            }'
+          tagName: ion-button
+          ↓Event [ngx.components.UIControlEvent-1779290004102]: 
+            ↓Camera [ngx.components.UIDynamicAction-1779290004358]: 
+              beanData: |
+                '{
+                 "ionBean": "CameraAction",
+                 "quality": "plain:80",
+                 "destinationType": "plain:DATA_URL",
+                 "targetWidth": "plain:1024",
+                 "targetHeight": "plain:1024"
+                }'
+              ↓AddPhoto [ngx.components.UICustomAction-1779290004359]: 
+                actionValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                      →: |
+                        		page.handlePhotoCapture(props.out);
+                        		page.ref.markForCheck();
+                        		resolve();
+                        
+          ↓Label [ngx.components.UIDynamicElement-1779290004104]: 
+            beanData: '{"ionBean":"Label"}'
+            tagName: ion-label
+            ↓Text [ngx.components.UIText-1779290004105]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:Ouvrir l'appareil photo
+    ↓CapturePill [ngx.components.UIElement-1779290004110]: 
+      tagName: div
+      ↓AttrClass [ngx.components.UIAttribute-1779290004111]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:vu-capture-pill
+      ↓BtnText [ngx.components.UIElement-1779290004112]: 
+        tagName: button
+        ↓AttrClass [ngx.components.UIAttribute-1779290004113]: 
+          attrName: '[class]'
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:''vu-capture-tab '' + (activeTab === ''text'' ? ''vu-capture-tab--active'' : '''')'
+        ↓Event [ngx.components.UIControlEvent-1779290004114]: 
+          ↓SetText [ngx.components.UICustomAction-1779290004115]: 
+            actionValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                  →: |
+                    		page.setTab("text");
+                    		resolve();
+                    
+        ↓Icon [ngx.components.UIDynamicElement-1779290004116]: 
+          beanData: '{"ionBean":"Icon","IconName":"plain:document-text"}'
+          tagName: ion-icon
+      ↓BtnAudio [ngx.components.UIElement-1779290004117]: 
+        tagName: button
+        ↓AttrClass [ngx.components.UIAttribute-1779290004118]: 
+          attrName: '[class]'
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:''vu-capture-tab '' + (activeTab === ''audio'' ? ''vu-capture-tab--active'' : '''')'
+        ↓Event [ngx.components.UIControlEvent-1779290004119]: 
+          ↓SetAudio [ngx.components.UICustomAction-1779290004120]: 
+            actionValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                  →: |
+                    		page.setTab("audio");
+                    		resolve();
+                    
+        ↓Icon [ngx.components.UIDynamicElement-1779290004121]: 
+          beanData: '{"ionBean":"Icon","IconName":"plain:mic"}'
+          tagName: ion-icon
+      ↓BtnPhoto [ngx.components.UIElement-1779290004122]: 
+        tagName: button
+        ↓AttrClass [ngx.components.UIAttribute-1779290004123]: 
+          attrName: '[class]'
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:''vu-capture-tab '' + (activeTab === ''photo'' ? ''vu-capture-tab--active'' : '''')'
+        ↓Event [ngx.components.UIControlEvent-1779290004124]: 
+          ↓SetPhoto [ngx.components.UICustomAction-1779290004125]: 
+            actionValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                  →: |
+                    		page.setTab("photo");
+                    		resolve();
+                    
+        ↓Icon [ngx.components.UIDynamicElement-1779290004126]: 
+          beanData: '{"ionBean":"Icon","IconName":"plain:camera"}'
+          tagName: ion-icon
+↓PageEvent [ngx.components.UIPageEvent-1779290004199]: 
+  ↓OnShow [ngx.components.UICustomAction-1779290004200]: 
+    actionValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+          →: |
+            		page.loadActive();
+            		resolve();
+            
+  ↓SpeechToText [ngx.components.UIDynamicAction-1779286939141]: 
+    beanData: '{"ionBean":"SpeechToTextAction"}'
+    isEnabled: false

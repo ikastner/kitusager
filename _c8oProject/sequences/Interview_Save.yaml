@@ -1,0 +1,32 @@
+comment: Enregistre ou met à jour une interview (réponses + métadonnées) sur le serveur SQL
+↓Init_Schema [steps.TransactionStep-1779372002001]: 
+  sourceTransaction: VoxUrssafV2.voxurssaf.Interview_InitSchema
+↓Save [steps.TransactionStep-1779372002002]: 
+  sourceTransaction: VoxUrssafV2.voxurssaf.Interview_Save_Tx
+  ↓interview_id [variables.StepVariable-1779372002003]: 
+  ↓event_id [variables.StepVariable-1779372002004]: 
+  ↓status [variables.StepVariable-1779372002005]: 
+  ↓created_at [variables.StepVariable-1779372002006]: 
+  ↓device_id [variables.StepVariable-1779372002007]: 
+  ↓participant_label [variables.StepVariable-1779372002008]: 
+  ↓zone [variables.StepVariable-1779372002009]: 
+  ↓answers_json [variables.StepVariable-1779372002010]: 
+  ↓photos_json [variables.StepVariable-1779372002011]: 
+↓Copy [steps.XMLCopyStep-1779372002012]: 
+  sourceDefinition: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+      - com.twinsoft.convertigo.beans.common.XMLVector: 
+        - java.lang.String: 
+          - ↑value: 1779372002002
+        - java.lang.String: 
+          - ↑value: ./document/*
+↓interview_id [variables.RequestableVariable-1779372002013]: 
+↓event_id [variables.RequestableVariable-1779372002014]: 
+↓status [variables.RequestableVariable-1779372002015]: 
+↓created_at [variables.RequestableVariable-1779372002016]: 
+↓device_id [variables.RequestableVariable-1779372002017]: 
+↓participant_label [variables.RequestableVariable-1779372002018]: 
+↓zone [variables.RequestableVariable-1779372002019]: 
+↓answers_json [variables.RequestableVariable-1779372002020]: 
+↓photos_json [variables.RequestableVariable-1779372002021]: 

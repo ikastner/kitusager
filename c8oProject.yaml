@@ -4,7 +4,16 @@
   contextTimeout: 59
   corsOrigin: =Origin
   httpSessionTimeout: 60
+  version: 1.0.0
   ↓void [connectors.SqlConnector]: 🗏 connectors/void.yaml
+  ↓voxurssaf [connectors.SqlConnector]: 🗏 connectors/voxurssaf.yaml
+  ↓voxurssafv2_fullsync [connectors.FullSyncConnector-1779350680837]: 🗏 connectors/voxurssafv2_fullsync.yaml
+  ↓FS_ExportInterviewToSql [sequences.GenericSequence]: 🗏 sequences/FS_ExportInterviewToSql.yaml
+  ↓FS_InitDesign [sequences.GenericSequence]: 🗏 sequences/FS_InitDesign.yaml
+  ↓Interview_Save [sequences.GenericSequence]: 🗏 sequences/Interview_Save.yaml
+  ↓Interview_UploadPhoto [sequences.GenericSequence]: 🗏 sequences/Interview_UploadPhoto.yaml
+  ↓CouchDb_schema [references.ImportXsdSchemaReference]: 
+    urlpath: http://localhost:18080/convertigo/xsd/couchdb/CouchDb.xsd
   ↓project1 [references.ProjectSchemaReference]: 
     projectName: mobilebuilder_tpl_8_4_0_ngx=https://github.com/convertigo/c8oprj-mobilebuilder-tpl/archive/mobilebuilder_tpl_8_4_0_ngx.zip
   ↓Application [core.MobileApplication]: 

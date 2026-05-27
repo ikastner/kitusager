@@ -1,0 +1,232 @@
+comment: Liste complète des interviews — voxUrssafReact allInterviews
+icon: list
+scriptContent: 
+  - xmlizable: 
+    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+      →: |
+        '/*Begin_c8o_PageImport*/
+        /*End_c8o_PageImport*/
+        /*Begin_c8o_PageDeclaration*/
+        	public searchQuery: string = "";
+        	/*End_c8o_PageDeclaration*/
+        /*Begin_c8o_PageConstructor*/
+        		/*End_c8o_PageConstructor*/
+        /*Begin_c8o_PageFunction*/
+        	public getStore(): any {
+        		return this.global.interviewStore;
+        	}
+        	public async loadList(): Promise<void> {
+        		const store = this.getStore();
+        		if (store && store.whenReady) { await store.whenReady(); }
+        		this.local.filtered = store ? store.searchInterviews(this.searchQuery) : [];
+        	}
+        	public goInterview(iv: any): void {
+        		if (!iv || !this.getStore()) { return; }
+        		this.getStore().resumeInterview(iv);
+        		this.angularRouter.navigate(["/interview-active"]);
+        	}
+        	/*End_c8o_PageFunction*/'
+segment: interview-all
+title: Toutes les interviews
+↓Content [ngx.components.UIDynamicElement-1779290003001]: 
+  beanData: '{"ionBean":"Content"}'
+  tagName: ion-content
+  ↓AttrClass [ngx.components.UIAttribute-1779290003002]: 
+    attrName: class
+    attrValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+        - MobileSmartSourceType: plain:vu-page
+  ↓Shell [ngx.components.UIElement-1779290003003]: 
+    tagName: div
+    ↓AttrClass [ngx.components.UIAttribute-1779290003004]: 
+      attrName: class
+      attrValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: plain:vu-app-shell
+    ↓PageHeader [ngx.components.UIElement-1779290003010]: 
+      tagName: div
+      ↓AttrClass [ngx.components.UIAttribute-1779290003011]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:vu-page-header vu-page-header--elevated
+      ↓BackBtn [ngx.components.UIElement-1779290003013]: 
+        tagName: button
+        ↓AttrClass [ngx.components.UIAttribute-1779290003014]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-back-btn
+        ↓Event [ngx.components.UIControlEvent-1779290003015]: 
+          ↓Back [ngx.components.UIDynamicAction-1779290003016]: 
+            beanData: '{"ionBean":"PopPageAction"}'
+        ↓Icon [ngx.components.UIDynamicElement-1779290003017]: 
+          beanData: '{"ionBean":"Icon","IconName":"plain:arrow-back"}'
+          tagName: ion-icon
+      ↓Title [ngx.components.UIElement-1779290003018]: 
+        tagName: h1
+        ↓AttrClass [ngx.components.UIAttribute-1779290003019]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-greeting-title
+        ↓Text [ngx.components.UIText-1779290003020]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:Toutes les interviews
+    ↓SearchWrap [ngx.components.UIElement-1779290003021]: 
+      tagName: div
+      ↓AttrClass [ngx.components.UIAttribute-1779290003022]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:vu-search-wrap
+      ↓Search [ngx.components.UIDynamicElement-1779290003023]: 
+        beanData: |
+          '{
+           "ionBean": "Searchbar",
+           "ControlName": "plain:searchQuery",
+           "DoubleBinding": "script:searchQuery"
+          }'
+        tagName: ion-searchbar
+        ↓AttrClass [ngx.components.UIAttribute-1779290003024]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-searchbar
+        ↓Event [ngx.components.UIControlEvent-1779290003025]: 
+          ↓Filter [ngx.components.UICustomAction-1779290003026]: 
+            actionValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                  →: |
+                    		page.loadList();
+                    		resolve();
+                    
+    ↓ListArea [ngx.components.UIElement-1779290003030]: 
+      tagName: div
+      ↓AttrClass [ngx.components.UIAttribute-1779290003031]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:vu-scroll-main vu-card-list vu-card-list--all
+      ↓Count [ngx.components.UIElement-1779290003032]: 
+        tagName: p
+        ↓AttrClass [ngx.components.UIAttribute-1779290003033]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-list-count
+        ↓Text [ngx.components.UIText-1779290003034]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:(local?.filtered?.length || 0) + '' Résultat'' + ((local?.filtered?.length || 0) > 1 ? ''s'' : '''')'
+      ↓CardItem [ngx.components.UIElement-1779290003040]: 
+        tagName: div
+        ↓AttrClass [ngx.components.UIAttribute-1779290003041]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-card
+        ↓AttrFor [ngx.components.UIAttribute-1779290003042]: 
+          attrName: '*ngFor'
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:let iv of local.filtered
+        ↓AttrClick [ngx.components.UIAttribute-1779290003043]: 
+          attrName: (click)
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:goInterview(iv)
+        ↓Accent [ngx.components.UIElement-1779290003046]: 
+          tagName: div
+          ↓AttrClass [ngx.components.UIAttribute-1779290003047]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-card-accent
+        ↓Body [ngx.components.UIElement-1779290003048]: 
+          tagName: div
+          ↓AttrClass [ngx.components.UIAttribute-1779290003049]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-card-body
+          ↓Date [ngx.components.UIText-1779290003050]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:iv.dateLabel
+          ↓Name [ngx.components.UIElement-1779290003051]: 
+            tagName: h3
+            ↓AttrClass [ngx.components.UIAttribute-1779290003052]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-card-name
+            ↓Text [ngx.components.UIText-1779290003053]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:iv.intervieweeName
+          ↓Notes [ngx.components.UIElement-1779290003054]: 
+            tagName: span
+            ↓AttrClass [ngx.components.UIAttribute-1779290003055]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-card-notes
+            ↓Text [ngx.components.UIText-1779290003056]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:iv.entryCount + ' notes'
+      ↓Empty [ngx.components.UIElement-1779290003060]: 
+        tagName: p
+        ↓AttrIf [ngx.components.UIAttribute-1779290003061]: 
+          attrName: '*ngIf'
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:!local?.filtered?.length
+        ↓AttrClass [ngx.components.UIAttribute-1779290003062]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-empty-inline
+        ↓Text [ngx.components.UIText-1779290003063]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:Aucune interview trouvée.
+↓PageEvent [ngx.components.UIPageEvent-1779290003099]: 
+  ↓OnShow [ngx.components.UICustomAction-1779290003100]: 
+    actionValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+          →: |
+            		page.loadList();
+            		resolve();
+            

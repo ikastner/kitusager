@@ -4,6 +4,7 @@ componentScriptContent:
     - com.twinsoft.convertigo.beans.common.FormatedContent: 
       →: |
         '/*Begin_c8o_AppImport*/
+        import { SpeechRecognition } from ''@ionic-native/speech-recognition/ngx'';
         /*End_c8o_AppImport*/
         /*Begin_c8o_AppDeclaration*/
         	/*End_c8o_AppDeclaration*/
@@ -12,6 +13,7 @@ componentScriptContent:
         /*Begin_c8o_AppConstructor*/
         		/*End_c8o_AppConstructor*/
         /*Begin_c8o_AppInitialization*/
+        		this.initVuApp();
                         
                         /* Uncomment the following lines to enable the custom status bar color. */
                         // statusBar.overlaysWebView(false);
@@ -55,11 +57,595 @@ componentScriptContent:
         				});*/
         			/*End_c8o_AppInitialization*/
         /*Begin_c8o_AppFunction*/
+        	private initVuApp(): void {
+        			const app: any = this;
+        			const store = app.getInterviewStore();
+        			// Expose speech helpers immediately (avoid race with async store init)
+        			app.global.startSpeechListening = (p: any) => app.startSpeechListening(p);
+        			app.global.stopSpeechListening = (p: any) => app.stopSpeechListening(p);
+        			store._ready = store.initWithPage(app).then(() => {
+        				app.global.interviewStore = store;
+        				app.router.sharedObject.interviewStore = store;
+        				app.global.investigatorName = store.getInvestigatorName();
+        				app.global.speechLocale = store.getSpeechLocale();
+        			}).catch((e: any) => {
+        				app.c8o.log.error("[VoxUrssafV2] init FullSync store", e);
+        				app.global.interviewStore = store;
+        				app.router.sharedObject.interviewStore = store;
+        			});
+        		}
+        	
+        		public getInterviewStore(): any {
+        			const app: any = this;
+        			if (!app._interviewStore) {
+        				const self = app;
+        				app._interviewStore = {
+        					FS_DB: "voxurssafv2_fullsync",
+        					LEGACY_KEY: "voxurssaf_v2_data",
+        					_cache: null as any,
+        					_ready: null as Promise<void> | null,
+        					_page: null as any,
+        	
+        					init() { /* compat — init réel via initWithPage */ },
+        	
+        					whenReady(): Promise<void> {
+        						return this._ready || Promise.resolve();
+        					},
+        	
+        					async initWithPage(page: any): Promise<void> {
+        						this._page = page;
+        						await page.c8o.finalizeInit();
+        						await this.migrateLegacyIfNeeded(page);
+        						try {
+        							await this.fsPull(page);
+        						} catch (e) {
+        							page.c8o.log.warn("[VoxUrssafV2] pull initial (offline?)", e);
+        						}
+        						await this.reloadCache(page);
+        					},
+        	
+        					newId() {
+        						return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+        							const r = Math.random() * 16 | 0;
+        							const v = c === "x" ? r : (r & 0x3 | 0x8);
+        							return v.toString(16);
+        						});
+        					},
+        	
+        					formatDate(iso: string) {
+        						if (!iso) { return ""; }
+        						const d = new Date(iso);
+        						return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
+        					},
+        	
+        					getEmptyData() {
+        						return {
+        							deviceId: this.newId(),
+        							eventId: "salon-externe-2026",
+        							investigatorName: "Enquêteur Terrain",
+        							speechLocale: "fr-FR",
+        							questions: [
+        								"Général / Contexte",
+        								"Quels sont vos principaux défis actuels ?",
+        								"Comment utilisez-vous notre produit/service ?",
+        								"Qu''est-ce qui vous manque le plus aujourd''hui ?",
+        								"Quel est votre retour sur l''événement ?"
+        							],
+        							interviews: [] as any[],
+        							activeInterviewId: null as string | null
+        						};
+        					},
+        	
+        					ensureCache() {
+        						if (!this._cache) { this._cache = this.getEmptyData(); }
+        						return this._cache;
+        					},
+        	
+        					load() { return this.ensureCache(); },
+        	
+        					configDocId(deviceId: string) { return "config:" + deviceId; },
+        	
+        					interviewDocId(id: string) { return "interview:" + id; },
+        	
+        					async fsGet(page: any, docid: string): Promise<any> {
+        						await page.c8o.finalizeInit();
+        						return page.c8o.callJsonObject("fs://" + this.FS_DB + ".get", { docid: docid });
+        					},
+        	
+        					async fsPost(page: any, doc: any): Promise<any> {
+        						await page.c8o.finalizeInit();
+        						const body = Object.assign({}, doc, { _use_policy: "override" });
+        						return page.c8o.callJsonObject("fs://" + this.FS_DB + ".post", body);
+        					},
+        	
+        					async fsView(page: any, view: string, key: string): Promise<any> {
+        						await page.c8o.finalizeInit();
+        						return page.c8o.callJsonObject("fs://" + this.FS_DB + ".view", {
+        							ddoc: "vu", view: view, key: key, include_docs: false
+        						});
+        					},
+        	
+        					async fsPull(page: any): Promise<any> {
+        						await page.c8o.finalizeInit();
+        						return page.c8o.callJsonObject("fs://" + this.FS_DB + ".replicate_pull", {
+        							continuous: false, retry: false, heartbeat: 10000, timeout: false
+        						});
+        					},
+        	
+        					async fsPush(page: any): Promise<any> {
+        						await page.c8o.finalizeInit();
+        						return page.c8o.callJsonObject("fs://" + this.FS_DB + ".replicate_push", {
+        							continuous: false, retry: false, heartbeat: 10000, timeout: false
+        						});
+        					},
+        	
+        					docToInterview(doc: any): any {
+        						if (!doc) { return null; }
+        						return {
+        							interviewId: doc.interviewId,
+        							status: doc.status || "draft",
+        							createdAt: doc.createdAt,
+        							updatedAt: doc.updatedAt,
+        							syncedAt: doc.syncedAt,
+        							syncError: doc.syncError,
+        							intervieweeName: doc.intervieweeName,
+        							intervieweeRole: doc.intervieweeRole,
+        							intervieweeCompany: doc.intervieweeCompany,
+        							intervieweeEmail: doc.intervieweeEmail,
+        							context: doc.context,
+        							entries: (doc.entries || []).slice()
+        						};
+        					},
+        	
+        					interviewToDoc(iv: any, deviceId: string, eventId: string): any {
+        						return {
+        							_id: this.interviewDocId(iv.interviewId),
+        							type: "interview",
+        							c8oGrp: deviceId,
+        							deviceId: deviceId,
+        							eventId: eventId,
+        							interviewId: iv.interviewId,
+        							status: iv.status || "draft",
+        							createdAt: iv.createdAt,
+        							updatedAt: iv.updatedAt,
+        							syncedAt: iv.syncedAt || null,
+        							syncError: iv.syncError || null,
+        							intervieweeName: iv.intervieweeName,
+        							intervieweeRole: iv.intervieweeRole,
+        							intervieweeCompany: iv.intervieweeCompany,
+        							intervieweeEmail: iv.intervieweeEmail,
+        							context: iv.context,
+        							entries: iv.entries || []
+        						};
+        					},
+        	
+        					async persistConfig(page: any): Promise<void> {
+        						const c = this.ensureCache();
+        						await this.fsPost(page, {
+        							_id: this.configDocId(c.deviceId),
+        							type: "config",
+        							deviceId: c.deviceId,
+        							eventId: c.eventId,
+        							investigatorName: c.investigatorName,
+        							speechLocale: c.speechLocale,
+        							questions: c.questions || [],
+        							activeInterviewId: c.activeInterviewId
+        						});
+        					},
+        	
+        					async persistInterview(page: any, iv: any): Promise<void> {
+        						const c = this.ensureCache();
+        						await this.fsPost(page, this.interviewToDoc(iv, c.deviceId, c.eventId));
+        					},
+        	
+        					async save(page: any): Promise<void> {
+        						await this.persistConfig(page);
+        						const c = this.ensureCache();
+        						for (const iv of (c.interviews || [])) {
+        							await this.persistInterview(page, iv);
+        						}
+        					},
+        	
+        					saveSync(page: any) {
+        						const p = page || this._page;
+        						if (p) {
+        							this.persistConfig(p).then(() => {
+        								const c = this.ensureCache();
+        								(c.interviews || []).forEach((iv: any) => this.persistInterview(p, iv));
+        							}).catch(() => {});
+        						}
+        					},
+        	
+        					async reloadCache(page: any): Promise<void> {
+        						const empty = this.getEmptyData();
+        						let deviceId = empty.deviceId;
+        						try {
+        							const localMeta = await this.fsGet(page, "_local/vu_device");
+        							if (localMeta && localMeta.deviceId) { deviceId = localMeta.deviceId; }
+        						} catch (e) { /* first run */ }
+        						let config: any = null;
+        						try {
+        							config = await this.fsGet(page, this.configDocId(deviceId));
+        						} catch (e) { /* no config yet */ }
+        						if (config && config.deviceId) {
+        							this._cache = {
+        								deviceId: config.deviceId,
+        								eventId: config.eventId || empty.eventId,
+        								investigatorName: config.investigatorName || empty.investigatorName,
+        								speechLocale: config.speechLocale || empty.speechLocale,
+        								questions: (config.questions || []).slice(),
+        								interviews: [],
+        								activeInterviewId: config.activeInterviewId || null
+        							};
+        						} else {
+        							this._cache = empty;
+        							this._cache.deviceId = deviceId;
+        							await this.fsPost(page, { _id: "_local/vu_device", deviceId: deviceId, _use_policy: "override" });
+        							await this.persistConfig(page);
+        						}
+        						const interviews: any[] = [];
+        						try {
+        							const viewRes = await this.fsView(page, "interviews_by_device", this._cache.deviceId);
+        							const rows = (viewRes && viewRes.rows) ? viewRes.rows : [];
+        							for (const row of rows) {
+        								const id = (row.value && row.value.interviewId) ? row.value.interviewId : String(row.id || "").replace("interview:", "");
+        								if (!id) { continue; }
+        								try {
+        									const doc = await this.fsGet(page, this.interviewDocId(id));
+        									const iv = this.docToInterview(doc);
+        									if (iv) { interviews.push(iv); }
+        								} catch (e) { /* skip */ }
+        							}
+        						} catch (e) {
+        							page.c8o.log.warn("[VoxUrssafV2] vue interviews_by_device indisponible — exécuter FS_InitDesign", e);
+        						}
+        						interviews.sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
+        						this._cache.interviews = interviews;
+        					},
+        	
+        					async migrateLegacyIfNeeded(page: any): Promise<void> {
+        						try {
+        							const raw = localStorage.getItem(this.LEGACY_KEY);
+        							if (!raw) { return; }
+        							const legacy = JSON.parse(raw);
+        							this._cache = legacy;
+        							await this.persistConfig(page);
+        							for (const iv of (legacy.interviews || [])) {
+        								await this.persistInterview(page, iv);
+        							}
+        							try { await this.fsPush(page); } catch (e) { /* offline */ }
+        							localStorage.removeItem(this.LEGACY_KEY);
+        							page.c8o.log.info("[VoxUrssafV2] migration localStorage → FullSync terminée");
+        						} catch (e) {
+        							page.c8o.log.error("[VoxUrssafV2] migration localStorage", e);
+        						}
+        					},
+        	
+        					getInvestigatorName() { return this.load().investigatorName || "Enquêteur Terrain"; },
+        					setInvestigatorName(name: string) {
+        						const data = this.load();
+        						data.investigatorName = name || "Enquêteur Terrain";
+        						this.saveSync(this._page);
+        					},
+        					getSpeechLocale() { return this.load().speechLocale || "fr-FR"; },
+        					getQuestions() { return (this.load().questions || []).slice(); },
+        					setQuestions(list: string[]) {
+        						const data = this.load();
+        						data.questions = (list || []).slice();
+        						this.saveSync(this._page);
+        					},
+        					listForHome() {
+        						return (this.load().interviews || []).map((iv: any) => ({
+        							id: iv.interviewId,
+        							intervieweeName: iv.intervieweeName || "Anonyme",
+        							intervieweeRole: iv.intervieweeRole || "",
+        							intervieweeCompany: iv.intervieweeCompany || "",
+        							entryCount: (iv.entries || []).length,
+        							dateLabel: this.formatDate(iv.updatedAt || iv.createdAt),
+        							status: iv.status || "saved"
+        						}));
+        					},
+        					countTotalNotes() {
+        						return (this.load().interviews || []).reduce((acc: number, iv: any) => acc + ((iv.entries || []).length), 0);
+        					},
+        					searchInterviews(query: string) {
+        						const q = (query || "").toLowerCase().trim();
+        						const list = this.listForHome();
+        						if (!q) { return list; }
+        						return list.filter((iv: any) => {
+        							const n = (iv.intervieweeName || "").toLowerCase();
+        							const c = (iv.intervieweeCompany || "").toLowerCase();
+        							return n.indexOf(q) >= 0 || c.indexOf(q) >= 0;
+        						});
+        					},
+        					getInterview(id: string) {
+        						return (this.load().interviews || []).find((i: any) => i.interviewId === id) || null;
+        					},
+        					getActiveInterview() {
+        						const data = this.load();
+        						if (!data.activeInterviewId) { return null; }
+        						return this.getInterview(data.activeInterviewId);
+        					},
+        					setActive(id: string) {
+        						const data = this.load();
+        						data.activeInterviewId = id;
+        						this.saveSync(this._page);
+        					},
+        					clearActive() {
+        						const data = this.load();
+        						data.activeInterviewId = null;
+        						this.saveSync(this._page);
+        					},
+        					createInterview(name: string, role: string, company: string, context: string, email?: string) {
+        						const data = this.load();
+        						const now = new Date().toISOString();
+        						const iv = {
+        							interviewId: this.newId(),
+        							status: "draft",
+        							createdAt: now,
+        							updatedAt: now,
+        							intervieweeName: (name || "").trim() || "Anonyme",
+        							intervieweeRole: role || "",
+        							intervieweeCompany: company || "",
+        							intervieweeEmail: email || "",
+        							context: context || "",
+        							entries: [] as any[]
+        						};
+        						data.interviews.unshift(iv);
+        						data.activeInterviewId = iv.interviewId;
+        						this.saveSync(this._page);
+        						return iv;
+        					},
+        					updateActiveMeta(name: string, role: string, company: string, context: string, email?: string) {
+        						const iv = this.getActiveInterview();
+        						if (!iv) { return; }
+        						const data = this.load();
+        						const idx = data.interviews.findIndex((i: any) => i.interviewId === iv.interviewId);
+        						if (idx < 0) { return; }
+        						data.interviews[idx].intervieweeName = (name || "").trim() || "Anonyme";
+        						data.interviews[idx].intervieweeRole = role || "";
+        						data.interviews[idx].intervieweeCompany = company || "";
+        						data.interviews[idx].intervieweeEmail = email || "";
+        						data.interviews[idx].context = context || "";
+        						data.interviews[idx].updatedAt = new Date().toISOString();
+        						this.saveSync(this._page);
+        					},
+        					setActiveEntries(entries: any[]) {
+        						const iv = this.getActiveInterview();
+        						if (!iv) { return; }
+        						const data = this.load();
+        						const idx = data.interviews.findIndex((i: any) => i.interviewId === iv.interviewId);
+        						if (idx < 0) { return; }
+        						data.interviews[idx].entries = (entries || []).slice();
+        						data.interviews[idx].updatedAt = new Date().toISOString();
+        						this.saveSync(this._page);
+        					},
+        					appendEntryToActive(entry: any) {
+        						const iv = this.getActiveInterview();
+        						if (!iv) { return; }
+        						const data = this.load();
+        						const idx = data.interviews.findIndex((i: any) => i.interviewId === iv.interviewId);
+        						if (idx < 0) { return; }
+        						if (!data.interviews[idx].entries) { data.interviews[idx].entries = []; }
+        						data.interviews[idx].entries.push(entry);
+        						data.interviews[idx].updatedAt = new Date().toISOString();
+        						data.interviews[idx].status = "draft";
+        						this.saveSync(this._page);
+        					},
+        					saveActiveInterview() {
+        						const iv = this.getActiveInterview();
+        						if (!iv) { return null; }
+        						const data = this.load();
+        						const idx = data.interviews.findIndex((i: any) => i.interviewId === iv.interviewId);
+        						if (idx < 0) { return null; }
+        						data.interviews[idx].status = "saved";
+        						data.interviews[idx].updatedAt = new Date().toISOString();
+        						data.activeInterviewId = null;
+        						this.saveSync(this._page);
+        						return data.interviews[idx];
+        					},
+        					resumeInterview(homeItem: any) {
+        						if (!homeItem || !homeItem.id) { return null; }
+        						this.setActive(homeItem.id);
+        						return this.getActiveInterview();
+        					},
+        					buildSyncPayload(iv: any) {
+        						const photos = (iv.entries || []).filter((e: any) => e.type === "photo");
+        						return {
+        							payload: {
+        								intervieweeName: iv.intervieweeName,
+        								intervieweeRole: iv.intervieweeRole,
+        								intervieweeCompany: iv.intervieweeCompany,
+        								intervieweeEmail: iv.intervieweeEmail,
+        								context: iv.context,
+        								entries: iv.entries || []
+        							},
+        							photos: photos.map((p: any, i: number) => ({
+        								photoId: p.id || ("p-" + i),
+        								order: i,
+        								dataUrl: p.extra || ""
+        							}))
+        						};
+        					},
+        					async syncInterview(page: any, interviewId: string): Promise<boolean> {
+        						const iv = this.getInterview(interviewId);
+        						if (!iv) { return false; }
+        						const data = this.load();
+        						const sync = this.buildSyncPayload(iv);
+        						iv.status = "syncing";
+        						const idx = data.interviews.findIndex((i: any) => i.interviewId === interviewId);
+        						if (idx >= 0) { data.interviews[idx] = iv; await this.persistInterview(page, iv); }
+        						try {
+        							await page.c8o.callJson("VoxUrssafV2.FS_ExportInterviewToSql", {
+        								docid: this.interviewDocId(iv.interviewId),
+        								interview_id: iv.interviewId,
+        								event_id: data.eventId,
+        								status: "synced",
+        								created_at: iv.createdAt,
+        								device_id: data.deviceId,
+        								participant_label: iv.intervieweeName || "",
+        								zone: iv.context || "",
+        								answers_json: JSON.stringify(sync.payload),
+        								photos_json: JSON.stringify(sync.photos.map((p: any) => ({ photoId: p.photoId, order: p.order })))
+        							});
+        							for (let i = 0; i < sync.photos.length; i++) {
+        								const p = sync.photos[i];
+        								let b64 = p.dataUrl || "";
+        								const b64idx = b64.indexOf("base64,");
+        								if (b64idx >= 0) { b64 = b64.substring(b64idx + 7); }
+        								await page.c8o.callJson("VoxUrssafV2.Interview_UploadPhoto", {
+        									photo_id: p.photoId,
+        									interview_id: iv.interviewId,
+        									sort_order: String(i),
+        									mime_type: "image/jpeg",
+        									content_base64: b64
+        								});
+        							}
+        							iv.status = "synced";
+        							iv.syncedAt = new Date().toISOString();
+        							iv.syncError = null;
+        							const d2 = this.load();
+        							const ix = d2.interviews.findIndex((x: any) => x.interviewId === interviewId);
+        							if (ix >= 0) { d2.interviews[ix] = iv; await this.persistInterview(page, iv); }
+        							return true;
+        						} catch (e) {
+        							iv.status = "error";
+        							iv.syncError = (e && e.message) ? e.message : String(e);
+        							const d2 = this.load();
+        							const ix = d2.interviews.findIndex((x: any) => x.interviewId === interviewId);
+        							if (ix >= 0) { d2.interviews[ix] = iv; await this.persistInterview(page, iv); }
+        							return false;
+        						}
+        					},
+        					async syncAllPending(page: any): Promise<number> {
+        						try { await this.fsPush(page); } catch (e) {
+        							page.c8o.log.warn("[VoxUrssafV2] push avant export", e);
+        						}
+        						let n = 0;
+        						for (const iv of (this.load().interviews || [])) {
+        							if (iv.status === "saved" || iv.status === "error") {
+        								if (await this.syncInterview(page, iv.interviewId)) { n++; }
+        							}
+        						}
+        						return n;
+        					}
+        				};
+        			}
+        			return app._interviewStore;
+        		}
+        	public startSpeechListening(page: any): Promise<void> {
+        		const locale = (this.global && this.global.speechLocale) ? this.global.speechLocale : "fr-FR";
+        		return new Promise((resolve, reject) => {
+        			const w = typeof window !== "undefined" ? (window as any) : null;
+        			const isCordova = !!(w && w.cordova && w.cordova.platformId && w.cordova.platformId !== "browser");
+        			const hasWebSpeech = !!(w && ("webkitSpeechRecognition" in w || "SpeechRecognition" in w));
+        
+        			const startWebSpeech = () => {
+        				if (!w || !hasWebSpeech) { reject("Speech recognition unavailable"); return; }
+        				const Ctor = w.SpeechRecognition || w.webkitSpeechRecognition;
+        				try {
+        					if (page.speechWebRecognition) {
+        						try { page.speechWebRecognition.stop(); } catch (e) {}
+        						try { page.speechWebRecognition.abort && page.speechWebRecognition.abort(); } catch (e) {}
+        						page.speechWebRecognition = null;
+        					}
+        					page.speechWebRecognition = new Ctor();
+        					page.speechWebRecognition.lang = locale;
+        					page.speechWebRecognition.continuous = true;
+        					page.speechWebRecognition.interimResults = true;
+        					page.speechWebRecognition.onresult = (ev: any) => {
+        						let finalTranscript = "";
+        						let interimTranscript = "";
+        						for (let i = 0; i < ev.results.length; ++i) {
+        							const t = ev.results[i][0].transcript;
+        							if (ev.results[i].isFinal) {
+        								finalTranscript += t;
+        							} else {
+        								interimTranscript += t;
+        							}
+        						}
+        						if (finalTranscript || interimTranscript) {
+        							page.events.publish("speechReceived", { final: finalTranscript, interim: interimTranscript, mode: "snapshot" });
+        						}
+        					};
+        					page.speechWebRecognition.onerror = (ev: any) => {
+        						try { page.speechWebRecognition.stop(); } catch (e) {}
+        						page.speechWebRecognition = null;
+        						reject(ev && ev.error ? ev.error : ev);
+        					};
+        					page.speechWebRecognition.onstart = () => resolve();
+        					page.speechWebRecognition.start();
+        				} catch (e) {
+        					reject(e);
+        				}
+        			};
+        
+        			if (isCordova) {
+        				let stt: any = null;
+        				try { stt = page.getInstance(SpeechRecognition); } catch (e) { stt = null; }
+        				if (!stt || typeof stt.startListening !== "function") {
+        					startWebSpeech();
+        					return;
+        				}
+        				stt.isRecognitionAvailable().then((available: boolean) => {
+        					if (!available) { reject("Speech recognition not available"); return; }
+        
+        					const doStart = () => {
+        						const options = { locale, language: locale, matches: 5, showPopup: true, showPartial: true };
+        						page.speechCordovaListening = true;
+        						page.speechCordovaSub = stt.startListening(options).subscribe(
+        							(matches: string[]) => {
+        								const text = Array.isArray(matches) ? matches.join(" ") : String(matches);
+        								page.events.publish("speechReceived", text);
+        							},
+        							() => {}
+        						);
+        						resolve();
+        					};
+        
+        					stt.hasPermission().then(doStart).catch(() => {
+        						if (typeof stt.requestPermission === "function") {
+        							stt.requestPermission().then(doStart).catch(reject);
+        						} else {
+        							reject("Speech recognition permission missing");
+        						}
+        					});
+        				}).catch(reject);
+        			} else {
+        				startWebSpeech();
+        			}
+        		});
+        	}
+        
+        	public stopSpeechListening(page: any): void {
+        		const w = typeof window !== "undefined" ? (window as any) : null;
+        		const isCordova = !!(w && w.cordova && w.cordova.platformId && w.cordova.platformId !== "browser");
+        		if (isCordova) {
+        			page.speechCordovaListening = false;
+        			if (page.speechCordovaSub) { page.speechCordovaSub.unsubscribe(); page.speechCordovaSub = null; }
+        			try { page.getInstance(SpeechRecognition).stopListening(); } catch (e) {}
+        		} else if (page.speechWebRecognition) {
+        			try { page.speechWebRecognition.stop(); } catch (e) {}
+        			try { page.speechWebRecognition.abort && page.speechWebRecognition.abort(); } catch (e) {}
+        			page.speechWebRecognition = null;
+        		}
+        	}
+        
+        	public countTotalNotes(): number {
+        		const store = this.global.interviewStore;
+        		return store ? store.countTotalNotes() : 0;
+        	}
         	/*End_c8o_AppFunction*/
         '
 tplProjectName: mobilebuilder_tpl_8_4_0_ngx
 ↓Menu [ngx.components.UIDynamicMenu-1779283399740]: 🗏 mobileMenus/Menu.yaml
+↓BottomNavPill [ngx.components.UISharedRegularComponent-1779290000001]: 🗏 mobileSharedComponents/BottomNavPill.yaml
 ↓Page [ngx.components.PageComponent-1779283399741]: 🗏 mobilePages/Page.yaml
+↓InterviewSetup [ngx.components.PageComponent-1779290000002]: 🗏 mobilePages/InterviewSetup.yaml
+↓InterviewActive [ngx.components.PageComponent-1779290000003]: 🗏 mobilePages/InterviewActive.yaml
+↓InterviewAll [ngx.components.PageComponent-1779290000004]: 🗏 mobilePages/InterviewAll.yaml
+↓InterviewQuestions [ngx.components.PageComponent-1779290000005]: 🗏 mobilePages/InterviewQuestions.yaml
+↓InterviewProfile [ngx.components.PageComponent-1779290000006]: 🗏 mobilePages/InterviewProfile.yaml
 ↓Style [ngx.components.UIStyle-1779283399742]: 
   comment: You can add some global application styles here
   styleContent: 
@@ -71,6 +657,599 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
           [hidden] {
             display: none !important;
           }
+          
+          /* === VoxUrssaf React UI — responsive === */
+          /* Paliers : mobile <640 pleine largeur | ≥640 colonne centrée unique (tablette + PC) */
+          ion-content.vu-page {
+            --background: #f8f9fa;
+            --vu-shell-max: 1200px;
+            --vu-safe-bottom: env(safe-area-inset-bottom, 0px);
+            --vu-bottom-nav-h: 72px;
+            --vu-capture-pill-h: 56px;
+            --vu-capture-panel-bottom: calc(var(--vu-capture-pill-h) + 20px + var(--vu-safe-bottom));
+            --vu-scroll-pad: calc(var(--vu-bottom-nav-h) + 32px + var(--vu-safe-bottom));
+            --vu-scroll-pad-active: calc(220px + var(--vu-capture-pill-h) + var(--vu-safe-bottom));
+            --vu-content-col-max: 720px;
+            --padding-start: 0;
+            --padding-end: 0;
+          }
+          .vu-content-col {
+            width: 100%;
+            max-width: var(--vu-content-col-max);
+            margin-left: auto;
+            margin-right: auto;
+            box-sizing: border-box;
+          }
+          .vu-app-shell {
+            width: 100%;
+            max-width: var(--vu-shell-max);
+            margin-left: auto;
+            margin-right: auto;
+            min-height: 100%;
+            font-family: system-ui, -apple-system, sans-serif;
+            padding: 0 clamp(16px, 3vw, 40px);
+            box-sizing: border-box;
+          }
+          .vu-flex-between {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 8px;
+          }
+          .vu-flex-between-center {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+          }
+          .vu-flex-between-end {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 8px;
+          }
+          .vu-flex-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+          }
+          .vu-flex-row-start {
+            display: flex;
+            gap: 8px;
+            align-items: flex-start;
+          }
+          .vu-input-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+          }
+          .vu-input-row ion-input { flex: 1; min-width: 0; }
+          .vu-entry-actions {
+            float: right;
+            margin-left: 6px;
+            margin-top: -2px;
+            display: flex;
+            gap: 2px;
+            align-items: center;
+          }
+          .vu-edit-row { margin-top: 12px; }
+          .vu-mb-16 { margin-bottom: 16px; }
+          .vu-mt-16 { margin-top: 16px; }
+          .vu-section-head-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 8px;
+            margin-bottom: 16px;
+          }
+          .vu-role-line {
+            font-size: 14px;
+            color: #64748b;
+            margin: 4px 0 0;
+          }
+          .vu-select-question {
+            width: 100%;
+            margin-top: 12px;
+            background: #f8f9fa;
+            border-radius: 16px;
+          }
+          .vu-empty-feed {
+            text-align: center;
+            color: #94a3b8;
+            padding: 48px 24px;
+          }
+          .vu-entry-time {
+            float: right;
+            font-size: 12px;
+            color: #94a3b8;
+          }
+          .vu-entry-content {
+            font-size: 14px;
+            color: #1e293b;
+            margin-top: 12px;
+            line-height: 1.5;
+            cursor: text;
+          }
+          .vu-entry-btn {
+            float: right;
+            margin-top: -2px;
+            --padding-start: 0;
+            --padding-end: 0;
+          }
+          .vu-entry-btn--edit { margin-left: 6px; }
+          .vu-entry-btn--delete { margin-left: 2px; }
+          .vu-capture-input {
+            flex: 1;
+            background: #f8f9fa;
+            border-radius: 16px;
+            --padding-start: 16px;
+          }
+          .vu-question-text {
+            flex: 1;
+            font-size: 14px;
+            color: #334155;
+            margin: 0;
+          }
+          .vu-page-header--elevated {
+            background: #fff;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+          }
+          .vu-list-count {
+            font-size: 12px;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 16px;
+          }
+          .vu-card-body { padding-left: 12px; }
+          .vu-empty-inline {
+            text-align: center;
+            color: #94a3b8;
+            padding: 40px 0;
+          }
+          .vu-avatar-center {
+            text-align: center;
+            margin-bottom: 24px;
+          }
+          .vu-avatar--lg {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 16px;
+          }
+          .vu-avatar--xl {
+            width: 96px;
+            height: 96px;
+            margin: 0 auto 16px;
+            background: rgba(0,80,170,0.08);
+          }
+          .vu-bottom-pill-wrap {
+            position: fixed;
+            bottom: calc(16px + var(--vu-safe-bottom));
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(90%, 420px);
+            max-width: calc(100vw - 32px);
+            z-index: 60;
+            pointer-events: none;
+            box-sizing: border-box;
+          }
+          .vu-bottom-pill {
+            pointer-events: auto;
+            background: #1c1c1e;
+            border-radius: 999px;
+            padding: 8px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-height: var(--vu-capture-pill-h);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+          }
+          .vu-home-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 40px 24px 16px;
+          }
+          .vu-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #fff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+          }
+          .vu-avatar ion-icon { font-size: 24px; color: #94a3b8; }
+          .vu-greeting-sub { font-size: 12px; color: #64748b; margin: 0; font-weight: 500; }
+          .vu-greeting-title { font-size: 18px; font-weight: 700; color: #1e293b; margin: 0; }
+          .vu-scroll-main {
+            padding: 0 0 var(--vu-scroll-pad);
+            box-sizing: border-box;
+          }
+          .vu-home-body {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+          }
+          .vu-section-recent { display: flex; flex-direction: column; gap: 16px; }
+          .vu-card-list { display: flex; flex-direction: column; gap: 16px; }
+          .vu-card-list .vu-card { margin-bottom: 0; }
+          .vu-card-list .vu-empty-card { grid-column: 1 / -1; }
+          .vu-hero-card {
+            background: #0050AA;
+            border-radius: 32px 12px 12px 32px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(0,80,170,0.25);
+            margin-bottom: 24px;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+          }
+          .vu-hero-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: rgba(255,255,255,0.2);
+            color: #fff;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-radius: 999px;
+            margin-bottom: 8px;
+          }
+          .vu-hero-title { color: #fff; font-size: 24px; font-weight: 700; line-height: 1.2; margin: 0; }
+          .vu-hero-plus {
+            width: 40px; height: 40px; border-radius: 50%;
+            background: #fff; color: #0050AA;
+            display: flex; align-items: center; justify-content: center;
+          }
+          .vu-section-title { font-size: 18px; font-weight: 700; color: #1e293b; margin: 0 0 16px; }
+          .vu-link-action { font-size: 12px; font-weight: 700; color: #0050AA; cursor: pointer; }
+          .vu-card {
+            background: #fff;
+            border-radius: 24px;
+            padding: 20px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.04);
+            border: 1px solid #f1f5f9;
+            margin-bottom: 16px;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+          }
+          .vu-card-accent { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #0050AA; opacity: 0.8; }
+          .vu-card-date { font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
+          .vu-card-name { font-size: 18px; font-weight: 700; color: #1e293b; margin: 4px 0 0; }
+          .vu-card-meta { font-size: 14px; color: #64748b; margin: 4px 0 0; }
+          .vu-card-notes {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-size: 12px; color: #64748b; background: #f8fafc;
+            padding: 6px 12px; border-radius: 8px; margin-top: 12px;
+          }
+          .vu-empty-card {
+            text-align: center;
+            padding: 32px 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+          }
+          .vu-empty-card > * { display: block; width: 100%; }
+          .vu-kpi-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 8px; }
+          .vu-form-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+          }
+          .vu-form-grid > * { min-width: 0; }
+          .vu-active-shell { position: relative; }
+          .vu-active-main {
+            min-width: 0;
+            padding-bottom: var(--vu-scroll-pad-active);
+            box-sizing: border-box;
+          }
+          .vu-kpi {
+            background: #fff; border-radius: 24px; padding: 20px;
+            text-align: center; box-shadow: 0 8px 30px rgba(0,0,0,0.04);
+            border: 1px solid #f1f5f9;
+          }
+          .vu-kpi-icon {
+            width: 40px; height: 40px; border-radius: 50%;
+            background: rgba(0,80,170,0.08);
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 8px;
+          }
+          .vu-kpi-icon ion-icon { color: #0050AA; font-size: 20px; }
+          .vu-kpi-value { font-size: 28px; font-weight: 700; color: #1e293b; }
+          .vu-kpi-label { font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px; }
+          .vu-page-header {
+            display: flex; align-items: center; gap: 16px;
+            padding: 40px 24px 16px;
+          }
+          .vu-back-btn {
+            width: 40px; height: 40px; border-radius: 50%;
+            background: #fff; border: none;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            color: #475569;
+          }
+          .vu-form-card {
+            background: #fff; border-radius: 32px; padding: 24px;
+            margin: 0 0 24px; box-shadow: 0 8px 30px rgba(0,0,0,0.04);
+            border: 1px solid #f1f5f9;
+          }
+          .vu-field-label {
+            font-size: 12px; font-weight: 700; color: #64748b;
+            text-transform: uppercase; letter-spacing: 0.05em;
+            margin: 0 0 6px 4px;
+          }
+          .vu-field {
+            --background: #f8f9fa;
+            --padding-start: 16px;
+            --padding-end: 16px;
+            border-radius: 16px;
+            margin-bottom: 16px;
+            border: 1px solid #f1f5f9;
+          }
+          .vu-btn-primary {
+            --background: #0050AA;
+            --border-radius: 16px;
+            font-weight: 700;
+            margin-top: 16px;
+          }
+          .vu-active-header {
+            background: #fff;
+            padding: 40px 24px 16px;
+            border-radius: 0 0 32px 32px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+          }
+          .vu-badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+          .vu-badge-pill {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-size: 12px; color: #94a3b8; background: #f8fafc;
+            padding: 4px 8px; border-radius: 6px;
+          }
+          .vu-entry {
+            background: #fff; border-radius: 24px; padding: 20px;
+            margin-bottom: 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.03);
+            border: 1px solid #f8fafc;
+          }
+          .vu-entry-photo-wrap {
+            margin-top: 12px;
+          }
+          .vu-entry-photo {
+            width: 100%;
+            height: 192px;
+            object-fit: cover;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            display: block;
+          }
+          .vu-entry-photo::part(image) {
+            object-fit: cover;
+          }
+          .vu-entry-badge {
+            font-size: 10px; font-weight: 700; text-transform: uppercase;
+            padding: 4px 10px; border-radius: 6px;
+            background: rgba(0,80,170,0.08); color: #0050AA;
+          }
+          .vu-capture-panel {
+            position: fixed;
+            bottom: var(--vu-capture-panel-bottom);
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(calc(100vw - 32px), 520px);
+            max-width: 100%;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(12px);
+            border-radius: 24px;
+            padding: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+            border: 1px solid #fff;
+            z-index: 40;
+            box-sizing: border-box;
+          }
+          .vu-capture-pill {
+            position: fixed;
+            bottom: calc(16px + var(--vu-safe-bottom));
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(90%, 420px);
+            max-width: calc(100vw - 32px);
+            background: #1c1c1e;
+            border-radius: 999px;
+            padding: 8px;
+            display: flex;
+            gap: 4px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            z-index: 50;
+            box-sizing: border-box;
+          }
+          .vu-capture-tab {
+            flex: 1;
+            border: none;
+            background: transparent;
+            color: #94a3b8;
+            padding: 12px;
+            min-height: 44px;
+            border-radius: 999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          .vu-capture-tab--active { background: #0050AA; color: #fff; }
+          .vu-capture-tab ion-icon { font-size: 20px; }
+          .vu-mic-error {
+            width: 100%;
+            background: #fff1f2;
+            color: #e11d48;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            text-align: center;
+            font-weight: 700;
+            margin-bottom: 12px;
+          }
+          .vu-recording-hint {
+            width: 100%;
+            text-align: center;
+            margin-bottom: 12px;
+          }
+          .vu-recording-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #e11d48;
+            background: #fff1f2;
+            padding: 6px 12px;
+            border-radius: 999px;
+          }
+          .vu-recording-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #e11d48;
+          }
+          .vu-audio-preview {
+            font-size: 14px;
+            color: #334155;
+            font-style: italic;
+            min-height: 40px;
+            line-height: 1.4;
+            margin: 8px 0 0;
+          }
+          .vu-audio-actions { display: flex; gap: 8px; width: 100%; }
+          .vu-audio-actions ion-button { flex: 1; margin: 0; }
+          .vu-audio-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 8px 0;
+            gap: 12px;
+            width: 100%;
+          }
+          .vu-modal-overlay {
+            position: fixed; inset: 0; background: rgba(15,23,42,0.4);
+            backdrop-filter: blur(4px); z-index: 100;
+            display: flex; align-items: center; justify-content: center;
+            padding: 24px;
+          }
+          .vu-modal {
+            background: #fff; border-radius: 32px; padding: 32px;
+            max-width: 360px; width: 100%; text-align: center;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+          }
+          .vu-search-wrap {
+            padding: 16px 0; background: #fff;
+            border-radius: 0 0 24px 24px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+            margin: 0 0 16px;
+          }
+          .vu-searchbar {
+            --background: #f8f9fa;
+            --border-radius: 12px;
+            padding: 0;
+          }
+          .vu-questions-list { display: flex; flex-direction: column; gap: 12px; }
+          .vu-questions-list > div {
+            background: #fff;
+            border-radius: 24px;
+            padding: 16px 20px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.04);
+            border: 1px solid #f1f5f9;
+            box-sizing: border-box;
+          }
+          
+          /* --- Colonne centrée unique (≥640px : tablette + ordinateur) --- */
+          @media (min-width: 640px) {
+            ion-content.vu-page::part(scroll) {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+            }
+            .vu-home-header, .vu-page-header { padding-top: 32px; }
+            .vu-hero-title { font-size: 28px; }
+            .vu-greeting-title { font-size: 20px; }
+            .vu-section-title { font-size: 20px; }
+            .vu-form-grid { grid-template-columns: repeat(2, 1fr); }
+            .vu-form-card {
+              max-width: 100%;
+              margin-left: 0;
+              margin-right: 0;
+            }
+            .vu-app-shell {
+              display: flex;
+              flex-direction: column;
+              align-items: stretch;
+              width: 100%;
+              max-width: min(var(--vu-content-col-max), calc(100vw - 48px));
+              margin-left: auto;
+              margin-right: auto;
+              padding-left: clamp(16px, 3vw, 24px);
+              padding-right: clamp(16px, 3vw, 24px);
+            }
+            .vu-app-shell > * {
+              width: 100%;
+              max-width: 100%;
+              margin-left: auto;
+              margin-right: auto;
+              box-sizing: border-box;
+            }
+            .vu-home-body {
+              display: flex;
+              flex-direction: column;
+              gap: 28px;
+            }
+            .vu-home-body .vu-hero-card {
+              margin-bottom: 0;
+              min-height: 0;
+            }
+            .vu-card-list,
+            .vu-card-list--all {
+              display: grid;
+              grid-template-columns: 1fr;
+              gap: 16px;
+            }
+            .vu-home-body .vu-kpi-grid {
+              grid-template-columns: repeat(2, 1fr);
+            }
+            .vu-kpi-grid {
+              grid-template-columns: repeat(2, 1fr);
+            }
+            .vu-questions-list {
+              display: flex;
+              flex-direction: column;
+              gap: 12px;
+            }
+            .vu-active-shell .vu-active-main {
+              padding-right: 16px !important;
+              padding-left: 16px;
+              padding-bottom: var(--vu-scroll-pad-active) !important;
+            }
+            .vu-active-shell .vu-capture-panel {
+              left: 50%;
+              right: auto;
+              transform: translateX(-50%);
+              width: min(calc(100vw - 48px), var(--vu-content-col-max));
+            }
+            .vu-active-shell .vu-capture-pill {
+              left: 50%;
+              right: auto;
+              transform: translateX(-50%);
+              width: min(90%, 520px);
+            }
+            .vu-bottom-pill-wrap {
+              width: min(90%, 520px);
+            }
+            .vu-scroll-main {
+              padding-bottom: calc(48px + var(--vu-safe-bottom));
+            }
+          }
+          /* === end VoxUrssaf React UI === */
           
           ion-menu ion-content {
             --background: var(--ion-item-background, var(--ion-background-color, #fff));
@@ -225,13 +1404,13 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
       - com.twinsoft.convertigo.beans.common.FormatedContent: 
         →: |
           ':root, :root.force-light {
-            /** primary **/
-            --ion-color-primary: #2563eb;
-            --ion-color-primary-rgb: 37,99,235;
+            /** primary — URSSAF #0050AA **/
+            --ion-color-primary: #0050AA;
+            --ion-color-primary-rgb: 0,80,170;
             --ion-color-primary-contrast: #ffffff;
             --ion-color-primary-contrast-rgb: 255,255,255;
-            --ion-color-primary-shade: #1d4ed8;
-            --ion-color-primary-tint: #3b82f6;
+            --ion-color-primary-shade: #004696;
+            --ion-color-primary-tint: #1a62b3;
           
             /** secondary **/
             --ion-color-secondary: #0ea5e9;
@@ -1178,7 +2357,14 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
           }
           
           ion-action-sheet .action-sheet-button.action-sheet-selected {
-            background: var(--button-background-selected);
+            background: color-mix(in srgb, var(--tw-primary) 14%, #ffffff 86%);
+            color: var(--tw-primary) !important;
+            font-weight: 700;
+          }
+          
+          ion-action-sheet .action-sheet-button.action-sheet-selected .action-sheet-button-inner,
+          ion-action-sheet .action-sheet-button.action-sheet-selected .action-sheet-button-inner * {
+            color: var(--tw-primary) !important;
           }
           
           ion-action-sheet .action-sheet-button:last-child {
@@ -1236,6 +2422,16 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
               color: #f8fafc !important;
             }
             
+            :root:not(.force-light) ion-action-sheet .action-sheet-button.action-sheet-selected {
+              background: #1e40af;
+              color: #f8fafc !important;
+            }
+            
+            :root:not(.force-light) ion-action-sheet .action-sheet-button.action-sheet-selected .action-sheet-button-inner,
+            :root:not(.force-light) ion-action-sheet .action-sheet-button.action-sheet-selected .action-sheet-button-inner * {
+              color: #f8fafc !important;
+            }
+            
             :root:not(.force-light) ion-action-sheet .action-sheet-sub-title,
             :root:not(.force-light) ion-action-sheet .action-sheet-icon {
               color: #cbd5e1;
@@ -1273,6 +2469,16 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
           }
           
           :root.force-dark ion-action-sheet .action-sheet-button:not(.action-sheet-cancel):not(.action-sheet-destructive) {
+            color: #f8fafc !important;
+          }
+          
+          :root.force-dark ion-action-sheet .action-sheet-button.action-sheet-selected {
+            background: #1e40af;
+            color: #f8fafc !important;
+          }
+          
+          :root.force-dark ion-action-sheet .action-sheet-button.action-sheet-selected .action-sheet-button-inner,
+          :root.force-dark ion-action-sheet .action-sheet-button.action-sheet-selected .action-sheet-button-inner * {
             color: #f8fafc !important;
           }
           

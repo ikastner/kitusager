@@ -1,0 +1,20 @@
+anonymousReplication: allow
+comment: |
+  'Dev : anonymousReplication allow + secureDatabase false (sinon _bulk_docs / post refusés en Anonymous).
+  Prod : secureDatabase true, anonymousReplication deny, auth Convertigo obligatoire.'
+databaseName: voxurssafv2_fullsync
+↓GetDocument [transactions.couchdb.GetDocumentTransaction]: 
+  accessibility: Public
+↓GetServerInfo [transactions.couchdb.GetServerInfoTransaction]: 
+  ↑default: true
+  accessibility: Public
+↓GetView [transactions.couchdb.GetViewTransaction]: 
+  accessibility: Public
+↓PostBulkDocuments [transactions.couchdb.PostBulkDocumentsTransaction]: 
+  accessibility: Public
+  fullSyncAclPolicy: noOp
+  policy: override
+↓PostDocument [transactions.couchdb.PostDocumentTransaction]: 
+  accessibility: Public
+  fullSyncAclPolicy: noOp
+  policy: override
