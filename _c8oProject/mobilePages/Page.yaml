@@ -14,25 +14,42 @@ scriptContent:
         /*Begin_c8o_PageConstructor*/
         		/*End_c8o_PageConstructor*/
         /*Begin_c8o_PageFunction*/
-        	public getStore(): any {
-        		return this.global.interviewStore;
+        	public async getStore(): Promise<any> {
+        		const app: any = this.router && this.router.sharedObject;
+        		if (app && app.ensureInterviewStore) {
+        			return app.ensureInterviewStore(this);
+        		}
+        		return this.global.interviewStore || null;
         	}
         	public async loadHome(): Promise<void> {
-        		const app: any = this.router.sharedObject;
-        		if (app && app.initVuApp) { app.initVuApp(); }
-        		const store = this.getStore();
-        		if (store && store.whenReady) { await store.whenReady(); }
+        		const store = await this.getStore();
         		this.local.interviews = store ? store.listForHome() : [];
         		this.local.recent = (this.local.interviews || []).slice(0, 3);
         		this.local.totalNotes = store ? store.countTotalNotes() : 0;
         	}
-        	public goInterview(iv: any): void {
-        		if (!iv || !this.getStore()) { return; }
-        		this.getStore().resumeInterview(iv);
-        		this.angularRouter.navigate(["/interview-active"]);
+        	public async goInterview(iv: any): Promise<void> {
+        		const store = await this.getStore();
+        		if (!iv || !store) { return; }
+        		const r = store.resumeInterview(iv);
+        		if (r && r.route) {
+        			this.angularRouter.navigate([r.route]);
+        		}
+        	}
+        	public cardMeta(iv: any): string {
+        		if (!iv) { return ""; }
+        		if (iv.isSalon) {
+        			const parts: string[] = [];
+        			if (iv.sheetCode) { parts.push(iv.sheetCode); }
+        			if (iv.verbatimPreview) { parts.push(iv.verbatimPreview); }
+        			return parts.join(" • ");
+        		}
+        		return (iv.intervieweeRole || "") + (iv.intervieweeRole && iv.intervieweeCompany ? " • " : "") + (iv.intervieweeCompany || "");
+        	}
+        	public hasCardMeta(iv: any): boolean {
+        		return !!(this.cardMeta(iv) || "").trim();
         	}
         	public async syncAll(): Promise<void> {
-        		const store = this.getStore();
+        		const store = await this.getStore();
         		if (!store) { return; }
         		const n = await store.syncAllPending(this);
         		const toastCtrl = this.getInstance(ToastController);
@@ -47,6 +64,24 @@ scriptContent:
         	}
         	public hasInterviewMeta(iv: any): boolean {
         		return !!(iv && (iv.intervieweeRole || iv.intervieweeCompany));
+        	}
+        	public getStoreSync(): any {
+        		const app: any = this.router && this.router.sharedObject;
+        		if (app && app.initVuApp) { app.initVuApp(); }
+        		return (app && app.getInterviewStore)
+        			? app.getInterviewStore()
+        			: ((this.global && this.global.interviewStore) || null);
+        	}
+        	public commitNewSalon(): void {
+        		const store = this.getStoreSync();
+        		if (!store) { return; }
+        		if (store._page !== this) { store._page = this; }
+        		if (store.startNewSalon) {
+        			store.startNewSalon();
+        		} else {
+        			store.clearActive();
+        			store.createSalonDraft();
+        		}
         	}
         	/*End_c8o_PageFunction*/'
 segment: home
@@ -132,8 +167,18 @@ title: Accueil
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: plain:vu-hero-card
         ↓Event [ngx.components.UIControlEvent-1779290001042]: 
-          ↓GoSetup [ngx.components.UIDynamicAction-1779290001043]: 
-            beanData: '{"ionBean":"PushPageAction","page":"plain:InterviewSetup"}'
+          ↓GoSetup [ngx.components.UICustomAction-1779290001043]: 
+            actionValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                  →: |
+                    		page.commitNewSalon();
+                    		page.ref.markForCheck();
+                    		resolve();
+                    
+            ↓PushStep1 [ngx.components.UIDynamicAction-17792900010430]: 
+              beanData: '{"ionBean":"PushPageAction","page":"plain:InterviewStep1"}'
         ↓HeroTop [ngx.components.UIElement-1779290001044]: 
           tagName: div
           ↓AttrClass [ngx.components.UIAttribute-1779290001045]: 
@@ -169,7 +214,7 @@ title: Accueil
                 textValue: 
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                    - MobileSmartSourceType: plain:Démarrer une Nouvelle Interview
+                    - MobileSmartSourceType: plain:Nouveau verbatim salon
           ↓HeroPlus [ngx.components.UIElement-1779290001053]: 
             tagName: div
             ↓AttrClass [ngx.components.UIAttribute-1779290001054]: 
@@ -339,12 +384,12 @@ title: Accueil
                   attrValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: plain:hasInterviewMeta(iv)
+                      - MobileSmartSourceType: plain:hasCardMeta(iv)
                 ↓Text [ngx.components.UIText-1779290001110]: 
                   textValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:(iv.intervieweeRole || '''') + (iv.intervieweeRole && iv.intervieweeCompany ? '' • '' : '''') + (iv.intervieweeCompany || '''')'
+                      - MobileSmartSourceType: script:cardMeta(iv)
               ↓Notes [ngx.components.UIElement-1779290001111]: 
                 tagName: span
                 ↓AttrClass [ngx.components.UIAttribute-1779290001112]: 

@@ -33,13 +33,19 @@ Modèle CouchDB : [`_c8oProject/fullsync/DATA_MODEL.md`](_c8oProject/fullsync/DA
 4. Une fois par environnement : exécuter **VoxUrssafV2.FS_InitDesign** (design `_design/vu` — voir `fullsync/design_vu.json`).
 5. Connecteur SQL **voxurssaf** (HSQLDB `hsqldb/voxurssaf_v2` en dev).
 
-## Parcours
+## Parcours salon (wizard 4 étapes — aligné Power Apps)
 
-1. **Accueil** — liste des interviews (vue `interviews_by_device`), KPI, **Synchroniser** = push FullSync + export SQL
-2. **Nouvelle fiche** — création interview (`draft`) → doc CouchDB local
-3. **Interview active** — capture texte / dictée / photo, fin de session → `saved`
-4. **Toutes les interviews** — recherche et reprise
-5. **Questions** / **Profil** — doc `config:{deviceId}`
+1. **Accueil** — liste des verbatims salon (`format: salon`), KPI, **Synchroniser** = push FullSync + export SQL (`answers_json` structuré)
+2. **Étape 1** (`/interview-step-1`) — code fiche `F-` + texte d’accueil
+3. **Étape 2** (`/interview-step-2`) — parcours Urssaf (4 toggles), satisfaction, verbatim + **dictée vocale** (Web Speech / Cordova)
+4. **Étape 3** (`/interview-step-3`) — profil (secteur, âge, ancienneté, multi-profil, mode de contact)
+5. **Étape 4** (`/interview-step-4`) — RGPD, recontact, prénom, e-mail, photo, **Valider** → `saved`
+6. **Toutes les interviews** — recherche et reprise du brouillon à l’étape `wizardStep`
+7. **Profil** enquêteur — doc `config:{deviceId}`
+
+La page **Questions** (`InterviewQuestions`) reste dans le projet pour configuration enquêteur (hors nav basse salon) ; les questions figées du salon sont dans le wizard.
+
+Ancien flux **Setup + Interview active** (feed notes) : retiré au profit du wizard.
 
 ## Backend (Convertigo)
 
@@ -57,7 +63,9 @@ Modèle CouchDB : [`_c8oProject/fullsync/DATA_MODEL.md`](_c8oProject/fullsync/DA
 
 | Scénario | Attendu |
 |----------|---------|
-| Hors ligne | Créer interview + notes + photo → rechargement app → données présentes (PouchDB) |
+| Hors ligne | Wizard 1→4 + photo → rechargement app → brouillon ou fiche `saved` dans PouchDB |
+| Dictée étape 2 | Micro autorisé → texte dans verbatim ; erreurs affichées (permission, no-speech) |
+| Reprise brouillon | Quitter à l’étape 2 → accueil → carte → reprise `/interview-step-2` |
 | En ligne | Pull au démarrage → push depuis accueil → documents visibles dans CouchDB |
 | Export | Interview `saved` → sync → statut `synced` + lignes dans HSQLDB |
 | Migration | Avec ancienne clé `voxurssaf_v2_data` → premier lancement migre puis supprime la clé |

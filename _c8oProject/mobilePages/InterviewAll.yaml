@@ -22,9 +22,12 @@ scriptContent:
         		this.local.filtered = store ? store.searchInterviews(this.searchQuery) : [];
         	}
         	public goInterview(iv: any): void {
-        		if (!iv || !this.getStore()) { return; }
-        		this.getStore().resumeInterview(iv);
-        		this.angularRouter.navigate(["/interview-active"]);
+        		const store = this.getStore();
+        		if (!iv || !store) { return; }
+        		const r = store.resumeInterview(iv);
+        		if (r && r.route) {
+        			this.angularRouter.navigate([r.route]);
+        		}
         	}
         	/*End_c8o_PageFunction*/'
 segment: interview-all

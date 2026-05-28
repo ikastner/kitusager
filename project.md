@@ -601,14 +601,6 @@ Describes the mobile application global properties
 <details><summary><span style="color:DarkGoldenRod"><i>Pages</i></span></summary><blockquote><p>
 
 
-<details><summary><b>InterviewActive</b> : Capture terrain — feed + onglets texte/audio/photo</summary><blockquote><p>
-
-
-### ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/ngx/components/images/pagecomponent_color_16x16.png?raw=true "PageComponent") InterviewActive
-
-Capture terrain — feed + onglets texte/audio/photo
-</p></blockquote></details>
-
 <details><summary><b>InterviewAll</b> : Liste complète des interviews — voxUrssafReact allInterviews</summary><blockquote><p>
 
 
@@ -633,12 +625,36 @@ Profil enquêteur — voxUrssafReact profile
 Gestion des questions — voxUrssafReact manageQuestions
 </p></blockquote></details>
 
-<details><summary><b>InterviewSetup</b> : Nouvelle fiche intervenant — voxUrssafReact setup</summary><blockquote><p>
+<details><summary><b>InterviewStep1</b> : Wizard salon — étape 1/4 code fiche</summary><blockquote><p>
 
 
-### ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/ngx/components/images/pagecomponent_color_16x16.png?raw=true "PageComponent") InterviewSetup
+### ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/ngx/components/images/pagecomponent_color_16x16.png?raw=true "PageComponent") InterviewStep1
 
-Nouvelle fiche intervenant — voxUrssafReact setup
+Wizard salon — étape 1/4 code fiche
+</p></blockquote></details>
+
+<details><summary><b>InterviewStep2</b> : Wizard salon — étape 2/4 parcours, satisfaction, verbatim + dictée</summary><blockquote><p>
+
+
+### ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/ngx/components/images/pagecomponent_color_16x16.png?raw=true "PageComponent") InterviewStep2
+
+Wizard salon — étape 2/4 parcours, satisfaction, verbatim + dictée
+</p></blockquote></details>
+
+<details><summary><b>InterviewStep3</b> : Wizard salon — étape 3/4 profil usager</summary><blockquote><p>
+
+
+### ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/ngx/components/images/pagecomponent_color_16x16.png?raw=true "PageComponent") InterviewStep3
+
+Wizard salon — étape 3/4 profil usager
+</p></blockquote></details>
+
+<details><summary><b>InterviewStep4</b> : Wizard salon — étape 4/4 consentement, photo, validation</summary><blockquote><p>
+
+
+### ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/ngx/components/images/pagecomponent_color_16x16.png?raw=true "PageComponent") InterviewStep4
+
+Wizard salon — étape 4/4 consentement, photo, validation
 </p></blockquote></details>
 
 <details><summary><b>Page</b> : Accueil — interface voxUrssafReact</summary><blockquote><p>

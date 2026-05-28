@@ -38,26 +38,6 @@ comment: Navigation pilule style voxUrssafReact (Accueil, Questions, FAB, Profil
       ↓Icon [ngx.components.UIDynamicElement-1779290000115]: 
         beanData: '{"ionBean":"Icon","IconName":"plain:home"}'
         tagName: ion-icon
-    ↓BtnQuestions [ngx.components.UIElement-1779290000120]: 
-      tagName: button
-      ↓AttrType [ngx.components.UIAttribute-1779290000121]: 
-        attrName: type
-        attrValue: 
-          - xmlizable: 
-            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-            - MobileSmartSourceType: plain:button
-      ↓AttrClass [ngx.components.UIAttribute-1779290000122]: 
-        attrName: '[class]'
-        attrValue: 
-          - xmlizable: 
-            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-            - MobileSmartSourceType: 'script:''vu-pill-btn '' + (this.current === ''questions'' ? ''vu-pill-btn--active'' : '''')'
-      ↓Event [ngx.components.UIControlEvent-1779290000123]: 
-        ↓GoQuestions [ngx.components.UIDynamicAction-1779290000124]: 
-          beanData: '{"ionBean":"RootPageAction","page":"plain:InterviewQuestions"}'
-      ↓Icon [ngx.components.UIDynamicElement-1779290000125]: 
-        beanData: '{"ionBean":"Icon","IconName":"plain:help-circle"}'
-        tagName: ion-icon
     ↓BtnFab [ngx.components.UIElement-1779290000130]: 
       tagName: button
       ↓AttrType [ngx.components.UIAttribute-1779290000131]: 
@@ -73,8 +53,8 @@ comment: Navigation pilule style voxUrssafReact (Accueil, Questions, FAB, Profil
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
             - MobileSmartSourceType: plain:vu-pill-fab
       ↓Event [ngx.components.UIControlEvent-1779290000133]: 
-        ↓GoSetup [ngx.components.UIDynamicAction-1779290000134]: 
-          beanData: '{"ionBean":"PushPageAction","page":"plain:InterviewSetup"}'
+        ↓GoStep1 [ngx.components.UIDynamicAction-1779290000134]: 
+          beanData: '{"ionBean":"PushPageAction","page":"plain:InterviewStep1"}'
       ↓Icon [ngx.components.UIDynamicElement-1779290000135]: 
         beanData: '{"ionBean":"Icon","IconName":"plain:add"}'
         tagName: ion-icon

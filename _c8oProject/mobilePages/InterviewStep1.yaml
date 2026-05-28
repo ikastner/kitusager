@@ -1,0 +1,350 @@
+comment: Wizard salon — étape 1/4 code fiche
+icon: document-text
+scriptContent: 
+  - xmlizable: 
+    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+      →: |
+        '/*Begin_c8o_PageImport*/
+        /*End_c8o_PageImport*/
+        /*Begin_c8o_PageDeclaration*/
+        	public sheetCode: string = "F-";
+        	public wizardCanProceed: boolean = false;
+        	public fieldError: string = "";
+        	/*End_c8o_PageDeclaration*/
+        /*Begin_c8o_PageConstructor*/
+        		/*End_c8o_PageConstructor*/
+        /*Begin_c8o_PageFunction*/
+        	public async ensureStore(): Promise<any> {
+        		const app: any = this.router && this.router.sharedObject;
+        		if (app && app.ensureInterviewStore) {
+        			return app.ensureInterviewStore(this);
+        		}
+        		if (app && app.initVuApp) { app.initVuApp(); }
+        		const store = (app && app.getInterviewStore)
+        			? app.getInterviewStore()
+        			: ((this.global && this.global.interviewStore) || null);
+        		if (store && store.whenReady) { await store.whenReady(); }
+        		return store;
+        	}
+        	public async showToast(msg: string): Promise<void> {
+        		const toastCtrl = this.getInstance(ToastController);
+        		const toast = await toastCtrl.create({ message: msg, duration: 2500, position: "bottom", color: "warning" });
+        		await toast.present();
+        	}
+        	public async loadStep(): Promise<void> {
+        		const store = await this.ensureStore();
+        		if (!store) { return; }
+        		let iv = store.getActiveInterview();
+        		if (!iv || iv.format !== "salon") {
+        			iv = store.createSalonDraft();
+        		}
+        		this.sheetCode = iv.sheetCode || "F-";
+        	}
+        	public normalizeSheetCode(raw: string): string {
+        		let c = (raw || "").trim().toUpperCase();
+        		if (!c || c === "F-") { return ""; }
+        		if (!c.startsWith("F-")) {
+        			c = "F-" + c.replace(/^F-?/i, "");
+        		}
+        		return c;
+        	}
+        	public getStoreSync(): any {
+        		const app: any = this.router && this.router.sharedObject;
+        		if (app && app.initVuApp) { app.initVuApp(); }
+        		return (app && app.getInterviewStore)
+        			? app.getInterviewStore()
+        			: ((this.global && this.global.interviewStore) || null);
+        	}
+        	/** Synchrone — requis pour que IfAction / PushPage (enfants) voient wizardCanProceed avant resolve(). */
+        	public commitStep1(): void {
+        		this.wizardCanProceed = false;
+        		this.fieldError = "";
+        		const store = this.getStoreSync();
+        		if (!store) {
+        			this.fieldError = "Store non disponible";
+        			return;
+        		}
+        		if (store._page !== this) { store._page = this; }
+        		let iv = store.getActiveInterview();
+        		if (!iv || iv.format !== "salon") {
+        			iv = store.createSalonDraft();
+        		}
+        		const code = this.normalizeSheetCode(this.sheetCode);
+        		if (!code || code.length < 4) {
+        			this.fieldError = "Indiquez le code fiche (ex. F-123)";
+        			return;
+        		}
+        		this.sheetCode = code;
+        		store.updateSalonDraft({ sheetCode: code, wizardStep: 2 });
+        		this.wizardCanProceed = true;
+        	}
+        	/*End_c8o_PageFunction*/'
+segment: interview-step-1
+title: Etape 1
+↓Content [ngx.components.UIDynamicElement-1779300001001]: 
+  beanData: '{"ionBean":"Content"}'
+  tagName: ion-content
+  ↓AttrClass [ngx.components.UIAttribute-1779300001002]: 
+    attrName: class
+    attrValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+        - MobileSmartSourceType: plain:vu-page
+  ↓Shell [ngx.components.UIElement-1779300001003]: 
+    tagName: div
+    ↓AttrClass [ngx.components.UIAttribute-1779300001004]: 
+      attrName: class
+      attrValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: plain:vu-app-shell
+    ↓WizardHeader [ngx.components.UIElement-1779300001010]: 
+      tagName: div
+      ↓AttrClass [ngx.components.UIAttribute-1779300001011]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:vu-wizard-header
+      ↓Sub [ngx.components.UIElement-1779300001012]: 
+        tagName: p
+        ↓AttrClass [ngx.components.UIAttribute-1779300001013]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-greeting-sub
+        ↓Text [ngx.components.UIText-1779300001014]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:Verbatims usagers
+      ↓Title [ngx.components.UIElement-1779300001015]: 
+        tagName: h1
+        ↓AttrClass [ngx.components.UIAttribute-1779300001016]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-greeting-title
+        ↓Text [ngx.components.UIText-1779300001017]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:Salon
+      ↓StepLbl [ngx.components.UIElement-1779300001018]: 
+        tagName: span
+        ↓AttrClass [ngx.components.UIAttribute-1779300001019]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-wizard-step-label
+        ↓Text [ngx.components.UIText-1779300001020]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:Etape 1/4
+      ↓Progress [ngx.components.UIElement-1779300001021]: 
+        tagName: div
+        ↓AttrClass [ngx.components.UIAttribute-1779300001022]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-wizard-progress
+        ↓Bar [ngx.components.UIElement-1779300001023]: 
+          tagName: div
+          ↓AttrClass [ngx.components.UIAttribute-1779300001024]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-wizard-progress-bar
+          ↓AttrStyle [ngx.components.UIAttribute-1779300001025]: 
+            attrName: style
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:width:25%;
+    ↓Main [ngx.components.UIElement-1779300001030]: 
+      tagName: div
+      ↓AttrClass [ngx.components.UIAttribute-1779300001031]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:vu-scroll-main
+      ↓FormCard [ngx.components.UIElement-1779300001040]: 
+        tagName: div
+        ↓AttrClass [ngx.components.UIAttribute-1779300001041]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-form-card
+        ↓H2 [ngx.components.UIElement-1779300001042]: 
+          tagName: h2
+          ↓AttrClass [ngx.components.UIAttribute-1779300001043]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-section-title
+          ↓Text [ngx.components.UIText-1779300001044]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Lier la fiche physique
+        ↓Lbl [ngx.components.UIElement-1779300001045]: 
+          tagName: label
+          ↓AttrClass [ngx.components.UIAttribute-1779300001046]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-field-label
+          ↓Text [ngx.components.UIText-1779300001047]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Code fiche
+        ↓InCode [ngx.components.UIDynamicElement-1779300001048]: 
+          beanData: |
+            '{
+             "ionBean": "Input",
+             "ControlName": "plain:sheetCode",
+             "DoubleBinding": "script:sheetCode",
+             "Placeholder": "plain:F-..."
+            }'
+          tagName: ion-input
+          ↓AttrClass [ngx.components.UIAttribute-1779300001049]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-field
+        ↓FieldErr [ngx.components.UIElement-1779300001059]: 
+          tagName: p
+          ↓AttrIf [ngx.components.UIAttribute-1779300001060]: 
+            attrName: '*ngIf'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:fieldError
+          ↓AttrClass [ngx.components.UIAttribute-1779300001061]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-field-error
+          ↓Text [ngx.components.UIText-1779300001062]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:fieldError
+        ↓Hint [ngx.components.UIElement-1779300001050]: 
+          tagName: p
+          ↓AttrClass [ngx.components.UIAttribute-1779300001051]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-hint-text
+          ↓Text [ngx.components.UIText-1779300001052]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Le code relie uniquement les données à la fiche papier. Aucune donnée personnelle n'est stockée à cette étape.
+        ↓IntroTitle [ngx.components.UIElement-1779300001053]: 
+          tagName: h3
+          ↓AttrClass [ngx.components.UIAttribute-1779300001054]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-greeting-title
+          ↓Text [ngx.components.UIText-1779300001055]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Votre expérience compte !
+        ↓Intro [ngx.components.UIElement-1779300001056]: 
+          tagName: p
+          ↓AttrClass [ngx.components.UIAttribute-1779300001057]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-hint-text
+          ↓Text [ngx.components.UIText-1779300001058]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Aujourd'hui, nous prenons le temps de vous écouter. En quelques minutes, partagez avec nous votre vécu avec l'Urssaf.
+        ↓Actions [ngx.components.UIElement-1779300001060]: 
+          tagName: div
+          ↓AttrClass [ngx.components.UIAttribute-1779300001061]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-wizard-actions
+          ↓BtnBack [ngx.components.UIDynamicElement-1779300001062]: 
+            beanData: |
+              '{
+               "ionBean": "Button",
+               "IonColor": "plain:medium",
+               "IonFill": "plain:outline"
+              }'
+            tagName: ion-button
+            ↓Event [ngx.components.UIControlEvent-1779300001063]: 
+              ↓Pop [ngx.components.UIDynamicAction-1779300001064]: 
+                beanData: '{"ionBean":"PopPageAction"}'
+            ↓Text [ngx.components.UIText-1779300001065]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:Retour
+          ↓BtnNext [ngx.components.UIDynamicElement-1779300001066]: 
+            beanData: |
+              '{
+               "ionBean": "Button",
+               "IonColor": "plain:primary",
+               "IonExpand": "plain:block"
+              }'
+            tagName: ion-button
+            ↓Event [ngx.components.UIControlEvent-1779300001067]: 
+              ↓Next [ngx.components.UICustomAction-1779300001068]: 
+                actionValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                      →: |
+                        		page.commitStep1();
+                        		page.ref.markForCheck();
+                        		if (page.fieldError) {
+                        			page.showToast(page.fieldError);
+                        		}
+                        		resolve();
+                        
+                ↓IfProceed [ngx.components.UIDynamicAction-1779300001069]: 
+                  beanData: '{"ionBean":"IfAction","condition":"script:page.wizardCanProceed"}'
+                  ↓PushStep2 [ngx.components.UIDynamicAction-1779901880470]: 
+                    beanData: '{"ionBean":"PushPageAction","page":"plain:InterviewStep2"}'
+            ↓Text [ngx.components.UIText-1779300001070]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:Etape suivante
+↓PageEvent [ngx.components.UIPageEvent-1779300001099]: 
+  ↓OnShow [ngx.components.UICustomAction-1779300001100]: 
+    actionValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+          →: |
+            		page.loadStep().then(() => page.ref.markForCheck());
+            		resolve();
+            

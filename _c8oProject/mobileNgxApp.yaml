@@ -55,24 +55,90 @@ componentScriptContent:
         				   });
         				   prompt.present();
         				});*/
+        			// Polyfill Buffer minimal pour PouchDB / SDK en dev Vite (si buffer npm absent)
+        			try {
+        				const w: any = typeof window !== "undefined" ? window : null;
+        				if (w && !w.Buffer) {
+        					w.Buffer = {
+        						from: (data: any) => data,
+        						isBuffer: () => false,
+        						alloc: (n: number) => new Uint8Array(n || 0)
+        					};
+        				}
+        			} catch (e) { /* ignore */ }
         			/*End_c8o_AppInitialization*/
         /*Begin_c8o_AppFunction*/
         	private initVuApp(): void {
         			const app: any = this;
         			const store = app.getInterviewStore();
-        			// Expose speech helpers immediately (avoid race with async store init)
         			app.global.startSpeechListening = (p: any) => app.startSpeechListening(p);
         			app.global.stopSpeechListening = (p: any) => app.stopSpeechListening(p);
-        			store._ready = store.initWithPage(app).then(() => {
-        				app.global.interviewStore = store;
+        			// Exposer le store tout de suite (comme VoxUrssaf V1) — le pull FullSync reste async
+        			app.global.interviewStore = store;
+        			if (app.router && app.router.sharedObject) {
         				app.router.sharedObject.interviewStore = store;
+        				if (app.router.sharedObject.global) {
+        					app.router.sharedObject.global.interviewStore = store;
+        				}
+        			}
+        			if (store._ready) { return; }
+        			store._ready = store.initWithPage(app).then(() => {
         				app.global.investigatorName = store.getInvestigatorName();
         				app.global.speechLocale = store.getSpeechLocale();
         			}).catch((e: any) => {
         				app.c8o.log.error("[VoxUrssafV2] init FullSync store", e);
-        				app.global.interviewStore = store;
-        				app.router.sharedObject.interviewStore = store;
         			});
+        		}
+        	
+        		public async ensureInterviewStore(page?: any): Promise<any> {
+        			this.initVuApp();
+        			const store = this.getInterviewStore();
+        			if (page && store) { store._page = page; }
+        			else if (store && !store._page) { store._page = this; }
+        			if (store && store.whenReady) { await store.whenReady(); }
+        			return store;
+        		}
+        	
+        		public wizardPageUrl(pageName: string): string {
+        			const pages = (this.routerProvider && this.routerProvider.pagesArray)
+        				? this.routerProvider.pagesArray : [];
+        			for (let i = 0; i < pages.length; i++) {
+        				if (pages[i].name === pageName) { return pages[i].url || "/"; }
+        			}
+        			const fallback: any = {
+        				"Page": "/",
+        				"InterviewStep1": "/interview-step-1",
+        				"InterviewStep2": "/interview-step-2",
+        				"InterviewStep3": "/interview-step-3",
+        				"InterviewStep4": "/interview-step-4"
+        			};
+        			return fallback[pageName] || "/";
+        		}
+        	
+        		public wizardNavigate(page: any, pageName: string): Promise<any> {
+        			const url = this.wizardPageUrl(pageName);
+        			if (page && page.angularRouter) {
+        				return page.angularRouter.navigate([url]);
+        			}
+        			const navController = page.getInstance(NavController);
+        			return navController.navigateForward(url);
+        		}
+        	
+        		public wizardBack(page: any): Promise<any> {
+        			if (page && page.angularRouter) {
+        				return page.angularRouter.navigateBack();
+        			}
+        			const navController = page.getInstance(NavController);
+        			return navController.navigateBack();
+        		}
+        	
+        		public wizardHome(page: any): Promise<any> {
+        			const url = this.wizardPageUrl("Page");
+        			if (page && page.angularRouter) {
+        				return page.angularRouter.navigate([url]);
+        			}
+        			const navController = page.getInstance(NavController);
+        			return navController.navigateRoot(url);
         		}
         	
         		public getInterviewStore(): any {
@@ -85,6 +151,7 @@ componentScriptContent:
         					_cache: null as any,
         					_ready: null as Promise<void> | null,
         					_page: null as any,
+        					_saveQueue: null as Promise<void> | null,
         	
         					init() { /* compat — init réel via initWithPage */ },
         	
@@ -158,6 +225,40 @@ componentScriptContent:
         						return page.c8o.callJsonObject("fs://" + this.FS_DB + ".post", body);
         					},
         	
+        					async fsPostSafe(page: any, doc: any): Promise<any> {
+        						try {
+        							return await this.fsPost(page, doc);
+        						} catch (e: any) {
+        							const status = e && e.status;
+        							const name = e && e.name;
+        							const msg = (e && e.message) ? e.message : String(e);
+        							const conflict = status === 409 || name === "conflict" || msg.indexOf("conflict") >= 0;
+        							if (!conflict || !doc || !doc._id) { throw e; }
+        							try {
+        								const cur = await this.fsGet(page, doc._id);
+        								if (cur && cur._rev) {
+        									const merged = Object.assign({}, cur, doc, { _rev: cur._rev });
+        									return await this.fsPost(page, merged);
+        								}
+        							} catch (e2) { /* retry */ }
+        							return await this.fsPost(page, doc);
+        						}
+        					},
+        	
+        					enqueuePersist(page: any, task: () => Promise<void>): Promise<void> {
+        						const p = page || this._page;
+        						if (!p) { return Promise.resolve(); }
+        						const run = () => task().catch((err: any) => {
+        							try { p.c8o.log.warn("[VoxUrssafV2] persist error", err); } catch (e) { /* ignore */ }
+        						});
+        						this._saveQueue = (this._saveQueue || Promise.resolve()).then(run);
+        						return this._saveQueue;
+        					},
+        	
+        					flushPersist(): Promise<void> {
+        						return this._saveQueue || Promise.resolve();
+        					},
+        	
         					async fsView(page: any, view: string, key: string): Promise<any> {
         						await page.c8o.finalizeInit();
         						return page.c8o.callJsonObject("fs://" + this.FS_DB + ".view", {
@@ -179,9 +280,30 @@ componentScriptContent:
         						});
         					},
         	
+        					emptySalonFields(): any {
+        						return {
+        							format: "salon",
+        							sheetCode: "F-",
+        							journeySteps: [] as string[],
+        							globalSatisfaction: "",
+        							verbatimText: "",
+        							sector: "",
+        							age: "",
+        							urssafSince: "",
+        							multiProfile: null as boolean | null,
+        							profileCount: "",
+        							contactMode: "",
+        							consentAccepted: false,
+        							recontactOk: false,
+        							firstName: "",
+        							photoDataUrl: "",
+        							wizardStep: 1
+        						};
+        					},
+        	
         					docToInterview(doc: any): any {
         						if (!doc) { return null; }
-        						return {
+        						const base: any = {
         							interviewId: doc.interviewId,
         							status: doc.status || "draft",
         							createdAt: doc.createdAt,
@@ -195,10 +317,31 @@ componentScriptContent:
         							context: doc.context,
         							entries: (doc.entries || []).slice()
         						};
+        						if (doc.format === "salon") {
+        							Object.assign(base, {
+        								format: "salon",
+        								sheetCode: doc.sheetCode || "",
+        								journeySteps: (doc.journeySteps || []).slice(),
+        								globalSatisfaction: doc.globalSatisfaction || "",
+        								verbatimText: doc.verbatimText || "",
+        								sector: doc.sector || "",
+        								age: doc.age || "",
+        								urssafSince: doc.urssafSince || "",
+        								multiProfile: doc.multiProfile,
+        								profileCount: doc.profileCount || "",
+        								contactMode: doc.contactMode || "",
+        								consentAccepted: !!doc.consentAccepted,
+        								recontactOk: !!doc.recontactOk,
+        								firstName: doc.firstName || "",
+        								photoDataUrl: doc.photoDataUrl || "",
+        								wizardStep: doc.wizardStep || 1
+        							});
+        						}
+        						return base;
         					},
         	
         					interviewToDoc(iv: any, deviceId: string, eventId: string): any {
-        						return {
+        						const doc: any = {
         							_id: this.interviewDocId(iv.interviewId),
         							type: "interview",
         							c8oGrp: deviceId,
@@ -217,11 +360,32 @@ componentScriptContent:
         							context: iv.context,
         							entries: iv.entries || []
         						};
+        						if (iv.format === "salon") {
+        							Object.assign(doc, {
+        								format: "salon",
+        								sheetCode: iv.sheetCode || "",
+        								journeySteps: iv.journeySteps || [],
+        								globalSatisfaction: iv.globalSatisfaction || "",
+        								verbatimText: iv.verbatimText || "",
+        								sector: iv.sector || "",
+        								age: iv.age || "",
+        								urssafSince: iv.urssafSince || "",
+        								multiProfile: iv.multiProfile,
+        								profileCount: iv.profileCount || "",
+        								contactMode: iv.contactMode || "",
+        								consentAccepted: !!iv.consentAccepted,
+        								recontactOk: !!iv.recontactOk,
+        								firstName: iv.firstName || "",
+        								photoDataUrl: iv.photoDataUrl || "",
+        								wizardStep: iv.wizardStep || 1
+        							});
+        						}
+        						return doc;
         					},
         	
         					async persistConfig(page: any): Promise<void> {
         						const c = this.ensureCache();
-        						await this.fsPost(page, {
+        						await this.fsPostSafe(page, {
         							_id: this.configDocId(c.deviceId),
         							type: "config",
         							deviceId: c.deviceId,
@@ -235,7 +399,23 @@ componentScriptContent:
         	
         					async persistInterview(page: any, iv: any): Promise<void> {
         						const c = this.ensureCache();
-        						await this.fsPost(page, this.interviewToDoc(iv, c.deviceId, c.eventId));
+        						await this.fsPostSafe(page, this.interviewToDoc(iv, c.deviceId, c.eventId));
+        					},
+        	
+        					persistActiveOnly(page?: any) {
+        						const p = page || this._page;
+        						if (!p) { return; }
+        						const iv = this.getActiveInterview();
+        						this.enqueuePersist(p, async () => {
+        							await this.persistConfig(p);
+        							if (iv) { await this.persistInterview(p, iv); }
+        						});
+        					},
+        	
+        					persistConfigOnly(page?: any) {
+        						const p = page || this._page;
+        						if (!p) { return; }
+        						this.enqueuePersist(p, async () => { await this.persistConfig(p); });
         					},
         	
         					async save(page: any): Promise<void> {
@@ -248,12 +428,14 @@ componentScriptContent:
         	
         					saveSync(page: any) {
         						const p = page || this._page;
-        						if (p) {
-        							this.persistConfig(p).then(() => {
-        								const c = this.ensureCache();
-        								(c.interviews || []).forEach((iv: any) => this.persistInterview(p, iv));
-        							}).catch(() => {});
-        						}
+        						if (!p) { return; }
+        						this.enqueuePersist(p, async () => {
+        							await this.persistConfig(p);
+        							const c = this.ensureCache();
+        							for (const iv of (c.interviews || [])) {
+        								await this.persistInterview(p, iv);
+        							}
+        						});
         					},
         	
         					async reloadCache(page: any): Promise<void> {
@@ -337,16 +519,34 @@ componentScriptContent:
         					listForHome() {
         						return (this.load().interviews || []).map((iv: any) => ({
         							id: iv.interviewId,
-        							intervieweeName: iv.intervieweeName || "Anonyme",
+        							intervieweeName: iv.format === "salon"
+        								? ((iv.firstName || iv.sheetCode || "Fiche salon").trim() || "Fiche salon")
+        								: (iv.intervieweeName || "Anonyme"),
         							intervieweeRole: iv.intervieweeRole || "",
         							intervieweeCompany: iv.intervieweeCompany || "",
-        							entryCount: (iv.entries || []).length,
+        							sheetCode: iv.sheetCode || "",
+        							verbatimPreview: (iv.verbatimText || "").substring(0, 100),
+        							globalSatisfaction: iv.globalSatisfaction || "",
+        							isSalon: iv.format === "salon",
+        							isDraft: iv.status === "draft",
+        							wizardStep: iv.wizardStep || 1,
+        							entryCount: iv.format === "salon"
+        								? (iv.verbatimText ? 1 : 0) + (iv.photoDataUrl ? 1 : 0)
+        								: ((iv.entries || []).length),
         							dateLabel: this.formatDate(iv.updatedAt || iv.createdAt),
         							status: iv.status || "saved"
         						}));
         					},
         					countTotalNotes() {
-        						return (this.load().interviews || []).reduce((acc: number, iv: any) => acc + ((iv.entries || []).length), 0);
+        						return (this.load().interviews || []).reduce((acc: number, iv: any) => {
+        							if (iv.format === "salon") {
+        								let n = 0;
+        								if ((iv.verbatimText || "").trim()) { n++; }
+        								if (iv.photoDataUrl) { n++; }
+        								return acc + n;
+        							}
+        							return acc + ((iv.entries || []).length);
+        						}, 0);
         					},
         					searchInterviews(query: string) {
         						const q = (query || "").toLowerCase().trim();
@@ -355,7 +555,9 @@ componentScriptContent:
         						return list.filter((iv: any) => {
         							const n = (iv.intervieweeName || "").toLowerCase();
         							const c = (iv.intervieweeCompany || "").toLowerCase();
-        							return n.indexOf(q) >= 0 || c.indexOf(q) >= 0;
+        							const s = (iv.sheetCode || "").toLowerCase();
+        							const v = (iv.verbatimPreview || "").toLowerCase();
+        							return n.indexOf(q) >= 0 || c.indexOf(q) >= 0 || s.indexOf(q) >= 0 || v.indexOf(q) >= 0;
         						});
         					},
         					getInterview(id: string) {
@@ -374,7 +576,34 @@ componentScriptContent:
         					clearActive() {
         						const data = this.load();
         						data.activeInterviewId = null;
-        						this.saveSync(this._page);
+        						this.persistConfigOnly(this._page);
+        					},
+        	
+        					startNewSalon() {
+        						const data = this.load();
+        						const now = new Date().toISOString();
+        						const iv = Object.assign({
+        							interviewId: this.newId(),
+        							status: "draft",
+        							createdAt: now,
+        							updatedAt: now,
+        							intervieweeName: "",
+        							intervieweeRole: "",
+        							intervieweeCompany: "",
+        							intervieweeEmail: "",
+        							context: "",
+        							entries: [] as any[]
+        						}, this.emptySalonFields());
+        						data.interviews.unshift(iv);
+        						data.activeInterviewId = iv.interviewId;
+        						const p = this._page;
+        						if (p) {
+        							this.enqueuePersist(p, async () => {
+        								await this.persistConfig(p);
+        								await this.persistInterview(p, iv);
+        							});
+        						}
+        						return iv;
         					},
         					createInterview(name: string, role: string, company: string, context: string, email?: string) {
         						const data = this.load();
@@ -395,6 +624,64 @@ componentScriptContent:
         						data.activeInterviewId = iv.interviewId;
         						this.saveSync(this._page);
         						return iv;
+        					},
+        	
+        					createSalonDraft() {
+        						const data = this.load();
+        						const now = new Date().toISOString();
+        						const iv = Object.assign({
+        							interviewId: this.newId(),
+        							status: "draft",
+        							createdAt: now,
+        							updatedAt: now,
+        							intervieweeName: "",
+        							intervieweeRole: "",
+        							intervieweeCompany: "",
+        							intervieweeEmail: "",
+        							context: "",
+        							entries: [] as any[]
+        						}, this.emptySalonFields());
+        						data.interviews.unshift(iv);
+        						data.activeInterviewId = iv.interviewId;
+        						this.persistActiveOnly(this._page);
+        						return iv;
+        					},
+        	
+        					updateSalonDraft(partial: any) {
+        						const iv = this.getActiveInterview();
+        						if (!iv || iv.format !== "salon") { return null; }
+        						const data = this.load();
+        						const idx = data.interviews.findIndex((i: any) => i.interviewId === iv.interviewId);
+        						if (idx < 0) { return null; }
+        						Object.assign(data.interviews[idx], partial || {});
+        						data.interviews[idx].updatedAt = new Date().toISOString();
+        						data.interviews[idx].status = "draft";
+        						this.persistActiveOnly(this._page);
+        						return data.interviews[idx];
+        					},
+        	
+        					getWizardRoute(step: number): string {
+        						const routes: string[] = ["", "/interview-step-1", "/interview-step-2", "/interview-step-3", "/interview-step-4"];
+        						const s = Math.max(1, Math.min(4, step || 1));
+        						return routes[s] || "/interview-step-1";
+        					},
+        	
+        					completeSalonInterview() {
+        						const iv = this.getActiveInterview();
+        						if (!iv || iv.format !== "salon") { return null; }
+        						const data = this.load();
+        						const idx = data.interviews.findIndex((i: any) => i.interviewId === iv.interviewId);
+        						if (idx < 0) { return null; }
+        						const row = data.interviews[idx];
+        						row.intervieweeName = (row.firstName || row.sheetCode || "Fiche salon").trim();
+        						row.intervieweeEmail = row.intervieweeEmail || "";
+        						row.context = row.sheetCode || "";
+        						row.wizardStep = 4;
+        						row.status = "saved";
+        						row.updatedAt = new Date().toISOString();
+        						data.activeInterviewId = null;
+        						this.persistActiveOnly(this._page);
+        						return row;
         					},
         					updateActiveMeta(name: string, role: string, company: string, context: string, email?: string) {
         						const iv = this.getActiveInterview();
@@ -447,9 +734,44 @@ componentScriptContent:
         					resumeInterview(homeItem: any) {
         						if (!homeItem || !homeItem.id) { return null; }
         						this.setActive(homeItem.id);
-        						return this.getActiveInterview();
+        						const iv = this.getActiveInterview();
+        						if (iv && iv.format === "salon" && iv.status === "draft") {
+        							return { iv: iv, route: this.getWizardRoute(iv.wizardStep || 1) };
+        						}
+        						return { iv: iv, route: "/interview-step-1" };
+        					},
+        					buildSalonSyncPayload(iv: any) {
+        						const photos: any[] = [];
+        						if (iv.photoDataUrl) {
+        							photos.push({ photoId: "salon-photo-1", order: 0, dataUrl: iv.photoDataUrl });
+        						}
+        						return {
+        							payload: {
+        								format: "salon",
+        								sheetCode: iv.sheetCode,
+        								journeySteps: iv.journeySteps || [],
+        								globalSatisfaction: iv.globalSatisfaction,
+        								verbatimText: iv.verbatimText,
+        								sector: iv.sector,
+        								age: iv.age,
+        								urssafSince: iv.urssafSince,
+        								multiProfile: iv.multiProfile,
+        								profileCount: iv.profileCount,
+        								contactMode: iv.contactMode,
+        								consentAccepted: iv.consentAccepted,
+        								recontactOk: iv.recontactOk,
+        								firstName: iv.firstName,
+        								intervieweeEmail: iv.intervieweeEmail,
+        								intervieweeName: iv.intervieweeName,
+        								context: iv.context
+        							},
+        							photos: photos
+        						};
         					},
         					buildSyncPayload(iv: any) {
+        						if (iv.format === "salon") {
+        							return this.buildSalonSyncPayload(iv);
+        						}
         						const photos = (iv.entries || []).filter((e: any) => e.type === "photo");
         						return {
         							payload: {
@@ -483,8 +805,10 @@ componentScriptContent:
         								status: "synced",
         								created_at: iv.createdAt,
         								device_id: data.deviceId,
-        								participant_label: iv.intervieweeName || "",
-        								zone: iv.context || "",
+        								participant_label: iv.format === "salon"
+        									? (iv.firstName || iv.sheetCode || iv.intervieweeName || "")
+        									: (iv.intervieweeName || ""),
+        								zone: iv.format === "salon" ? (iv.sheetCode || "") : (iv.context || ""),
         								answers_json: JSON.stringify(sync.payload),
         								photos_json: JSON.stringify(sync.photos.map((p: any) => ({ photoId: p.photoId, order: p.order })))
         							});
@@ -641,8 +965,10 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
 ↓Menu [ngx.components.UIDynamicMenu-1779283399740]: 🗏 mobileMenus/Menu.yaml
 ↓BottomNavPill [ngx.components.UISharedRegularComponent-1779290000001]: 🗏 mobileSharedComponents/BottomNavPill.yaml
 ↓Page [ngx.components.PageComponent-1779283399741]: 🗏 mobilePages/Page.yaml
-↓InterviewSetup [ngx.components.PageComponent-1779290000002]: 🗏 mobilePages/InterviewSetup.yaml
-↓InterviewActive [ngx.components.PageComponent-1779290000003]: 🗏 mobilePages/InterviewActive.yaml
+↓InterviewStep1 [ngx.components.PageComponent-1779300000001]: 🗏 mobilePages/InterviewStep1.yaml
+↓InterviewStep2 [ngx.components.PageComponent-1779300000002]: 🗏 mobilePages/InterviewStep2.yaml
+↓InterviewStep3 [ngx.components.PageComponent-1779300000003]: 🗏 mobilePages/InterviewStep3.yaml
+↓InterviewStep4 [ngx.components.PageComponent-1779300000004]: 🗏 mobilePages/InterviewStep4.yaml
 ↓InterviewAll [ngx.components.PageComponent-1779290000004]: 🗏 mobilePages/InterviewAll.yaml
 ↓InterviewQuestions [ngx.components.PageComponent-1779290000005]: 🗏 mobilePages/InterviewQuestions.yaml
 ↓InterviewProfile [ngx.components.PageComponent-1779290000006]: 🗏 mobilePages/InterviewProfile.yaml
@@ -1248,6 +1574,89 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
             .vu-scroll-main {
               padding-bottom: calc(48px + var(--vu-safe-bottom));
             }
+          }
+          .vu-wizard-header {
+            background: #15438a;
+            color: #fff;
+            padding: 24px 20px 16px;
+            border-radius: 0 0 24px 24px;
+            margin-bottom: 16px;
+          }
+          .vu-wizard-header .vu-greeting-sub { color: #7aa2d6; }
+          .vu-wizard-header .vu-greeting-title { color: #fff; font-size: 16px; }
+          .vu-wizard-step-label {
+            display: inline-block;
+            background: #ed7226;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 4px;
+            margin-bottom: 12px;
+          }
+          .vu-wizard-progress {
+            height: 6px;
+            background: rgba(255,255,255,0.25);
+            border-radius: 999px;
+            margin-top: 12px;
+            overflow: hidden;
+          }
+          .vu-wizard-progress-bar {
+            height: 100%;
+            background: #0050AA;
+            border-radius: 999px;
+            transition: width 0.2s;
+          }
+          .vu-toggle-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            background: #fff;
+            margin: 4px;
+            font-size: 13px;
+            cursor: pointer;
+          }
+          .vu-toggle-chip--on {
+            background: rgba(0,80,170,0.1);
+            border-color: #0050AA;
+            color: #0050AA;
+            font-weight: 600;
+          }
+          .vu-satisfaction-option {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            background: #fff;
+            font-size: 14px;
+            cursor: pointer;
+          }
+          .vu-satisfaction-option--on {
+            border-color: #0050AA;
+            background: rgba(0,80,170,0.08);
+            font-weight: 600;
+          }
+          .vu-wizard-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+          }
+          .vu-wizard-actions ion-button { flex: 1; margin: 0; }
+          .vu-hint-text { font-size: 13px; color: #64748b; line-height: 1.5; margin: 8px 0 16px; }
+          .vu-field-error { font-size: 13px; color: #dc2626; margin: 6px 0 0; font-weight: 500; }
+          .vu-rgpd-text { font-size: 11px; color: #64748b; line-height: 1.45; margin: 12px 0; }
+          .vu-photo-preview {
+            width: 100%;
+            max-height: 200px;
+            object-fit: cover;
+            border-radius: 16px;
+            margin-top: 12px;
           }
           /* === end VoxUrssaf React UI === */
           
