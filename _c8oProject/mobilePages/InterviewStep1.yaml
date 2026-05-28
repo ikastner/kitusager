@@ -326,8 +326,17 @@ title: Etape 1
                         		page.ref.markForCheck();
                         		if (page.fieldError) {
                         			page.showToast(page.fieldError);
+                        			resolve();
+                        		} else {
+                        			const app: any = page.router && page.router.sharedObject;
+                        			const store = app && app.getInterviewStore ? app.getInterviewStore() : null;
+                        			const done = () => resolve();
+                        			if (store && store.flushPersist) {
+                        				store.flushPersist().then(done).catch(done);
+                        			} else {
+                        				done();
+                        			}
                         		}
-                        		resolve();
                         
                 ↓IfProceed [ngx.components.UIDynamicAction-1779300001069]: 
                   beanData: '{"ionBean":"IfAction","condition":"script:page.wizardCanProceed"}'

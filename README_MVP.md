@@ -63,7 +63,7 @@ Ancien flux **Setup + Interview active** (feed notes) : retiré au profit du wiz
 
 | Scénario | Attendu |
 |----------|---------|
-| Hors ligne | Wizard 1→4 + photo → rechargement app → brouillon ou fiche `saved` dans PouchDB |
+| Hors ligne | Wizard 1→4 + photo → rechargement app → brouillon ou fiche `saved` dans PouchDB (deviceId + index interviews en localStorage si vue Couch indisponible) |
 | Dictée étape 2 | Micro autorisé → texte dans verbatim ; erreurs affichées (permission, no-speech) |
 | Reprise brouillon | Quitter à l’étape 2 → accueil → carte → reprise `/interview-step-2` |
 | En ligne | Pull au démarrage → push depuis accueil → documents visibles dans CouchDB |

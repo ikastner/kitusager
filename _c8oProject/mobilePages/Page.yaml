@@ -23,6 +23,9 @@ scriptContent:
         	}
         	public async loadHome(): Promise<void> {
         		const store = await this.getStore();
+        		if (store && store.reloadCache) {
+        			await store.reloadCache(this);
+        		}
         		this.local.interviews = store ? store.listForHome() : [];
         		this.local.recent = (this.local.interviews || []).slice(0, 3);
         		this.local.totalNotes = store ? store.countTotalNotes() : 0;

@@ -448,10 +448,21 @@ title: Etape 4
                       →: |
                         		page.commitSubmit();
                         		page.ref.markForCheck();
-                        		if (!page.validationError) {
-                        			page.showToast("Merci pour votre temps !");
+                        		if (page.validationError) {
+                        			resolve();
+                        		} else {
+                        			const app: any = page.router && page.router.sharedObject;
+                        			const store = app && app.getInterviewStore ? app.getInterviewStore() : null;
+                        			const done = () => {
+                        				page.showToast("Merci pour votre temps !");
+                        				resolve();
+                        			};
+                        			if (store && store.flushPersist) {
+                        				store.flushPersist().then(done).catch(done);
+                        			} else {
+                        				done();
+                        			}
                         		}
-                        		resolve();
                         
                 ↓IfOk [ngx.components.UIDynamicAction-1779300030171]: 
                   beanData: '{"ionBean":"IfAction","condition":"script:!page.validationError"}'

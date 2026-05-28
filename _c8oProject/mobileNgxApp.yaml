@@ -148,6 +148,8 @@ componentScriptContent:
         				app._interviewStore = {
         					FS_DB: "voxurssafv2_fullsync",
         					LEGACY_KEY: "voxurssaf_v2_data",
+        					DEVICE_LS_KEY: "voxurssaf_v2_device_id",
+        					INTERVIEWS_LS_KEY: "voxurssaf_v2_interview_ids",
         					_cache: null as any,
         					_ready: null as Promise<void> | null,
         					_page: null as any,
@@ -163,12 +165,55 @@ componentScriptContent:
         						this._page = page;
         						await page.c8o.finalizeInit();
         						await this.migrateLegacyIfNeeded(page);
+        						await this.reloadCache(page);
         						try {
         							await this.fsPull(page);
+        							await this.reloadCache(page);
         						} catch (e) {
         							page.c8o.log.warn("[VoxUrssafV2] pull initial (offline?)", e);
         						}
-        						await this.reloadCache(page);
+        					},
+        	
+        					rememberDeviceId(deviceId: string) {
+        						if (!deviceId) { return; }
+        						try { localStorage.setItem(this.DEVICE_LS_KEY, deviceId); } catch (e) { /* ignore */ }
+        					},
+        	
+        					readDeviceIdFromLocal(): string | null {
+        						try {
+        							const id = localStorage.getItem(this.DEVICE_LS_KEY);
+        							return (id && id.trim()) ? id.trim() : null;
+        						} catch (e) { return null; }
+        					},
+        	
+        					rememberInterviewId(id: string) {
+        						if (!id) { return; }
+        						try {
+        							const raw = localStorage.getItem(this.INTERVIEWS_LS_KEY);
+        							const ids: string[] = raw ? JSON.parse(raw) : [];
+        							if (ids.indexOf(id) < 0) { ids.push(id); }
+        							localStorage.setItem(this.INTERVIEWS_LS_KEY, JSON.stringify(ids));
+        						} catch (e) { /* ignore */ }
+        					},
+        	
+        					async loadInterviewsFallback(page: any, deviceId: string): Promise<any[]> {
+        						const interviews: any[] = [];
+        						let ids: string[] = [];
+        						try {
+        							const raw = localStorage.getItem(this.INTERVIEWS_LS_KEY);
+        							ids = raw ? JSON.parse(raw) : [];
+        						} catch (e) { ids = []; }
+        						for (const id of ids) {
+        							if (!id) { continue; }
+        							try {
+        								const doc = await this.fsGet(page, this.interviewDocId(id));
+        								if (doc && doc.deviceId === deviceId) {
+        									const iv = this.docToInterview(doc);
+        									if (iv) { interviews.push(iv); }
+        								}
+        							} catch (e) { /* skip */ }
+        						}
+        						return interviews;
         					},
         	
         					newId() {
@@ -400,6 +445,14 @@ componentScriptContent:
         					async persistInterview(page: any, iv: any): Promise<void> {
         						const c = this.ensureCache();
         						await this.fsPostSafe(page, this.interviewToDoc(iv, c.deviceId, c.eventId));
+        						if (iv && iv.interviewId) { this.rememberInterviewId(iv.interviewId); }
+        					},
+        	
+        					async persistAllInterviews(page: any): Promise<void> {
+        						const c = this.ensureCache();
+        						for (const iv of (c.interviews || [])) {
+        							await this.persistInterview(page, iv);
+        						}
         					},
         	
         					persistActiveOnly(page?: any) {
@@ -409,6 +462,15 @@ componentScriptContent:
         						this.enqueuePersist(p, async () => {
         							await this.persistConfig(p);
         							if (iv) { await this.persistInterview(p, iv); }
+        						});
+        					},
+        	
+        					persistAllNow(page?: any): Promise<void> {
+        						const p = page || this._page;
+        						if (!p) { return Promise.resolve(); }
+        						return this.enqueuePersist(p, async () => {
+        							await this.persistConfig(p);
+        							await this.persistAllInterviews(p);
         						});
         					},
         	
@@ -440,11 +502,15 @@ componentScriptContent:
         	
         					async reloadCache(page: any): Promise<void> {
         						const empty = this.getEmptyData();
-        						let deviceId = empty.deviceId;
-        						try {
-        							const localMeta = await this.fsGet(page, "_local/vu_device");
-        							if (localMeta && localMeta.deviceId) { deviceId = localMeta.deviceId; }
-        						} catch (e) { /* first run */ }
+        						let deviceId = this.readDeviceIdFromLocal();
+        						if (!deviceId) {
+        							try {
+        								const localMeta = await this.fsGet(page, "_local/vu_device");
+        								if (localMeta && localMeta.deviceId) { deviceId = localMeta.deviceId; }
+        							} catch (e) { /* first run */ }
+        						}
+        						if (!deviceId) { deviceId = empty.deviceId; }
+        						this.rememberDeviceId(deviceId);
         						let config: any = null;
         						try {
         							config = await this.fsGet(page, this.configDocId(deviceId));
@@ -462,10 +528,16 @@ componentScriptContent:
         						} else {
         							this._cache = empty;
         							this._cache.deviceId = deviceId;
-        							await this.fsPost(page, { _id: "_local/vu_device", deviceId: deviceId, _use_policy: "override" });
-        							await this.persistConfig(page);
+        						}
+        						try {
+        							await this.fsPostSafe(page, { _id: "_local/vu_device", deviceId: deviceId, _use_policy: "override" });
+        						} catch (e) { /* ignore */ }
+        						this.rememberDeviceId(deviceId);
+        						if (!config || !config.deviceId) {
+        							try { await this.persistConfig(page); } catch (e) { /* ignore */ }
         						}
         						const interviews: any[] = [];
+        						let loadedFromView = false;
         						try {
         							const viewRes = await this.fsView(page, "interviews_by_device", this._cache.deviceId);
         							const rows = (viewRes && viewRes.rows) ? viewRes.rows : [];
@@ -475,11 +547,23 @@ componentScriptContent:
         								try {
         									const doc = await this.fsGet(page, this.interviewDocId(id));
         									const iv = this.docToInterview(doc);
-        									if (iv) { interviews.push(iv); }
+        									if (iv) {
+        										interviews.push(iv);
+        										this.rememberInterviewId(iv.interviewId);
+        									}
         								} catch (e) { /* skip */ }
         							}
+        							loadedFromView = true;
         						} catch (e) {
-        							page.c8o.log.warn("[VoxUrssafV2] vue interviews_by_device indisponible — exécuter FS_InitDesign", e);
+        							page.c8o.log.warn("[VoxUrssafV2] vue interviews_by_device indisponible — fallback localStorage", e);
+        						}
+        						if (!loadedFromView || interviews.length === 0) {
+        							const fallback = await this.loadInterviewsFallback(page, this._cache.deviceId);
+        							for (const iv of fallback) {
+        								if (!interviews.find((x: any) => x.interviewId === iv.interviewId)) {
+        									interviews.push(iv);
+        								}
+        							}
         						}
         						interviews.sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
         						this._cache.interviews = interviews;
@@ -680,7 +764,14 @@ componentScriptContent:
         						row.status = "saved";
         						row.updatedAt = new Date().toISOString();
         						data.activeInterviewId = null;
-        						this.persistActiveOnly(this._page);
+        						this.rememberInterviewId(row.interviewId);
+        						const p = this._page;
+        						if (p) {
+        							this.enqueuePersist(p, async () => {
+        								await this.persistConfig(p);
+        								await this.persistAllInterviews(p);
+        							});
+        						}
         						return row;
         					},
         					updateActiveMeta(name: string, role: string, company: string, context: string, email?: string) {
