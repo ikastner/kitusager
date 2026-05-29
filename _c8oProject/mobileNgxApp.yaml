@@ -166,12 +166,19 @@ componentScriptContent:
         						await page.c8o.finalizeInit();
         						await this.migrateLegacyIfNeeded(page);
         						await this.reloadCache(page);
-        						try {
-        							await this.fsPull(page);
-        							await this.reloadCache(page);
-        						} catch (e) {
-        							page.c8o.log.warn("[VoxUrssafV2] pull initial (offline?)", e);
-        						}
+        						// Pas de pull/push au démarrage : évite _bulk_docs anonymous si CouchDB/Convertigo pas republié.
+        						// Utiliser le bouton « Synchroniser » sur l''accueil quand le serveur est prêt.
+        					},
+        	
+        					async pullFromServer(page: any): Promise<void> {
+        						await page.c8o.finalizeInit();
+        						await this.fsPull(page);
+        						await this.reloadCache(page);
+        					},
+        	
+        					async pushToServer(page: any): Promise<void> {
+        						await page.c8o.finalizeInit();
+        						await this.fsPush(page);
         					},
         	
         					rememberDeviceId(deviceId: string) {
@@ -932,9 +939,14 @@ componentScriptContent:
         							return false;
         						}
         					},
-        					async syncAllPending(page: any): Promise<number> {
-        						try { await this.fsPush(page); } catch (e) {
-        							page.c8o.log.warn("[VoxUrssafV2] push avant export", e);
+        					async syncAllPending(page: any): Promise<{ n: number; pushOk: boolean }> {
+        						let pushOk = true;
+        						try {
+        							await this.pushToServer(page);
+        						} catch (e) {
+        							pushOk = false;
+        							const msg = (e && e.message) ? e.message : String(e);
+        							page.c8o.log.warn("[VoxUrssafV2] push serveur impossible (republier connecteur secureDatabase:false ?)", msg);
         						}
         						let n = 0;
         						for (const iv of (this.load().interviews || [])) {
@@ -942,7 +954,7 @@ componentScriptContent:
         								if (await this.syncInterview(page, iv.interviewId)) { n++; }
         							}
         						}
-        						return n;
+        						return { n: n, pushOk: pushOk };
         					}
         				};
         			}

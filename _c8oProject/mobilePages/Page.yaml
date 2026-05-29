@@ -54,16 +54,30 @@ scriptContent:
         	public async syncAll(): Promise<void> {
         		const store = await this.getStore();
         		if (!store) { return; }
-        		const n = await store.syncAllPending(this);
+        		if (store.flushPersist) { await store.flushPersist(); }
+        		const res = await store.syncAllPending(this);
+        		const n = res ? res.n : 0;
+        		const pushOk = res ? res.pushOk : true;
         		const toastCtrl = this.getInstance(ToastController);
+        		let message = "";
+        		let color = "medium";
+        		if (!pushOk) {
+        			message = "Données enregistrées localement. Push serveur refusé — republier VoxUrssafV2 (secureDatabase:false).";
+        			color = "warning";
+        		} else if (n > 0) {
+        			message = n + " interview(s) synchronisée(s)";
+        			color = "success";
+        		} else {
+        			message = "Aucune interview à synchroniser";
+        		}
         		const toast = await toastCtrl.create({
-        			message: n > 0 ? (n + " interview(s) synchronisée(s)") : "Aucune interview à synchroniser",
-        			duration: 2500,
+        			message: message,
+        			duration: 3500,
         			position: "bottom",
-        			color: n > 0 ? "success" : "medium"
+        			color: color
         		});
         		await toast.present();
-        		this.loadHome();
+        		await this.loadHome();
         	}
         	public hasInterviewMeta(iv: any): boolean {
         		return !!(iv && (iv.intervieweeRole || iv.intervieweeCompany));

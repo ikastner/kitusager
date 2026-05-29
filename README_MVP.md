@@ -25,9 +25,19 @@ Modèle CouchDB : [`_c8oProject/fullsync/DATA_MODEL.md`](_c8oProject/fullsync/DA
 1. **CouchDB** configuré dans les *engine settings* Convertigo.
 2. Connecteur **voxurssafv2_fullsync** publié en dev avec :
    - `anonymousReplication: allow` (pull/push réplication)
-   - `secureDatabase: false` (sinon *handleDocRequest isn't allowed for an anonymous user* sur `_bulk_docs`)
+   - **`secureDatabase: false`** (obligatoire en dev — sinon *handleDocRequest isn't allowed for an anonymous user* sur `_bulk_docs`)
    - **Republier** le projet après changement (Convertigo met à jour la sécurité CouchDB).
-   - Si l’erreur persiste : dans Fauxton, base `voxurssafv2_fullsync` → supprimer ou assouplir le document `_security`, puis republier.
+   - Si l’erreur persiste après republication :
+     1. Ouvrir Fauxton : `http://localhost:5984/_utils` (ou port CouchDB de votre engine)
+     2. Base **`voxurssafv2_fullsync`** → onglet **Security**
+     3. Remplacer par (dev uniquement) :
+        ```json
+        {
+          "members": { "names": [], "roles": ["_admin"] },
+          "admins": { "names": [], "roles": ["_admin"] }
+        }
+        ```
+     4. Ou **supprimer** le document `_security` puis republier le connecteur depuis Studio.
    - En prod : `secureDatabase: true`, `anonymousReplication: deny`, authentification obligatoire.
 3. Transactions `PostDocument`, `GetDocument`, `GetView`, `PostBulkDocuments`.
 4. Une fois par environnement : exécuter **VoxUrssafV2.FS_InitDesign** (design `_design/vu` — voir `fullsync/design_vu.json`).

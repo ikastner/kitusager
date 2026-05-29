@@ -1,7 +1,9 @@
 anonymousReplication: allow
+secureDatabase: false
 comment: |
   'Dev : anonymousReplication allow + secureDatabase false (sinon _bulk_docs / post refusés en Anonymous).
-  Prod : secureDatabase true, anonymousReplication deny, auth Convertigo obligatoire.'
+  Prod : secureDatabase true, anonymousReplication deny, auth Convertigo obligatoire.
+  Après modification : republier le projet dans Studio pour mettre à jour _security CouchDB.'
 databaseName: voxurssafv2_fullsync
 ↓GetDocument [transactions.couchdb.GetDocumentTransaction]: 
   accessibility: Public
