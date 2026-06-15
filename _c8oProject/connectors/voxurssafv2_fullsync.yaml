@@ -1,5 +1,4 @@
 anonymousReplication: allow
-secureDatabase: false
 comment: |
   'Dev : anonymousReplication allow + secureDatabase false (sinon _bulk_docs / post refusés en Anonymous).
   Prod : secureDatabase true, anonymousReplication deny, auth Convertigo obligatoire.

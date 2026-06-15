@@ -41,6 +41,36 @@ Connecteur SQL interviews événement (HSQLDB dev — base voxurssaf_v2)
 <details><summary><span style="color:DarkGoldenRod"><i>Transactions</i></span></summary><blockquote><p>
 
 
+<details><summary><b>Interview_Delete_Tx</b> : Supprime une interview avant ré-insertion (un seul paramètre — évite doublon JDBC)</summary><blockquote><p>
+
+
+### ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/transactions/images/sqltransaction_color_16x16.png?raw=true "SqlTransaction") Interview_Delete_Tx
+
+Supprime une interview avant ré-insertion (un seul paramètre — évite doublon JDBC)
+
+<span style="color:DarkGoldenRod">Variables</span>
+
+<table>
+<tr>
+<th>
+name
+</th>
+<th>
+comment
+</th>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;interview_id
+</td>
+<td>
+
+</td>
+</tr>
+</table>
+
+</p></blockquote></details>
+
 <details><summary><b>Interview_Get_Tx</b></summary><blockquote><p>
 
 
@@ -71,12 +101,28 @@ comment
 
 </p></blockquote></details>
 
-<details><summary><b>Interview_InitSchema</b> : Crée les tables si absentes (dev HSQLDB)</summary><blockquote><p>
+<details><summary><b>Interview_InitInterviewTable_Tx</b> : Table interview (une requête = pas de conflit JDBC)</summary><blockquote><p>
+
+
+### ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/transactions/images/sqltransaction_color_16x16.png?raw=true "SqlTransaction") Interview_InitInterviewTable_Tx
+
+Table interview (une requête = pas de conflit JDBC)
+</p></blockquote></details>
+
+<details><summary><b>Interview_InitPhotoTable_Tx</b> : Table interview_photo</summary><blockquote><p>
+
+
+### ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/transactions/images/sqltransaction_color_16x16.png?raw=true "SqlTransaction") Interview_InitPhotoTable_Tx
+
+Table interview_photo
+</p></blockquote></details>
+
+<details><summary><b>Interview_InitSchema</b> : Alias legacy — préférer Interview_EnsureSchema (2 transactions séparées)</summary><blockquote><p>
 
 
 ### ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/transactions/images/sqltransaction_color_16x16.png?raw=true "SqlTransaction") Interview_InitSchema
 
-Crée les tables si absentes (dev HSQLDB)
+Alias legacy — préférer Interview_EnsureSchema (2 transactions séparées)
 </p></blockquote></details>
 
 <details><summary><b>Interview_List_Tx</b></summary><blockquote><p>
@@ -109,12 +155,12 @@ comment
 
 </p></blockquote></details>
 
-<details><summary><b>Interview_Save_Tx</b></summary><blockquote><p>
+<details><summary><b>Interview_Save_Tx</b> : Insert interview — DELETE séparé dans Interview_Delete_Tx</summary><blockquote><p>
 
 
 ### ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/transactions/images/sqltransaction_color_16x16.png?raw=true "SqlTransaction") Interview_Save_Tx
 
-
+Insert interview — DELETE séparé dans Interview_Delete_Tx
 
 <span style="color:DarkGoldenRod">Variables</span>
 
@@ -203,6 +249,36 @@ comment
 
 </p></blockquote></details>
 
+<details><summary><b>Photo_Delete_Tx</b> : Supprime une photo avant ré-insertion</summary><blockquote><p>
+
+
+### ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/transactions/images/sqltransaction_color_16x16.png?raw=true "SqlTransaction") Photo_Delete_Tx
+
+Supprime une photo avant ré-insertion
+
+<span style="color:DarkGoldenRod">Variables</span>
+
+<table>
+<tr>
+<th>
+name
+</th>
+<th>
+comment
+</th>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;photo_id
+</td>
+<td>
+
+</td>
+</tr>
+</table>
+
+</p></blockquote></details>
+
 <details><summary><b>Photo_Save_Tx</b></summary><blockquote><p>
 
 
@@ -274,6 +350,7 @@ comment
 
 Dev : anonymousReplication allow + secureDatabase false (sinon _bulk_docs / post refusés en Anonymous).
 Prod : secureDatabase true, anonymousReplication deny, auth Convertigo obligatoire.
+Après modification : republier le projet dans Studio pour mettre à jour _security CouchDB.
 
 <details><summary><span style="color:DarkGoldenRod"><i>Transactions</i></span></summary><blockquote><p>
 
@@ -324,12 +401,13 @@ Prod : secureDatabase true, anonymousReplication deny, auth Convertigo obligatoi
 <details><summary><span style="color:DarkGoldenRod"><i>Sequences</i></span></summary><blockquote><p>
 
 
-<details><summary><b>FS_ExportInterviewToSql</b> : Export métier — vérifie le document CouchDB puis enregistre en SQL (Interview_Save)</summary><blockquote><p>
+<details><summary><b>FS_ExportInterviewToSql</b> : Export métier vers SQL (paramètres passés par l''app)</summary><blockquote><p>
 
 
 ## ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/sequences/images/genericsequence_color_16x16.png?raw=true "GenericSequence") FS_ExportInterviewToSql
 
-Export métier — vérifie le document CouchDB puis enregistre en SQL (Interview_Save)
+Export métier vers SQL (paramètres passés par l''app).
+CouchDB optionnel : l''app envoie answers_json / métadonnées ; pas de GetDocument obligatoire.
 
 <span style="color:DarkGoldenRod">Variables</span>
 
@@ -434,12 +512,20 @@ comment
 Publie le design document _design/vu (vues interviews_by_device et config_by_device)
 </p></blockquote></details>
 
-<details><summary><b>Interview_Save</b> : Enregistre ou met à jour une interview (réponses + métadonnées) sur le serveur SQL</summary><blockquote><p>
+<details><summary><b>Interview_EnsureSchema</b> : Crée les tables HSQLDB si absentes — séquence sans paramètres (évite Incorrect number of parameters)</summary><blockquote><p>
+
+
+## ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/sequences/images/genericsequence_color_16x16.png?raw=true "GenericSequence") Interview_EnsureSchema
+
+Crée les tables HSQLDB si absentes — séquence sans paramètres (évite Incorrect number of parameters)
+</p></blockquote></details>
+
+<details><summary><b>Interview_Save</b> : Enregistre ou met à jour une interview SQL (appeler Interview_EnsureSchema avant)</summary><blockquote><p>
 
 
 ## ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/sequences/images/genericsequence_color_16x16.png?raw=true "GenericSequence") Interview_Save
 
-Enregistre ou met à jour une interview (réponses + métadonnées) sur le serveur SQL
+Enregistre ou met à jour une interview SQL (appeler Interview_EnsureSchema avant)
 
 <span style="color:DarkGoldenRod">Variables</span>
 
@@ -528,12 +614,12 @@ comment
 
 </p></blockquote></details>
 
-<details><summary><b>Interview_UploadPhoto</b> : Enregistre une photo d'interview (base64) sur le serveur SQL</summary><blockquote><p>
+<details><summary><b>Interview_UploadPhoto</b> : Enregistre une photo d'interview SQL (appeler Interview_EnsureSchema avant)</summary><blockquote><p>
 
 
 ## ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/sequences/images/genericsequence_color_16x16.png?raw=true "GenericSequence") Interview_UploadPhoto
 
-Enregistre une photo d'interview (base64) sur le serveur SQL
+Enregistre une photo d'interview SQL (appeler Interview_EnsureSchema avant)
 
 <span style="color:DarkGoldenRod">Variables</span>
 
@@ -623,6 +709,14 @@ Profil enquêteur — voxUrssafReact profile
 ### ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/ngx/components/images/pagecomponent_color_16x16.png?raw=true "PageComponent") InterviewQuestions
 
 Gestion des questions — voxUrssafReact manageQuestions
+</p></blockquote></details>
+
+<details><summary><b>InterviewRecap</b> : Récapitulatif lecture seule — fiche salon validée ou synchronisée</summary><blockquote><p>
+
+
+### ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/ngx/components/images/pagecomponent_color_16x16.png?raw=true "PageComponent") InterviewRecap
+
+Récapitulatif lecture seule — fiche salon validée ou synchronisée
 </p></blockquote></details>
 
 <details><summary><b>InterviewStep1</b> : Wizard salon — étape 1/4 code fiche</summary><blockquote><p>

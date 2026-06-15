@@ -2,6 +2,10 @@ comment: Connecteur SQL interviews événement (HSQLDB dev — base voxurssaf_v2
 jdbcDriverClassName: org.hsqldb.jdbcDriver
 jdbcURL: jdbc:hsqldb:file:.//hsqldb/voxurssaf_v2
 jdbcUserName: SA
+↓Interview_Delete_Tx [transactions.SqlTransaction]: 
+  comment: Supprime une interview avant ré-insertion (un seul paramètre — évite doublon JDBC)
+  sqlQuery: DELETE FROM interview WHERE interview_id = {interview_id}
+  ↓interview_id [variables.RequestableVariable-1779371001020]: 
 ↓Interview_Get_Tx [transactions.SqlTransaction]: 
   sqlQuery: |
     SELECT interview_id, event_id, status, created_at, synced_at, device_id,
@@ -61,11 +65,6 @@ jdbcUserName: SA
     WHERE event_id = {event_id}
     ORDER BY created_at DESC
   ↓event_id [variables.RequestableVariable-1779371001011]: 
-↓Interview_Delete_Tx [transactions.SqlTransaction]: 
-  comment: Supprime une interview avant ré-insertion (un seul paramètre — évite doublon JDBC)
-  sqlQuery: |
-    DELETE FROM interview WHERE interview_id = {interview_id}
-  ↓interview_id [variables.RequestableVariable-1779371001020]: 
 ↓Interview_Save_Tx [transactions.SqlTransaction]: 
   comment: Insert interview — DELETE séparé dans Interview_Delete_Tx
   sqlQuery: |
@@ -87,8 +86,7 @@ jdbcUserName: SA
   ↓photos_json [variables.RequestableVariable-1779371001009]: 
 ↓Photo_Delete_Tx [transactions.SqlTransaction]: 
   comment: Supprime une photo avant ré-insertion
-  sqlQuery: |
-    DELETE FROM interview_photo WHERE photo_id = {photo_id}
+  sqlQuery: DELETE FROM interview_photo WHERE photo_id = {photo_id}
   ↓photo_id [variables.RequestableVariable-1779371001017]: 
 ↓Photo_Save_Tx [transactions.SqlTransaction]: 
   sqlQuery: |

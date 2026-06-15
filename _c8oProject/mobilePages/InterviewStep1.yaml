@@ -322,7 +322,7 @@ title: Etape 1
                     - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                     - com.twinsoft.convertigo.beans.common.FormatedContent: 
                       →: |
-                        		page.commitStep1();
+                        '		page.commitStep1();
                         		page.ref.markForCheck();
                         		if (page.fieldError) {
                         			page.showToast(page.fieldError);
@@ -337,7 +337,7 @@ title: Etape 1
                         				done();
                         			}
                         		}
-                        
+                        '
                 ↓IfProceed [ngx.components.UIDynamicAction-1779300001069]: 
                   beanData: '{"ionBean":"IfAction","condition":"script:page.wizardCanProceed"}'
                   ↓PushStep2 [ngx.components.UIDynamicAction-1779901880470]: 

@@ -13,6 +13,8 @@ scriptContent:
         	public firstName: string = "";
         	public intervieweeEmail: string = "";
         	public photoDataUrl: string = "";
+        	public photoDataUrls: string[] = [];
+        	public maxPhotos: number = 6;
         	public validationError: string = "";
         	/*End_c8o_PageDeclaration*/
         /*Begin_c8o_PageConstructor*/
@@ -32,10 +34,38 @@ scriptContent:
         		this.recontactOk = !!iv.recontactOk;
         		this.firstName = iv.firstName || "";
         		this.intervieweeEmail = iv.intervieweeEmail || "";
-        		this.photoDataUrl = iv.photoDataUrl || "";
+        		this.loadPhotosFromInterview(iv);
         		this.validationError = "";
         	}
+        	public loadPhotosFromInterview(iv: any): void {
+        		if (!iv) {
+        			this.photoDataUrls = [];
+        			this.photoDataUrl = "";
+        			return;
+        		}
+        		if (iv.photoDataUrls && iv.photoDataUrls.length) {
+        			this.photoDataUrls = iv.photoDataUrls.slice();
+        		} else if (iv.photoDataUrl) {
+        			this.photoDataUrls = [iv.photoDataUrl];
+        		} else {
+        			this.photoDataUrls = [];
+        		}
+        		this.photoDataUrl = this.photoDataUrls[0] || "";
+        	}
+        	public canAddPhoto(): boolean {
+        		return (this.photoDataUrls || []).length < this.maxPhotos;
+        	}
+        	public persistPhotos(store?: any): void {
+        		const urls = (this.photoDataUrls || []).slice();
+        		this.photoDataUrl = urls[0] || "";
+        		const payload = { photoDataUrls: urls, photoDataUrl: this.photoDataUrl };
+        		if (store) { store.updateSalonDraft(payload); }
+        	}
         	public async handlePhotoCapture(out: any): Promise<void> {
+        		if (!this.canAddPhoto()) {
+        			await this.showToast("Maximum " + this.maxPhotos + " photos.");
+        			return;
+        		}
         		let raw = "";
         		if (out != null && out !== undefined) {
         			if (typeof out === "string") { raw = out; }
@@ -44,9 +74,21 @@ scriptContent:
         		raw = (raw || "").trim();
         		if (!raw) { return; }
         		const imageUrl = raw.indexOf("data:") === 0 ? raw : "data:image/jpeg;base64," + raw;
-        		this.photoDataUrl = imageUrl;
+        		this.photoDataUrls = (this.photoDataUrls || []).slice();
+        		this.photoDataUrls.push(imageUrl);
+        		this.photoDataUrl = this.photoDataUrls[0] || "";
         		const st = await this.ensureStore();
-        		if (st) { st.updateSalonDraft({ photoDataUrl: imageUrl }); }
+        		if (st) { this.persistPhotos(st); }
+        	}
+        	public removePhoto(index: number): void {
+        		const urls = (this.photoDataUrls || []).slice();
+        		if (index < 0 || index >= urls.length) { return; }
+        		urls.splice(index, 1);
+        		this.photoDataUrls = urls;
+        		this.photoDataUrl = urls[0] || "";
+        		const st = this.getStoreSync();
+        		if (st) { this.persistPhotos(st); }
+        		this.ref.markForCheck();
         	}
         	public async showToast(msg: string): Promise<void> {
         		const toastCtrl = this.getInstance(ToastController);
@@ -78,8 +120,13 @@ scriptContent:
         			return;
         		}
         		const verbatim = ((iv.verbatimText || "").trim());
-        		if (!verbatim) {
+        		const hasAudio = !!((iv.verbatimAudioDataUrl || "").trim());
+        		if (!verbatim && !hasAudio) {
         			this.validationError = "Le verbatim est obligatoire (étape 2).";
+        			return;
+        		}
+        		if (!verbatim && hasAudio) {
+        			this.validationError = "Saisissez le texte du verbatim (l''audio seul ne suffit pas).";
         			return;
         		}
         		if (!this.consentAccepted) {
@@ -96,7 +143,8 @@ scriptContent:
         			recontactOk: !!this.recontactOk,
         			firstName: (this.firstName || "").trim(),
         			intervieweeEmail: email,
-        			photoDataUrl: this.photoDataUrl || "",
+        			photoDataUrls: (this.photoDataUrls || []).slice(),
+        			photoDataUrl: (this.photoDataUrls[0] || ""),
         			wizardStep: 4
         		});
         		store.completeSalonInterview();
@@ -110,7 +158,8 @@ scriptContent:
         			recontactOk: !!this.recontactOk,
         			firstName: (this.firstName || "").trim(),
         			intervieweeEmail: (this.intervieweeEmail || "").trim(),
-        			photoDataUrl: this.photoDataUrl || "",
+        			photoDataUrls: (this.photoDataUrls || []).slice(),
+        			photoDataUrl: (this.photoDataUrls[0] || ""),
         			wizardStep: 3
         		});
         	}
@@ -328,62 +377,110 @@ title: Etape 4
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:Photo (optionnelle)
-        ↓BtnCam [ngx.components.UIDynamicElement-1779300030073]: 
-          beanData: |
-            '{
-             "ionBean": "Button",
-             "IonColor": "plain:dark",
-             "IonExpand": "plain:block"
-            }'
-          tagName: ion-button
-          ↓Event [ngx.components.UIControlEvent-1779300030074]: 
-            ↓Camera [ngx.components.UIDynamicAction-1779300030075]: 
-              beanData: |
-                '{
-                 "ionBean": "CameraAction",
-                 "quality": "plain:80",
-                 "destinationType": "plain:DATA_URL",
-                 "targetWidth": "plain:1024",
-                 "targetHeight": "plain:1024"
-                }'
-              ↓AddPhoto [ngx.components.UICustomAction-1779300030076]: 
-                actionValue: 
-                  - xmlizable: 
-                    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-                    - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                      →: |
-                        		page.handlePhotoCapture(props.out).then(() => page.ref.markForCheck());
-                        		resolve();
-                        
-          ↓Label [ngx.components.UIDynamicElement-1779300030077]: 
-            beanData: '{"ionBean":"Label"}'
-            tagName: ion-label
-            ↓Text [ngx.components.UIText-1779300030078]: 
-              textValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:Prendre une photo
-        ↓ImgPrev [ngx.components.UIDynamicElement-1779300030079]: 
-          beanData: '{"ionBean":"Image"}'
-          tagName: ion-img
-          ↓AttrIf [ngx.components.UIAttribute-1779300030080]: 
-            attrName: '*ngIf'
-            attrValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:photoDataUrl
-          ↓AttrSrc [ngx.components.UIAttribute-1779300030081]: 
-            attrName: '[src]'
-            attrValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: script:photoDataUrl
-          ↓AttrClass [ngx.components.UIAttribute-1779300030082]: 
+        ↓PhotoGrid [ngx.components.UIElement-1779400200100]: 
+          tagName: div
+          ↓AttrClass [ngx.components.UIAttribute-1779400200101]: 
             attrName: class
             attrValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:vu-photo-preview
+                - MobileSmartSourceType: plain:vu-photo-grid
+          ↓ThumbItem [ngx.components.UIElement-1779400200102]: 
+            tagName: div
+            ↓AttrFor [ngx.components.UIAttribute-1779400200103]: 
+              attrName: '*ngFor'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:let photo of photoDataUrls; let i = index
+            ↓AttrClass [ngx.components.UIAttribute-1779400200104]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-photo-thumb-wrap
+            ↓ThumbImg [ngx.components.UIDynamicElement-1779400200105]: 
+              beanData: '{"ionBean":"Image"}'
+              tagName: ion-img
+              ↓AttrSrc [ngx.components.UIAttribute-1779400200106]: 
+                attrName: '[src]'
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:photo
+              ↓AttrClass [ngx.components.UIAttribute-1779400200107]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:vu-photo-thumb
+            ↓BtnRemove [ngx.components.UIElement-1779400200108]: 
+              tagName: button
+              ↓AttrType [ngx.components.UIAttribute-1779400200109]: 
+                attrName: type
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:button
+              ↓AttrClass [ngx.components.UIAttribute-1779400200110]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:vu-photo-remove
+              ↓AttrClick [ngx.components.UIAttribute-1779400200111]: 
+                attrName: (click)
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:removePhoto(i)
+              ↓Text [ngx.components.UIText-1779400200112]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:×
+          ↓AddTile [ngx.components.UIElement-1779400200113]: 
+            tagName: button
+            ↓AttrIf [ngx.components.UIAttribute-1779400200114]: 
+              attrName: '*ngIf'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:canAddPhoto()
+            ↓AttrType [ngx.components.UIAttribute-1779400200115]: 
+              attrName: type
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:button
+            ↓AttrClass [ngx.components.UIAttribute-1779400200116]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-photo-add-btn
+            ↓Event [ngx.components.UIControlEvent-1779400200117]: 
+              ↓Camera [ngx.components.UIDynamicAction-1779400200118]: 
+                beanData: |
+                  '{
+                   "ionBean": "CameraAction",
+                   "quality": "plain:80",
+                   "destinationType": "plain:DATA_URL",
+                   "targetWidth": "plain:1024",
+                   "targetHeight": "plain:1024"
+                  }'
+                ↓AddPhoto [ngx.components.UICustomAction-1779400200119]: 
+                  actionValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                        →: |
+                          		page.handlePhotoCapture(props.out).then(() => page.ref.markForCheck());
+                          		resolve();
+                          
+            ↓IconAdd [ngx.components.UIDynamicElement-1779400200120]: 
+              beanData: '{"ionBean":"Icon","IconName":"plain:add"}'
+              tagName: ion-icon
         ↓ValErr [ngx.components.UIElement-1779300030090]: 
           tagName: p
           ↓AttrIf [ngx.components.UIAttribute-1779300030091]: 
@@ -447,7 +544,7 @@ title: Etape 4
                     - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                     - com.twinsoft.convertigo.beans.common.FormatedContent: 
                       →: |
-                        		page.commitSubmit();
+                        '		page.commitSubmit();
                         		page.ref.markForCheck();
                         		if (page.validationError) {
                         			resolve();
@@ -465,7 +562,7 @@ title: Etape 4
                         				done();
                         			}
                         		}
-                        
+                        '
                 ↓IfOk [ngx.components.UIDynamicAction-1779300030171]: 
                   beanData: '{"ionBean":"IfAction","condition":"script:!page.validationError"}'
                   ↓GoHome [ngx.components.UIDynamicAction-1779300030172]: 
@@ -476,14 +573,14 @@ title: Etape 4
                         - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                         - com.twinsoft.convertigo.beans.common.FormatedContent: 
                           →: |
-                            		const app: any = page.router && page.router.sharedObject;
+                            '		const app: any = page.router && page.router.sharedObject;
                             		const home = app && app.routerProvider && app.routerProvider.getPageByName
                             			? app.routerProvider.getPageByName("Page") : null;
                             		if (home && home.instance && home.instance.loadHome) {
                             			home.instance.loadHome().then(() => home.instance.ref.markForCheck());
                             		}
                             		resolve();
-                            
+                            '
             ↓Text [ngx.components.UIText-1779300030170]: 
               textValue: 
                 - xmlizable: 

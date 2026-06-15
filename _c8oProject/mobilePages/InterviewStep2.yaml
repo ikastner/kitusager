@@ -11,7 +11,10 @@ scriptContent:
         	public journeySteps: string[] = [];
         	public globalSatisfaction: string = "";
         	public verbatimDraft: string = "";
+        	public verbatimAudioDataUrl: string = "";
         	public isRecording: boolean = false;
+        	public speechAudioMode: boolean = false;
+        	public speechModeHint: string = "";
         	public showMicError: boolean = false;
         	public micErrorMessage: string = "";
         	public wizardCanProceed: boolean = false;
@@ -33,6 +36,7 @@ scriptContent:
         		this.journeySteps = (iv.journeySteps || []).slice();
         		this.globalSatisfaction = iv.globalSatisfaction || "";
         		this.verbatimDraft = iv.verbatimText || "";
+        		this.verbatimAudioDataUrl = iv.verbatimAudioDataUrl || "";
         	}
         	public isJourneyOn(id: string): boolean {
         		return (this.journeySteps || []).indexOf(id) >= 0;
@@ -52,34 +56,84 @@ scriptContent:
         			if (data.mode === "snapshot" || "final" in data || "interim" in data) {
         				const committed = (data.final || "").trim();
         				const interim = (data.interim || "").trim();
+        				const base = (this.verbatimDraft || "").replace(/\s*\(en cours...\)$/i, "").trim();
         				let display = committed;
         				if (interim) {
         					display = (display ? display + " " : "") + interim + " (en cours...)";
+        				} else if (!display && base) {
+        					display = base;
         				}
         				this.verbatimDraft = display.trim();
+        				this.ref.markForCheck();
         				return;
         			}
         		}
         		const chunk = Array.isArray(data) ? data.join(" ") : String(data != null ? data : "");
         		if (!chunk.trim()) { return; }
-        		this.verbatimDraft = chunk.trim();
+        		const base = (this.verbatimDraft || "").replace(/\s*\(en cours...\)$/i, "").trim();
+        		const next = chunk.trim();
+        		this.verbatimDraft = base ? (base + " " + next) : next;
+        		this.ref.markForCheck();
+        	}
+        	public applyAudioRecorded(dataUrl: string): void {
+        		this.verbatimAudioDataUrl = dataUrl || "";
+        		this.speechAudioMode = false;
+        		this.speechModeHint = "";
+        		if (!(this.verbatimDraft || "").trim()) {
+        			this.verbatimDraft = "[Enregistrement audio — saisir ou corriger le verbatim ci-dessus]";
+        		}
+        		this.ref.markForCheck();
+        	}
+        	public onAudioRecordingEmpty(): void {
+        		this.speechAudioMode = false;
+        		this.speechModeHint = "";
+        		this.showMicError = true;
+        		this.micErrorMessage = "Aucun son enregistré. Rapprochez-vous du micro et réessayez.";
+        		setTimeout(() => { this.showMicError = false; this.ref.markForCheck(); }, 4000);
+        		this.ref.markForCheck();
+        	}
+        	public applySpeechModeChanged(data: any): void {
+        		if (!data || data.mode !== "audio") { return; }
+        		this.speechAudioMode = true;
+        		this.speechModeHint = data.message || "Enregistrement audio actif.";
+        		this.ref.markForCheck();
+        	}
+        	public recordingBadgeLabel(): string {
+        		if (this.speechAudioMode) {
+        			return "Enregistrement audio — parlez puis retouchez le micro";
+        		}
+        		return "Dictée en cours…";
         	}
         	public async toggleRecording(): Promise<void> {
         		if (this.isRecording) {
         			this.global.stopSpeechListening(this);
         			this.isRecording = false;
+        			this.speechAudioMode = false;
+        			this.speechModeHint = "";
         			this.verbatimDraft = (this.verbatimDraft || "").replace(/\s*\(en cours...\)$/i, "").trim();
+        			if (this.verbatimDraft === "[Enregistrement audio — saisir ou corriger le verbatim ci-dessus]" && this.verbatimAudioDataUrl) {
+        				/* garder le placeholder tant qu''aucun texte saisi */
+        			}
+        			this.ref.markForCheck();
         			return;
         		}
         		this.showMicError = false;
         		this.micErrorMessage = "";
+        		this.isRecording = true;
+        		this.ref.markForCheck();
         		try {
         			await this.global.startSpeechListening(this);
-        			this.isRecording = true;
         		} catch (e) {
+        			this.isRecording = false;
         			const msg = (typeof e === "string") ? e : ((e && (e.message || e.error)) ? (e.message || e.error) : String(e));
         			if (msg && (msg.indexOf("not-allowed") >= 0 || msg.indexOf("NotAllowed") >= 0)) {
-        				this.micErrorMessage = "Accès micro refusé. Autorisez le microphone pour ce site.";
+        				this.micErrorMessage = "Accès micro refusé. Autorisez le microphone dans les paramètres Android.";
+        			} else if (msg && msg.indexOf("permission") >= 0) {
+        				this.micErrorMessage = "Permission micro requise. Acceptez l''accès au microphone.";
+        			} else if (msg && msg.indexOf("speech_recognition_unavailable") >= 0) {
+        				this.micErrorMessage = "Dictée auto indisponible sur cet appareil (GrapheneOS / sans Google). Installez l''app Google depuis le Play Store, ou utilisez l''enregistrement audio + saisie manuelle.";
+        			} else if (msg && msg.indexOf("Plugin dictée") >= 0) {
+        				this.micErrorMessage = "Dictée indisponible : reconstruisez l''APK depuis Convertigo Studio.";
         			} else if (msg && msg.indexOf("no-speech") >= 0) {
         				this.micErrorMessage = "Aucun son détecté. Parlez après avoir démarré la dictée.";
         			} else {
@@ -106,6 +160,7 @@ scriptContent:
         			journeySteps: (this.journeySteps || []).slice(),
         			globalSatisfaction: this.globalSatisfaction || "",
         			verbatimText: (this.verbatimDraft || "").trim(),
+        			verbatimAudioDataUrl: this.verbatimAudioDataUrl || "",
         			wizardStep: 3
         		});
         		this.wizardCanProceed = true;
@@ -118,6 +173,7 @@ scriptContent:
         			journeySteps: (this.journeySteps || []).slice(),
         			globalSatisfaction: this.globalSatisfaction || "",
         			verbatimText: (this.verbatimDraft || "").trim(),
+        			verbatimAudioDataUrl: this.verbatimAudioDataUrl || "",
         			wizardStep: 1
         		});
         	}
@@ -140,6 +196,28 @@ title: Etape 2
           →: |
             		page.applySpeechReceived(event);
             		page.ref.markForCheck();
+            		resolve();
+            
+↓Subscribe_Handler_SpeechAudio [ngx.components.UIEventSubscriber-1779300010997]: 
+  topic: speechAudioRecorded
+  ↓ApplyAudio [ngx.components.UICustomAction-1779300010996]: 
+    actionValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+          →: |
+            		page.applyAudioRecorded(event);
+            		resolve();
+            
+↓Subscribe_Handler_SpeechMode [ngx.components.UIEventSubscriber-1779300010995]: 
+  topic: speechModeChanged
+  ↓ApplyMode [ngx.components.UICustomAction-1779300010994]: 
+    actionValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+          →: |
+            		page.applySpeechModeChanged(event);
             		resolve();
             
 ↓Content [ngx.components.UIDynamicElement-1779300010001]: 
@@ -589,7 +667,26 @@ title: Etape 2
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:Dictée en cours…
+                - MobileSmartSourceType: script:recordingBadgeLabel()
+        ↓SpeechHint [ngx.components.UIElement-1779300010148]: 
+          tagName: p
+          ↓AttrIf [ngx.components.UIAttribute-1779300010149]: 
+            attrName: '*ngIf'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:speechModeHint
+          ↓AttrClass [ngx.components.UIAttribute-1779300010150]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-hint-text
+          ↓Text [ngx.components.UIText-1779300010151]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:speechModeHint
         ↓MicErr [ngx.components.UIElement-1779300010144]: 
           tagName: p
           ↓AttrIf [ngx.components.UIAttribute-1779300010145]: 
