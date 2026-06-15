@@ -10,6 +10,7 @@
   ↓voxurssafv2_fullsync [connectors.FullSyncConnector-1779350680837]: 🗏 connectors/voxurssafv2_fullsync.yaml
   ↓FS_ExportInterviewToSql [sequences.GenericSequence]: 🗏 sequences/FS_ExportInterviewToSql.yaml
   ↓FS_InitDesign [sequences.GenericSequence]: 🗏 sequences/FS_InitDesign.yaml
+  ↓Interview_EnsureSchema [sequences.GenericSequence]: 🗏 sequences/Interview_EnsureSchema.yaml
   ↓Interview_Save [sequences.GenericSequence]: 🗏 sequences/Interview_Save.yaml
   ↓Interview_UploadPhoto [sequences.GenericSequence]: 🗏 sequences/Interview_UploadPhoto.yaml
   ↓CouchDb_schema [references.ImportXsdSchemaReference]: 

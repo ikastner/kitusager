@@ -1,0 +1,751 @@
+comment: Récapitulatif lecture seule — fiche salon validée ou synchronisée
+icon: reader
+scriptContent: 
+  - xmlizable: 
+    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+      →: |
+        '/*Begin_c8o_PageImport*/
+        /*End_c8o_PageImport*/
+        /*Begin_c8o_PageDeclaration*/
+        	public sheetCode: string = "";
+        	public firstName: string = "";
+        	public intervieweeEmail: string = "";
+        	public status: string = "";
+        	public dateLabel: string = "";
+        	public journeyText: string = "";
+        	public globalSatisfaction: string = "";
+        	public verbatimText: string = "";
+        	public sector: string = "";
+        	public age: string = "";
+        	public urssafSince: string = "";
+        	public multiProfileText: string = "";
+        	public contactMode: string = "";
+        	public consentText: string = "";
+        	public recontactText: string = "";
+        	public photoDataUrl: string = "";
+        	public syncError: string = "";
+        	public isDraft: boolean = false;
+        	public isSalon: boolean = true;
+        	public notFound: boolean = false;
+        	/*End_c8o_PageDeclaration*/
+        /*Begin_c8o_PageConstructor*/
+        		/*End_c8o_PageConstructor*/
+        /*Begin_c8o_PageFunction*/
+        	public async ensureStore(): Promise<any> {
+        		const app: any = this.router && this.router.sharedObject;
+        		if (app && app.ensureInterviewStore) { return app.ensureInterviewStore(this); }
+        		if (app && app.initVuApp) { app.initVuApp(); }
+        		return (app && app.getInterviewStore) ? app.getInterviewStore() : null;
+        	}
+        	public displayOrDash(v: string): string {
+        		const s = (v || "").trim();
+        		return s || "—";
+        	}
+        	public labelJourney(id: string): string {
+        		const m: any = {
+        			creation: "Création activité",
+        			vie_courante: "Vie courante",
+        			imprevus: "Imprévus",
+        			fin: "Fin de parcours"
+        		};
+        		return m[id] || id;
+        	}
+        	public labelSatisfaction(id: string): string {
+        		const m: any = {
+        			tres_insatisfait: "Très insatisfait",
+        			moyen: "Moyen",
+        			satisfait: "Satisfait",
+        			tres_satisfait: "Très satisfait"
+        		};
+        		return m[id] || id;
+        	}
+        	public labelContact(mode: string): string {
+        		if (mode === "direct") { return "Contact direct Urssaf"; }
+        		if (mode === "intermediaire") { return "Via intermédiaire"; }
+        		return mode || "";
+        	}
+        	public statusLabel(st: string): string {
+        		const m: any = {
+        			draft: "Brouillon",
+        			saved: "Validée",
+        			synced: "Synchronisée",
+        			syncing: "Synchronisation…",
+        			error: "Erreur sync",
+        			ready: "Prête"
+        		};
+        		return m[st] || st || "—";
+        	}
+        	public statusClass(st: string): string {
+        		const s = st || "";
+        		if (s === "synced") { return "vu-badge-pill vu-status-synced"; }
+        		if (s === "saved") { return "vu-badge-pill vu-status-saved"; }
+        		if (s === "draft") { return "vu-badge-pill vu-status-draft"; }
+        		if (s === "error") { return "vu-badge-pill vu-status-error"; }
+        		return "vu-badge-pill";
+        	}
+        	public async loadRecap(): Promise<void> {
+        		const store = await this.ensureStore();
+        		if (store && store._page !== this) { store._page = this; }
+        		let iv = store ? store.getRecapInterview() : null;
+        		if (!iv && store && this.navParams && this.navParams.data && this.navParams.data.interviewId) {
+        			iv = store.getInterview(this.navParams.data.interviewId);
+        		}
+        		if (!iv) {
+        			this.notFound = true;
+        			return;
+        		}
+        		if (store && store.setRecapView) { store.setRecapView(iv.interviewId); }
+        		this.notFound = false;
+        		this.isSalon = iv.format === "salon";
+        		this.isDraft = iv.status === "draft";
+        		this.status = iv.status || "";
+        		this.sheetCode = iv.sheetCode || iv.context || "";
+        		this.firstName = iv.firstName || iv.intervieweeName || "";
+        		this.intervieweeEmail = iv.intervieweeEmail || "";
+        		this.dateLabel = store.formatDate(iv.updatedAt || iv.createdAt);
+        		const steps = (iv.journeySteps || []).map((id: string) => this.labelJourney(id));
+        		this.journeyText = steps.length ? steps.join(", ") : "";
+        		this.globalSatisfaction = this.labelSatisfaction(iv.globalSatisfaction || "");
+        		this.verbatimText = iv.verbatimText || "";
+        		this.sector = iv.sector || "";
+        		this.age = iv.age || "";
+        		this.urssafSince = iv.urssafSince || "";
+        		if (iv.multiProfile === true) {
+        			this.multiProfileText = "Oui" + ((iv.profileCount || "").trim() ? " (" + iv.profileCount + ")" : "");
+        		} else if (iv.multiProfile === false) {
+        			this.multiProfileText = "Non";
+        		} else {
+        			this.multiProfileText = "";
+        		}
+        		this.contactMode = this.labelContact(iv.contactMode || "");
+        		this.consentText = iv.consentAccepted ? "Accepté" : "Non accepté";
+        		this.recontactText = iv.recontactOk ? "Oui" : "Non";
+        		this.photoDataUrl = iv.photoDataUrl || "";
+        		this.syncError = iv.syncError || "";
+        	}
+        	public async continueEdit(): Promise<void> {
+        		const store = await this.ensureStore();
+        		const iv = store ? store.getActiveInterview() : null;
+        		if (!iv || !store) { return; }
+        		const route = store.getWizardRoute(iv.wizardStep || 1);
+        		this.angularRouter.navigate([route]);
+        	}
+        	public hasPhoto(): boolean {
+        		return !!(this.photoDataUrl || "").trim();
+        	}
+        	public hasVerbatim(): boolean {
+        		return !!(this.verbatimText || "").trim();
+        	}
+        	/*End_c8o_PageFunction*/'
+segment: interview-recap
+title: Récap fiche
+↓Content [ngx.components.UIDynamicElement-1779400001001]: 
+  beanData: '{"ionBean":"Content"}'
+  tagName: ion-content
+  ↓AttrClass [ngx.components.UIAttribute-1779400001002]: 
+    attrName: class
+    attrValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+        - MobileSmartSourceType: plain:vu-page
+  ↓Shell [ngx.components.UIElement-1779400001003]: 
+    tagName: div
+    ↓AttrClass [ngx.components.UIAttribute-1779400001004]: 
+      attrName: class
+      attrValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: plain:vu-app-shell
+    ↓PageHeader [ngx.components.UIElement-1779400001010]: 
+      tagName: div
+      ↓AttrClass [ngx.components.UIAttribute-1779400001011]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:vu-page-header vu-page-header--elevated
+      ↓BackBtn [ngx.components.UIElement-1779400001012]: 
+        tagName: button
+        ↓AttrClass [ngx.components.UIAttribute-1779400001013]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-back-btn
+        ↓Event [ngx.components.UIControlEvent-1779400001014]: 
+          ↓Back [ngx.components.UIDynamicAction-1779400001015]: 
+            beanData: '{"ionBean":"PopPageAction"}'
+        ↓Icon [ngx.components.UIDynamicElement-1779400001016]: 
+          beanData: '{"ionBean":"Icon","IconName":"plain:arrow-back"}'
+          tagName: ion-icon
+      ↓Title [ngx.components.UIElement-1779400001017]: 
+        tagName: h1
+        ↓AttrClass [ngx.components.UIAttribute-1779400001018]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-greeting-title
+        ↓Text [ngx.components.UIText-1779400001019]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:Récapitulatif
+    ↓Scroll [ngx.components.UIElement-1779400001020]: 
+      tagName: div
+      ↓AttrClass [ngx.components.UIAttribute-1779400001021]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:vu-scroll-main
+      ↓NotFound [ngx.components.UIElement-1779400001022]: 
+        tagName: div
+        ↓AttrIf [ngx.components.UIAttribute-1779400001023]: 
+          attrName: '*ngIf'
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:notFound
+        ↓AttrClass [ngx.components.UIAttribute-1779400001024]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-form-card
+        ↓Text [ngx.components.UIText-1779400001025]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:Fiche introuvable.
+      ↓Main [ngx.components.UIElement-1779400001030]: 
+        tagName: div
+        ↓AttrIf [ngx.components.UIAttribute-1779400001031]: 
+          attrName: '*ngIf'
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:!notFound
+        ↓Hero [ngx.components.UIElement-1779400001032]: 
+          tagName: div
+          ↓AttrClass [ngx.components.UIAttribute-1779400001033]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-recap-hero
+          ↓HeroTitle [ngx.components.UIElement-1779400001034]: 
+            tagName: h2
+            ↓AttrClass [ngx.components.UIAttribute-1779400001035]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-recap-hero-title
+            ↓Text [ngx.components.UIText-1779400001200]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:displayOrDash(sheetCode)
+          ↓HeroSub [ngx.components.UIElement-1779400001036]: 
+            tagName: p
+            ↓AttrClass [ngx.components.UIAttribute-1779400001037]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-recap-hero-sub
+            ↓Text [ngx.components.UIText-1779400001201]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:displayOrDash(firstName) + (dateLabel ? ' • ' + dateLabel : '')
+          ↓BadgeRow [ngx.components.UIElement-1779400001038]: 
+            tagName: div
+            ↓AttrClass [ngx.components.UIAttribute-1779400001039]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-badge-row
+            ↓StatusBadge [ngx.components.UIElement-1779400001040]: 
+              tagName: span
+              ↓AttrClass [ngx.components.UIAttribute-1779400001041]: 
+                attrName: '[class]'
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:statusClass(status)
+              ↓Text [ngx.components.UIText-1779400001042]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:statusLabel(status)
+        ↓Card1 [ngx.components.UIElement-1779400001050]: 
+          tagName: div
+          ↓AttrClass [ngx.components.UIAttribute-1779400001051]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-form-card
+          ↓SecTitle1 [ngx.components.UIElement-1779400001052]: 
+            tagName: h3
+            ↓AttrClass [ngx.components.UIAttribute-1779400001053]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-section-title
+            ↓Text [ngx.components.UIText-1779400001202]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:Parcours et verbatim
+          ↓LblJ [ngx.components.UIElement-1779400001054]: 
+            tagName: p
+            ↓AttrClass [ngx.components.UIAttribute-1779400001055]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-field-label
+            ↓Text [ngx.components.UIText-1779400001203]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:Parcours Urssaf
+          ↓ValJ [ngx.components.UIElement-1779400001056]: 
+            tagName: p
+            ↓AttrClass [ngx.components.UIAttribute-1779400001057]: 
+              attrName: '[class]'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:journeyText ? 'vu-recap-value' : 'vu-recap-value vu-recap-muted'
+            ↓Text [ngx.components.UIText-1779400001204]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:displayOrDash(journeyText)
+          ↓LblS [ngx.components.UIElement-1779400001058]: 
+            tagName: p
+            ↓AttrClass [ngx.components.UIAttribute-1779400001059]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-field-label
+            ↓Text [ngx.components.UIText-1779400001205]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:Satisfaction globale
+          ↓ValS [ngx.components.UIElement-1779400001060]: 
+            tagName: p
+            ↓AttrClass [ngx.components.UIAttribute-1779400001061]: 
+              attrName: '[class]'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:globalSatisfaction ? 'vu-recap-value' : 'vu-recap-value vu-recap-muted'
+            ↓Text [ngx.components.UIText-1779400001206]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:displayOrDash(globalSatisfaction)
+          ↓LblV [ngx.components.UIElement-1779400001062]: 
+            tagName: p
+            ↓AttrClass [ngx.components.UIAttribute-1779400001063]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-field-label
+            ↓Text [ngx.components.UIText-1779400001207]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:Verbatim
+          ↓ValV [ngx.components.UIElement-1779400001064]: 
+            tagName: p
+            ↓AttrClass [ngx.components.UIAttribute-1779400001065]: 
+              attrName: '[class]'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:hasVerbatim() ? 'vu-recap-value' : 'vu-recap-value vu-recap-muted'
+            ↓Text [ngx.components.UIText-1779400001208]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:displayOrDash(verbatimText)
+        ↓Card2 [ngx.components.UIElement-1779400001070]: 
+          tagName: div
+          ↓AttrClass [ngx.components.UIAttribute-1779400001071]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-form-card
+          ↓SecTitle2 [ngx.components.UIElement-1779400001072]: 
+            tagName: h3
+            ↓AttrClass [ngx.components.UIAttribute-1779400001073]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-section-title
+            ↓Text [ngx.components.UIText-1779400001209]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:Profil usager
+          ↓LblSec [ngx.components.UIElement-1779400001074]: 
+            tagName: p
+            ↓AttrClass [ngx.components.UIAttribute-1779400001075]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-field-label
+            ↓Text [ngx.components.UIText-1779400001210]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:Secteur
+          ↓ValSec [ngx.components.UIElement-1779400001076]: 
+            tagName: p
+            ↓AttrClass [ngx.components.UIAttribute-1779400001077]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-recap-value
+            ↓Text [ngx.components.UIText-1779400001211]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:displayOrDash(sector)
+          ↓LblAge [ngx.components.UIElement-1779400001078]: 
+            tagName: p
+            ↓AttrClass [ngx.components.UIAttribute-1779400001079]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-field-label
+            ↓Text [ngx.components.UIText-1779400001212]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:Tranche d''âge
+          ↓ValAge [ngx.components.UIElement-1779400001080]: 
+            tagName: p
+            ↓AttrClass [ngx.components.UIAttribute-1779400001081]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-recap-value
+            ↓Text [ngx.components.UIText-1779400001213]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:displayOrDash(age)
+          ↓LblU [ngx.components.UIElement-1779400001082]: 
+            tagName: p
+            ↓AttrClass [ngx.components.UIAttribute-1779400001083]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-field-label
+            ↓Text [ngx.components.UIText-1779400001214]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:Ancienneté Urssaf
+          ↓ValU [ngx.components.UIElement-1779400001084]: 
+            tagName: p
+            ↓AttrClass [ngx.components.UIAttribute-1779400001085]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-recap-value
+            ↓Text [ngx.components.UIText-1779400001215]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:displayOrDash(urssafSince)
+          ↓LblM [ngx.components.UIElement-1779400001086]: 
+            tagName: p
+            ↓AttrClass [ngx.components.UIAttribute-1779400001087]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-field-label
+            ↓Text [ngx.components.UIText-1779400001216]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:Multi-profils
+          ↓ValM [ngx.components.UIElement-1779400001088]: 
+            tagName: p
+            ↓AttrClass [ngx.components.UIAttribute-1779400001089]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-recap-value
+            ↓Text [ngx.components.UIText-1779400001217]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:displayOrDash(multiProfileText)
+          ↓LblC [ngx.components.UIElement-1779400001090]: 
+            tagName: p
+            ↓AttrClass [ngx.components.UIAttribute-1779400001091]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-field-label
+            ↓Text [ngx.components.UIText-1779400001218]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:Mode de contact
+          ↓ValC [ngx.components.UIElement-1779400001092]: 
+            tagName: p
+            ↓AttrClass [ngx.components.UIAttribute-1779400001093]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-recap-value
+            ↓Text [ngx.components.UIText-1779400001219]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:displayOrDash(contactMode)
+        ↓Card3 [ngx.components.UIElement-1779400001100]: 
+          tagName: div
+          ↓AttrClass [ngx.components.UIAttribute-1779400001101]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-form-card
+          ↓SecTitle3 [ngx.components.UIElement-1779400001102]: 
+            tagName: h3
+            ↓AttrClass [ngx.components.UIAttribute-1779400001103]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-section-title
+            ↓Text [ngx.components.UIText-1779400001220]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:Consentement et contact
+          ↓LblE [ngx.components.UIElement-1779400001104]: 
+            tagName: p
+            ↓AttrClass [ngx.components.UIAttribute-1779400001105]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-field-label
+            ↓Text [ngx.components.UIText-1779400001221]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:E-mail
+          ↓ValE [ngx.components.UIElement-1779400001106]: 
+            tagName: p
+            ↓AttrClass [ngx.components.UIAttribute-1779400001107]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-recap-value
+            ↓Text [ngx.components.UIText-1779400001222]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:displayOrDash(intervieweeEmail)
+          ↓LblRgpd [ngx.components.UIElement-1779400001108]: 
+            tagName: p
+            ↓AttrClass [ngx.components.UIAttribute-1779400001109]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-field-label
+            ↓Text [ngx.components.UIText-1779400001223]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:Consentement RGPD
+          ↓ValRgpd [ngx.components.UIElement-1779400001110]: 
+            tagName: p
+            ↓AttrClass [ngx.components.UIAttribute-1779400001111]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-recap-value
+            ↓Text [ngx.components.UIText-1779400001224]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:consentText
+          ↓LblRc [ngx.components.UIElement-1779400001112]: 
+            tagName: p
+            ↓AttrClass [ngx.components.UIAttribute-1779400001113]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-field-label
+            ↓Text [ngx.components.UIText-1779400001225]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:Recontact autorisé
+          ↓ValRc [ngx.components.UIElement-1779400001114]: 
+            tagName: p
+            ↓AttrClass [ngx.components.UIAttribute-1779400001115]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-recap-value
+            ↓Text [ngx.components.UIText-1779400001226]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:recontactText
+          ↓LblPh [ngx.components.UIElement-1779400001116]: 
+            tagName: p
+            ↓AttrIf [ngx.components.UIAttribute-1779400001118]: 
+              attrName: '*ngIf'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:hasPhoto()
+            ↓AttrClass [ngx.components.UIAttribute-1779400001117]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-field-label
+            ↓Text [ngx.components.UIText-1779400001227]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:Photo
+          ↓Photo [ngx.components.UIDynamicElement-1779400001119]: 
+            beanData: '{"ionBean":"Image"}'
+            tagName: ion-img
+            ↓AttrIf [ngx.components.UIAttribute-1779400001120]: 
+              attrName: '*ngIf'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:hasPhoto()
+            ↓AttrSrc [ngx.components.UIAttribute-1779400001122]: 
+              attrName: '[src]'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:photoDataUrl
+            ↓AttrClass [ngx.components.UIAttribute-1779400001121]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-recap-photo
+          ↓ErrBlock [ngx.components.UIElement-1779400001130]: 
+            tagName: div
+            ↓AttrIf [ngx.components.UIAttribute-1779400001131]: 
+              attrName: '*ngIf'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:syncError
+            ↓LblErr [ngx.components.UIElement-1779400001132]: 
+              tagName: p
+              ↓AttrClass [ngx.components.UIAttribute-1779400001133]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:vu-field-label
+              ↓Text [ngx.components.UIText-1779400001228]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:Erreur synchronisation
+            ↓ValErr [ngx.components.UIElement-1779400001134]: 
+              tagName: p
+              ↓AttrClass [ngx.components.UIAttribute-1779400001135]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:vu-recap-value vu-recap-muted
+              ↓Text [ngx.components.UIText-1779400001229]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:syncError
+        ↓BtnEdit [ngx.components.UIDynamicElement-1779400001140]: 
+          beanData: '{"ionBean":"Button","IonColor":"plain:primary"}'
+          tagName: ion-button
+          ↓AttrClass [ngx.components.UIAttribute-1779400001141]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-btn-primary
+          ↓AttrIf [ngx.components.UIAttribute-1779400001142]: 
+            attrName: '*ngIf'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:isDraft
+          ↓Event [ngx.components.UIControlEvent-1779400001143]: 
+            ↓GoEdit [ngx.components.UICustomAction-1779400001144]: 
+              actionValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                    →: |
+                      		page.continueEdit().then(() => resolve());
+                      
+          ↓Text [ngx.components.UIText-1779400001145]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Continuer l''édition
+↓PageEvent [ngx.components.UIPageEvent-1779400001200]: 
+  ↓OnShow [ngx.components.UICustomAction-1779400001201]: 
+    actionValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+          →: |
+            		page.loadRecap().then(() => {
+            			page.ref.markForCheck();
+            			resolve();
+            		}).catch(() => {
+            			page.ref.markForCheck();
+            			resolve();
+            		});
+            

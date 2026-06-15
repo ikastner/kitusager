@@ -1,6 +1,7 @@
-comment: Enregistre ou met à jour une interview (réponses + métadonnées) sur le serveur SQL
-↓Init_Schema [steps.TransactionStep-1779372002001]: 
-  sourceTransaction: VoxUrssafV2.voxurssaf.Interview_InitSchema
+comment: Enregistre ou met à jour une interview SQL (appeler Interview_EnsureSchema avant)
+↓Delete [steps.TransactionStep-1779372002015]: 
+  sourceTransaction: VoxUrssafV2.voxurssaf.Interview_Delete_Tx
+  ↓interview_id [variables.StepVariable-1779372002014]: 
 ↓Save [steps.TransactionStep-1779372002002]: 
   sourceTransaction: VoxUrssafV2.voxurssaf.Interview_Save_Tx
   ↓interview_id [variables.StepVariable-1779372002003]: 

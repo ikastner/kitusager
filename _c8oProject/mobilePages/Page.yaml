@@ -23,20 +23,38 @@ scriptContent:
         	}
         	public async loadHome(): Promise<void> {
         		const store = await this.getStore();
+        		if (!store) {
+        			this.local.interviews = [];
+        			this.local.recent = [];
+        			this.local.totalNotes = 0;
+        			return;
+        		}
+        		if (store.listForHome().length === 0 && store.hydrateFromLocalSnapshot) {
+        			store.hydrateFromLocalSnapshot();
+        		}
+        		this.local.interviews = store.listForHome();
+        		this.local.recent = (this.local.interviews || []).slice(0, 3);
+        		this.local.totalNotes = store.countTotalNotes();
+        	}
+        	public async refreshHomeFromDb(): Promise<void> {
+        		const store = await this.getStore();
         		if (store && store.reloadCache) {
         			await store.reloadCache(this);
         		}
-        		this.local.interviews = store ? store.listForHome() : [];
-        		this.local.recent = (this.local.interviews || []).slice(0, 3);
-        		this.local.totalNotes = store ? store.countTotalNotes() : 0;
+        		await this.loadHome();
         	}
         	public async goInterview(iv: any): Promise<void> {
         		const store = await this.getStore();
         		if (!iv || !store) { return; }
+        		if (store._page !== this) { store._page = this; }
         		const r = store.resumeInterview(iv);
-        		if (r && r.route) {
-        			this.angularRouter.navigate([r.route]);
+        		if (!r || !r.route) { return; }
+        		if (r.route === "/interview-recap") {
+        			const navController = this.getInstance(NavController);
+        			await navController.navigateForward("/interview-recap");
+        			return;
         		}
+        		this.angularRouter.navigate([r.route]);
         	}
         	public cardMeta(iv: any): string {
         		if (!iv) { return ""; }
@@ -54,30 +72,64 @@ scriptContent:
         	public async syncAll(): Promise<void> {
         		const store = await this.getStore();
         		if (!store) { return; }
-        		if (store.flushPersist) { await store.flushPersist(); }
         		const res = await store.syncAllPending(this);
         		const n = res ? res.n : 0;
         		const pushOk = res ? res.pushOk : true;
+        		const pending = res ? res.pending : 0;
+        		const failed = res ? res.failed : 0;
+        		const lastError = (res && res.lastError) ? String(res.lastError) : "";
+        		const total = (store.listForHome && store.listForHome()) ? store.listForHome().length : 0;
         		const toastCtrl = this.getInstance(ToastController);
         		let message = "";
         		let color = "medium";
+        		let duration = 4500;
         		if (!pushOk) {
-        			message = "Données enregistrées localement. Push serveur refusé — republier VoxUrssafV2 (secureDatabase:false).";
+        			message = "Fiches sauvegardées sur cet appareil. Push CouchDB refusé — republier VoxUrssafV2 (secureDatabase:false).";
         			color = "warning";
         		} else if (n > 0) {
-        			message = n + " interview(s) synchronisée(s)";
+        			message = n + " fiche(s) exportée(s) vers le serveur SQL";
         			color = "success";
+        		} else if (pending > 0 && failed > 0) {
+        			let detail = lastError;
+        			if (!detail) {
+        				try {
+        					const data = store.load ? store.load() : null;
+        					const errIv = data && (data.interviews || []).find((iv: any) => iv.status === "error" && iv.syncError);
+        					if (errIv) {
+        						detail = (errIv.syncErrorStep ? "[" + errIv.syncErrorStep + "] " : "") + (errIv.syncError || "");
+        					}
+        				} catch (e) { /* ignore */ }
+        			}
+        			message = "Export SQL échoué pour " + failed + "/" + pending + " fiche(s).";
+        			if (detail) {
+        				message += " " + detail.substring(0, 380);
+        				duration = 12000;
+        			} else {
+        				message += " Republiez VoxUrssafV2 (Interview_EnsureSchema + Interview_Save).";
+        			}
+        			color = "danger";
+        		} else if (pending > 0) {
+        			message = pending + " fiche(s) en attente d''export serveur.";
+        			color = "warning";
+        		} else if (total > 0) {
+        			message = "Fiches déjà synchronisées ou en brouillon (" + total + " en local).";
+        			color = "medium";
         		} else {
-        			message = "Aucune interview à synchroniser";
+        			message = "Aucune fiche enregistrée sur cet appareil.";
         		}
         		const toast = await toastCtrl.create({
         			message: message,
-        			duration: 3500,
+        			duration: duration,
         			position: "bottom",
-        			color: color
+        			color: color,
+        			buttons: (failed > 0 && lastError) ? [{ text: "OK", role: "cancel" }] : undefined
         		});
         		await toast.present();
+        		if (failed > 0) {
+        			try { this.c8o.log.error("[VoxUrssafV2] syncAll: " + message); } catch (e) { /* ignore */ }
+        		}
         		await this.loadHome();
+        		this.ref.markForCheck();
         	}
         	public hasInterviewMeta(iv: any): boolean {
         		return !!(iv && (iv.intervieweeRole || iv.intervieweeCompany));
@@ -591,6 +643,11 @@ title: Accueil
         - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
         - com.twinsoft.convertigo.beans.common.FormatedContent: 
           →: |
-            		page.loadHome();
-            		resolve();
+            		page.loadHome().then(() => {
+            			page.ref.markForCheck();
+            			resolve();
+            		}).catch(() => {
+            			page.ref.markForCheck();
+            			resolve();
+            		});
             

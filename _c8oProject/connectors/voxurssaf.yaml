@@ -9,8 +9,8 @@ jdbcUserName: SA
     FROM interview
     WHERE interview_id = {interview_id}
   ↓interview_id [variables.RequestableVariable-1779371001010]: 
-↓Interview_InitSchema [transactions.SqlTransaction]: 
-  comment: Crée les tables si absentes (dev HSQLDB)
+↓Interview_InitInterviewTable_Tx [transactions.SqlTransaction]: 
+  comment: Table interview (une requête = pas de conflit JDBC)
   sqlQuery: |
     CREATE TABLE IF NOT EXISTS interview (
       interview_id VARCHAR(64) PRIMARY KEY,
@@ -25,13 +25,33 @@ jdbcUserName: SA
       answers_json CLOB NOT NULL,
       photos_json CLOB,
       sync_error VARCHAR(512)
-    );
+    )
+↓Interview_InitPhotoTable_Tx [transactions.SqlTransaction]: 
+  comment: Table interview_photo
+  sqlQuery: |
     CREATE TABLE IF NOT EXISTS interview_photo (
       photo_id VARCHAR(64) PRIMARY KEY,
       interview_id VARCHAR(64) NOT NULL,
       sort_order INT NOT NULL,
       mime_type VARCHAR(64),
       content_base64 CLOB NOT NULL
+    )
+↓Interview_InitSchema [transactions.SqlTransaction]: 
+  comment: Alias legacy — préférer Interview_EnsureSchema (2 transactions séparées)
+  sqlQuery: |
+    CREATE TABLE IF NOT EXISTS interview (
+      interview_id VARCHAR(64) PRIMARY KEY,
+      event_id VARCHAR(64) NOT NULL,
+      status VARCHAR(20) NOT NULL,
+      created_at TIMESTAMP NOT NULL,
+      updated_at TIMESTAMP,
+      synced_at TIMESTAMP,
+      device_id VARCHAR(64) NOT NULL,
+      participant_label VARCHAR(255),
+      zone VARCHAR(64),
+      answers_json CLOB NOT NULL,
+      photos_json CLOB,
+      sync_error VARCHAR(512)
     )
 ↓Interview_List_Tx [transactions.SqlTransaction]: 
   sqlQuery: |
@@ -41,9 +61,14 @@ jdbcUserName: SA
     WHERE event_id = {event_id}
     ORDER BY created_at DESC
   ↓event_id [variables.RequestableVariable-1779371001011]: 
-↓Interview_Save_Tx [transactions.SqlTransaction]: 
+↓Interview_Delete_Tx [transactions.SqlTransaction]: 
+  comment: Supprime une interview avant ré-insertion (un seul paramètre — évite doublon JDBC)
   sqlQuery: |
-    DELETE FROM interview WHERE interview_id = {interview_id};
+    DELETE FROM interview WHERE interview_id = {interview_id}
+  ↓interview_id [variables.RequestableVariable-1779371001020]: 
+↓Interview_Save_Tx [transactions.SqlTransaction]: 
+  comment: Insert interview — DELETE séparé dans Interview_Delete_Tx
+  sqlQuery: |
     INSERT INTO interview (
       interview_id, event_id, status, created_at, updated_at, synced_at,
       device_id, participant_label, zone, answers_json, photos_json, sync_error
@@ -60,9 +85,13 @@ jdbcUserName: SA
   ↓zone [variables.RequestableVariable-1779371001007]: 
   ↓answers_json [variables.RequestableVariable-1779371001008]: 
   ↓photos_json [variables.RequestableVariable-1779371001009]: 
+↓Photo_Delete_Tx [transactions.SqlTransaction]: 
+  comment: Supprime une photo avant ré-insertion
+  sqlQuery: |
+    DELETE FROM interview_photo WHERE photo_id = {photo_id}
+  ↓photo_id [variables.RequestableVariable-1779371001017]: 
 ↓Photo_Save_Tx [transactions.SqlTransaction]: 
   sqlQuery: |
-    DELETE FROM interview_photo WHERE photo_id = {photo_id};
     INSERT INTO interview_photo (photo_id, interview_id, sort_order, mime_type, content_base64)
     VALUES ({photo_id}, {interview_id}, {sort_order}, {mime_type}, {content_base64})
   ↓photo_id [variables.RequestableVariable-1779371001012]: 

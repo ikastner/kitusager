@@ -110,7 +110,8 @@ componentScriptContent:
         				"InterviewStep1": "/interview-step-1",
         				"InterviewStep2": "/interview-step-2",
         				"InterviewStep3": "/interview-step-3",
-        				"InterviewStep4": "/interview-step-4"
+        				"InterviewStep4": "/interview-step-4",
+        				"InterviewRecap": "/interview-recap"
         			};
         			return fallback[pageName] || "/";
         		}
@@ -148,12 +149,14 @@ componentScriptContent:
         				app._interviewStore = {
         					FS_DB: "voxurssafv2_fullsync",
         					LEGACY_KEY: "voxurssaf_v2_data",
+        					CACHE_LS_KEY: "voxurssaf_v2_offline_cache",
         					DEVICE_LS_KEY: "voxurssaf_v2_device_id",
         					INTERVIEWS_LS_KEY: "voxurssaf_v2_interview_ids",
         					_cache: null as any,
         					_ready: null as Promise<void> | null,
         					_page: null as any,
         					_saveQueue: null as Promise<void> | null,
+        					_recapViewId: null as string | null,
         	
         					init() { /* compat — init réel via initWithPage */ },
         	
@@ -164,6 +167,7 @@ componentScriptContent:
         					async initWithPage(page: any): Promise<void> {
         						this._page = page;
         						await page.c8o.finalizeInit();
+        						this.hydrateFromLocalSnapshot();
         						await this.migrateLegacyIfNeeded(page);
         						await this.reloadCache(page);
         						// Pas de pull/push au démarrage : évite _bulk_docs anonymous si CouchDB/Convertigo pas republié.
@@ -203,6 +207,75 @@ componentScriptContent:
         						} catch (e) { /* ignore */ }
         					},
         	
+        					hydrateFromLocalSnapshot(): boolean {
+        						const snap = this.loadLocalSnapshot();
+        						if (!snap || !Array.isArray(snap.interviews) || snap.interviews.length === 0) {
+        							return false;
+        						}
+        						const empty = this.getEmptyData();
+        						const deviceId = snap.deviceId || this.readDeviceIdFromLocal() || empty.deviceId;
+        						this.rememberDeviceId(deviceId);
+        						this._cache = {
+        							deviceId: deviceId,
+        							eventId: snap.eventId || empty.eventId,
+        							investigatorName: snap.investigatorName || empty.investigatorName,
+        							speechLocale: snap.speechLocale || empty.speechLocale,
+        							questions: (snap.questions || []).slice(),
+        							interviews: snap.interviews.map((iv: any) => Object.assign({}, iv)),
+        							activeInterviewId: snap.activeInterviewId || null
+        						};
+        						return true;
+        					},
+        	
+        					saveLocalSnapshot() {
+        						try {
+        							const c = this.ensureCache();
+        							const prev = this.loadLocalSnapshot();
+        							if ((c.interviews || []).length === 0 && prev && (prev.interviews || []).length > 0) {
+        								return;
+        							}
+        							const interviews = (c.interviews || []).map((iv: any) => {
+        								const copy = Object.assign({}, iv);
+        								if (copy.entries) { copy.entries = copy.entries.slice(); }
+        								if (copy.journeySteps) { copy.journeySteps = copy.journeySteps.slice(); }
+        								if (copy.photoDataUrl && copy.photoDataUrl.length > 120000) {
+        									copy._photoOmitted = true;
+        									delete copy.photoDataUrl;
+        								}
+        								return copy;
+        							});
+        							localStorage.setItem(this.CACHE_LS_KEY, JSON.stringify({
+        								deviceId: c.deviceId,
+        								eventId: c.eventId,
+        								investigatorName: c.investigatorName,
+        								speechLocale: c.speechLocale,
+        								questions: (c.questions || []).slice(),
+        								interviews: interviews,
+        								activeInterviewId: c.activeInterviewId,
+        								savedAt: new Date().toISOString()
+        							}));
+        							this.rememberDeviceId(c.deviceId);
+        							for (const iv of interviews) {
+        								if (iv && iv.interviewId) { this.rememberInterviewId(iv.interviewId); }
+        							}
+        						} catch (e) {
+        							const p = this._page;
+        							if (p) { try { p.c8o.log.warn("[VoxUrssafV2] saveLocalSnapshot", e); } catch (e2) { /* ignore */ } }
+        						}
+        					},
+        	
+        					loadLocalSnapshot(): any {
+        						try {
+        							const raw = localStorage.getItem(this.CACHE_LS_KEY);
+        							return raw ? JSON.parse(raw) : null;
+        						} catch (e) { return null; }
+        					},
+        	
+        					countPendingSync(): number {
+        						return (this.load().interviews || []).filter((iv: any) =>
+        							iv.status === "saved" || iv.status === "error").length;
+        					},
+        	
         					async loadInterviewsFallback(page: any, deviceId: string): Promise<any[]> {
         						const interviews: any[] = [];
         						let ids: string[] = [];
@@ -235,6 +308,62 @@ componentScriptContent:
         						if (!iso) { return ""; }
         						const d = new Date(iso);
         						return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
+        					},
+        	
+        					formatSqlTimestamp(iso: string) {
+        						if (!iso) {
+        							return new Date().toISOString().replace("T", " ").replace("Z", "").substring(0, 19);
+        						}
+        						return String(iso).replace("T", " ").replace("Z", "").substring(0, 19);
+        					},
+        	
+        					formatSyncError(e: any, step?: string): string {
+        						const parts: string[] = [];
+        						if (step) { parts.push("[" + step + "]"); }
+        						const inner = (e && e.__inner) ? e.__inner : e;
+        						const push = (v: any) => {
+        							if (v == null || v === undefined) { return; }
+        							let s = "";
+        							if (typeof v === "string") { s = v.trim(); }
+        							else if (v.message) { s = String(v.message).trim(); }
+        							else if (v.errorMessage) { s = String(v.errorMessage).trim(); }
+        							else if (v.ErrorMessage) { s = String(v.ErrorMessage).trim(); }
+        							else {
+        								try { s = JSON.stringify(v); } catch (e2) { s = String(v); }
+        							}
+        							if (s && parts.indexOf(s) < 0) { parts.push(s); }
+        						};
+        						push(e && e.message);
+        						push(inner && inner.message);
+        						push(inner && inner.error);
+        						push(inner && inner.data);
+        						push(inner && inner.body);
+        						if (inner && inner.document) {
+        							push(inner.document.error);
+        							push(inner.document.message);
+        						}
+        						if (inner && inner.stack && parts.length < 3) {
+        							const st = String(inner.stack).split("\n")[0];
+        							if (st) { parts.push(st); }
+        						}
+        						if (parts.length <= (step ? 1 : 0)) {
+        							try {
+        								const j = JSON.stringify(inner || e);
+        								if (j && j !== "{}" && j.length < 800) { parts.push(j); }
+        							} catch (e3) { push(String(inner || e)); }
+        						}
+        						return parts.join(" — ").substring(0, 480);
+        					},
+        	
+        					callSequence(page: any, requestable: string, params?: any): Promise<any> {
+        						if (!params || typeof params !== "object") {
+        							return page.c8o.callJson(requestable);
+        						}
+        						return page.c8o.callJsonObject(requestable, params);
+        					},
+        	
+        					async ensureSqlSchema(page: any): Promise<void> {
+        						await this.callSequence(page, "VoxUrssafV2.Interview_EnsureSchema");
         					},
         	
         					getEmptyData() {
@@ -299,9 +428,14 @@ componentScriptContent:
         	
         					enqueuePersist(page: any, task: () => Promise<void>): Promise<void> {
         						const p = page || this._page;
-        						if (!p) { return Promise.resolve(); }
+        						if (!p) {
+        							try { this.saveLocalSnapshot(); } catch (e) { /* ignore */ }
+        							return Promise.resolve();
+        						}
         						const run = () => task().catch((err: any) => {
         							try { p.c8o.log.warn("[VoxUrssafV2] persist error", err); } catch (e) { /* ignore */ }
+        						}).finally(() => {
+        							try { this.saveLocalSnapshot(); } catch (e) { /* ignore */ }
         						});
         						this._saveQueue = (this._saveQueue || Promise.resolve()).then(run);
         						return this._saveQueue;
@@ -507,9 +641,34 @@ componentScriptContent:
         						});
         					},
         	
+        					mergeInterviewsById(target: any[], source: any[]): any[] {
+        						const out = (target || []).slice();
+        						for (const mem of (source || [])) {
+        							if (!mem || !mem.interviewId) { continue; }
+        							const idx = out.findIndex((x: any) => x.interviewId === mem.interviewId);
+        							if (idx < 0) {
+        								out.push(mem);
+        							} else {
+        								const a = mem.updatedAt || mem.createdAt || "";
+        								const b = out[idx].updatedAt || out[idx].createdAt || "";
+        								if (a >= b) { out[idx] = mem; }
+        							}
+        						}
+        						return out;
+        					},
+        	
         					async reloadCache(page: any): Promise<void> {
+        						const memoryInterviews = (this._cache && this._cache.interviews)
+        							? this._cache.interviews.slice() : [];
+        						const memoryActiveId = (this._cache && this._cache.activeInterviewId)
+        							? this._cache.activeInterviewId : null;
+        						const recapViewId = this._recapViewId;
         						const empty = this.getEmptyData();
+        						const offlineSnap = this.loadLocalSnapshot();
         						let deviceId = this.readDeviceIdFromLocal();
+        						if (!deviceId && offlineSnap && offlineSnap.deviceId) {
+        							deviceId = offlineSnap.deviceId;
+        						}
         						if (!deviceId) {
         							try {
         								const localMeta = await this.fsGet(page, "_local/vu_device");
@@ -543,7 +702,7 @@ componentScriptContent:
         						if (!config || !config.deviceId) {
         							try { await this.persistConfig(page); } catch (e) { /* ignore */ }
         						}
-        						const interviews: any[] = [];
+        						let interviews: any[] = [];
         						let loadedFromView = false;
         						try {
         							const viewRes = await this.fsView(page, "interviews_by_device", this._cache.deviceId);
@@ -572,8 +731,31 @@ componentScriptContent:
         								}
         							}
         						}
-        						interviews.sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
-        						this._cache.interviews = interviews;
+        						if (offlineSnap && offlineSnap.interviews && offlineSnap.interviews.length) {
+        							if (offlineSnap.deviceId && offlineSnap.deviceId !== this._cache.deviceId) {
+        								this._cache.deviceId = offlineSnap.deviceId;
+        								this.rememberDeviceId(offlineSnap.deviceId);
+        							}
+        							interviews = this.mergeInterviewsById(interviews, offlineSnap.interviews);
+        						}
+        						const merged = this.mergeInterviewsById(interviews, memoryInterviews);
+        						merged.sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
+        						this._cache.interviews = merged;
+        						if (memoryActiveId) {
+        							this._cache.activeInterviewId = memoryActiveId;
+        						}
+        						if (recapViewId) {
+        							this._recapViewId = recapViewId;
+        						}
+        						if (offlineSnap && offlineSnap.investigatorName && !this._cache.investigatorName) {
+        							this._cache.investigatorName = offlineSnap.investigatorName;
+        						}
+        						if (offlineSnap && offlineSnap.questions && (!this._cache.questions || !this._cache.questions.length)) {
+        							this._cache.questions = (offlineSnap.questions || []).slice();
+        						}
+        						if (merged.length > 0) {
+        							try { this.saveLocalSnapshot(); } catch (e) { /* ignore */ }
+        						}
         					},
         	
         					async migrateLegacyIfNeeded(page: any): Promise<void> {
@@ -659,6 +841,21 @@ componentScriptContent:
         						if (!data.activeInterviewId) { return null; }
         						return this.getInterview(data.activeInterviewId);
         					},
+        					getRecapInterview() {
+        						const data = this.load();
+        						const id = this._recapViewId || data.activeInterviewId;
+        						if (!id) { return null; }
+        						return this.getInterview(id);
+        					},
+        					setRecapView(id: string) {
+        						if (!id) { return null; }
+        						this._recapViewId = id;
+        						this.setActive(id);
+        						return this.getInterview(id);
+        					},
+        					clearRecapView() {
+        						this._recapViewId = null;
+        					},
         					setActive(id: string) {
         						const data = this.load();
         						data.activeInterviewId = id;
@@ -687,6 +884,7 @@ componentScriptContent:
         						}, this.emptySalonFields());
         						data.interviews.unshift(iv);
         						data.activeInterviewId = iv.interviewId;
+        						try { this.saveLocalSnapshot(); } catch (e) { /* ignore */ }
         						const p = this._page;
         						if (p) {
         							this.enqueuePersist(p, async () => {
@@ -747,6 +945,7 @@ componentScriptContent:
         						Object.assign(data.interviews[idx], partial || {});
         						data.interviews[idx].updatedAt = new Date().toISOString();
         						data.interviews[idx].status = "draft";
+        						try { this.saveLocalSnapshot(); } catch (e) { /* ignore */ }
         						this.persistActiveOnly(this._page);
         						return data.interviews[idx];
         					},
@@ -772,6 +971,7 @@ componentScriptContent:
         						row.updatedAt = new Date().toISOString();
         						data.activeInterviewId = null;
         						this.rememberInterviewId(row.interviewId);
+        						try { this.saveLocalSnapshot(); } catch (e) { /* ignore */ }
         						const p = this._page;
         						if (p) {
         							this.enqueuePersist(p, async () => {
@@ -831,12 +1031,13 @@ componentScriptContent:
         					},
         					resumeInterview(homeItem: any) {
         						if (!homeItem || !homeItem.id) { return null; }
-        						this.setActive(homeItem.id);
-        						const iv = this.getActiveInterview();
-        						if (iv && iv.format === "salon" && iv.status === "draft") {
+        						const iv = this.getInterview(homeItem.id);
+        						if (!iv) { return null; }
+        						this.setRecapView(homeItem.id);
+        						if (iv.format === "salon" && iv.status === "draft") {
         							return { iv: iv, route: this.getWizardRoute(iv.wizardStep || 1) };
         						}
-        						return { iv: iv, route: "/interview-step-1" };
+        						return { iv: iv, route: "/interview-recap" };
         					},
         					buildSalonSyncPayload(iv: any) {
         						const photos: any[] = [];
@@ -892,54 +1093,87 @@ componentScriptContent:
         						if (!iv) { return false; }
         						const data = this.load();
         						const sync = this.buildSyncPayload(iv);
+        						try { await this.persistInterview(page, iv); } catch (e) {
+        							try { page.c8o.log.warn("[VoxUrssafV2] persist avant export SQL", e); } catch (e2) { /* ignore */ }
+        						}
         						iv.status = "syncing";
         						const idx = data.interviews.findIndex((i: any) => i.interviewId === interviewId);
         						if (idx >= 0) { data.interviews[idx] = iv; await this.persistInterview(page, iv); }
+        						const sqlParams: any = {
+        							interview_id: iv.interviewId,
+        							event_id: data.eventId,
+        							status: "synced",
+        							created_at: this.formatSqlTimestamp(iv.createdAt),
+        							device_id: data.deviceId,
+        							participant_label: iv.format === "salon"
+        								? (iv.firstName || iv.sheetCode || iv.intervieweeName || "")
+        								: (iv.intervieweeName || ""),
+        							zone: iv.format === "salon" ? (iv.sheetCode || "") : (iv.context || ""),
+        							answers_json: JSON.stringify(sync.payload),
+        							photos_json: JSON.stringify(sync.photos.map((p: any) => ({ photoId: p.photoId, order: p.order })))
+        						};
+        						const runStep = async (step: string, fn: () => Promise<any>) => {
+        							try {
+        								await fn();
+        							} catch (err: any) {
+        								const wrapped: any = new Error(this.formatSyncError(err, step));
+        								wrapped.__syncStep = step;
+        								wrapped.__inner = err;
+        								throw wrapped;
+        							}
+        						};
         						try {
-        							await page.c8o.callJson("VoxUrssafV2.FS_ExportInterviewToSql", {
-        								docid: this.interviewDocId(iv.interviewId),
-        								interview_id: iv.interviewId,
-        								event_id: data.eventId,
-        								status: "synced",
-        								created_at: iv.createdAt,
-        								device_id: data.deviceId,
-        								participant_label: iv.format === "salon"
-        									? (iv.firstName || iv.sheetCode || iv.intervieweeName || "")
-        									: (iv.intervieweeName || ""),
-        								zone: iv.format === "salon" ? (iv.sheetCode || "") : (iv.context || ""),
-        								answers_json: JSON.stringify(sync.payload),
-        								photos_json: JSON.stringify(sync.photos.map((p: any) => ({ photoId: p.photoId, order: p.order })))
-        							});
+        							await runStep("Interview_Save", () =>
+        								this.callSequence(page, "VoxUrssafV2.Interview_Save", sqlParams));
         							for (let i = 0; i < sync.photos.length; i++) {
         								const p = sync.photos[i];
         								let b64 = p.dataUrl || "";
         								const b64idx = b64.indexOf("base64,");
         								if (b64idx >= 0) { b64 = b64.substring(b64idx + 7); }
-        								await page.c8o.callJson("VoxUrssafV2.Interview_UploadPhoto", {
+        								const photoParams = {
         									photo_id: p.photoId,
         									interview_id: iv.interviewId,
         									sort_order: String(i),
         									mime_type: "image/jpeg",
         									content_base64: b64
-        								});
+        								};
+        								await runStep("Interview_UploadPhoto", () =>
+        									this.callSequence(page, "VoxUrssafV2.Interview_UploadPhoto", photoParams));
         							}
         							iv.status = "synced";
         							iv.syncedAt = new Date().toISOString();
         							iv.syncError = null;
+        							iv.syncErrorStep = null;
         							const d2 = this.load();
         							const ix = d2.interviews.findIndex((x: any) => x.interviewId === interviewId);
         							if (ix >= 0) { d2.interviews[ix] = iv; await this.persistInterview(page, iv); }
+        							try { this.saveLocalSnapshot(); } catch (e) { /* ignore */ }
         							return true;
         						} catch (e) {
         							iv.status = "error";
-        							iv.syncError = (e && e.message) ? e.message : String(e);
+        							iv.syncErrorStep = (e && e.__syncStep) ? e.__syncStep : "Interview_Save";
+        							iv.syncError = this.formatSyncError(e, iv.syncErrorStep);
+        							try { page.c8o.log.error("[VoxUrssafV2] sync " + iv.interviewId, e); } catch (e2) { /* ignore */ }
         							const d2 = this.load();
         							const ix = d2.interviews.findIndex((x: any) => x.interviewId === interviewId);
         							if (ix >= 0) { d2.interviews[ix] = iv; await this.persistInterview(page, iv); }
+        							try { this.saveLocalSnapshot(); } catch (e3) { /* ignore */ }
         							return false;
         						}
         					},
-        					async syncAllPending(page: any): Promise<{ n: number; pushOk: boolean }> {
+        					async syncAllPending(page: any): Promise<{ n: number; pushOk: boolean; pending: number; failed: number; lastError: string }> {
+        						await this.flushPersist();
+        						if (this.persistAllNow) { await this.persistAllNow(page); }
+        						try { this.saveLocalSnapshot(); } catch (e) { /* ignore */ }
+        						const pendingList = (this.load().interviews || []).filter((iv: any) =>
+        							iv.status === "saved" || iv.status === "error");
+        						let lastError = "";
+        						try {
+        							await this.ensureSqlSchema(page);
+        						} catch (e) {
+        							lastError = this.formatSyncError(e, "Interview_EnsureSchema");
+        							page.c8o.log.warn("[VoxUrssafV2] Interview_EnsureSchema", e);
+        						}
         						let pushOk = true;
         						try {
         							await this.pushToServer(page);
@@ -949,12 +1183,15 @@ componentScriptContent:
         							page.c8o.log.warn("[VoxUrssafV2] push serveur impossible (republier connecteur secureDatabase:false ?)", msg);
         						}
         						let n = 0;
-        						for (const iv of (this.load().interviews || [])) {
-        							if (iv.status === "saved" || iv.status === "error") {
-        								if (await this.syncInterview(page, iv.interviewId)) { n++; }
+        						let failed = 0;
+        						for (const iv of pendingList) {
+        							if (await this.syncInterview(page, iv.interviewId)) { n++; }
+        							else {
+        								failed++;
+        								if (iv.syncError) { lastError = iv.syncError; }
         							}
         						}
-        						return { n: n, pushOk: pushOk };
+        						return { n: n, pushOk: pushOk, pending: pendingList.length, failed: failed, lastError: lastError };
         					}
         				};
         			}
@@ -1075,6 +1312,7 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
 ↓InterviewAll [ngx.components.PageComponent-1779290000004]: 🗏 mobilePages/InterviewAll.yaml
 ↓InterviewQuestions [ngx.components.PageComponent-1779290000005]: 🗏 mobilePages/InterviewQuestions.yaml
 ↓InterviewProfile [ngx.components.PageComponent-1779290000006]: 🗏 mobilePages/InterviewProfile.yaml
+↓InterviewRecap [ngx.components.PageComponent-1779400000001]: 🗏 mobilePages/InterviewRecap.yaml
 ↓Style [ngx.components.UIStyle-1779283399742]: 
   comment: You can add some global application styles here
   styleContent: 
@@ -1440,6 +1678,19 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
             font-size: 12px; color: #94a3b8; background: #f8fafc;
             padding: 4px 8px; border-radius: 6px;
           }
+          .vu-recap-hero {
+            background: linear-gradient(135deg, #0050AA 0%, #003d82 100%);
+            color: #fff; border-radius: 24px; padding: 20px 24px; margin-bottom: 20px;
+          }
+          .vu-recap-hero-title { font-size: 22px; font-weight: 700; margin: 0 0 4px; }
+          .vu-recap-hero-sub { font-size: 14px; opacity: 0.9; margin: 0; }
+          .vu-recap-value { font-size: 16px; color: #1e293b; margin: 0 0 14px; line-height: 1.55; white-space: pre-wrap; }
+          .vu-recap-muted { color: #94a3b8; font-style: italic; }
+          .vu-recap-photo { width: 100%; max-height: 280px; object-fit: cover; border-radius: 16px; margin-top: 8px; }
+          .vu-status-synced { background: #dcfce7; color: #166534; }
+          .vu-status-saved { background: #dbeafe; color: #1e40af; }
+          .vu-status-draft { background: #fef3c7; color: #92400e; }
+          .vu-status-error { background: #fee2e2; color: #991b1b; }
           .vu-entry {
             background: #fff; border-radius: 24px; padding: 20px;
             margin-bottom: 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.03);

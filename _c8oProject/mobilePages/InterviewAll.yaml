@@ -21,13 +21,19 @@ scriptContent:
         		if (store && store.whenReady) { await store.whenReady(); }
         		this.local.filtered = store ? store.searchInterviews(this.searchQuery) : [];
         	}
-        	public goInterview(iv: any): void {
+        	public async goInterview(iv: any): Promise<void> {
         		const store = this.getStore();
+        		if (store && store.whenReady) { await store.whenReady(); }
         		if (!iv || !store) { return; }
+        		if (store._page !== this) { store._page = this; }
         		const r = store.resumeInterview(iv);
-        		if (r && r.route) {
-        			this.angularRouter.navigate([r.route]);
+        		if (!r || !r.route) { return; }
+        		if (r.route === "/interview-recap") {
+        			const navController = this.getInstance(NavController);
+        			await navController.navigateForward("/interview-recap");
+        			return;
         		}
+        		this.angularRouter.navigate([r.route]);
         	}
         	/*End_c8o_PageFunction*/'
 segment: interview-all
