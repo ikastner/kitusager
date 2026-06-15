@@ -17,7 +17,7 @@ scriptContent:
         		return (this.global && this.global.interviewStore) || null;
         	}
         	public async loadList(): Promise<void> {
-        		console.log("[VoxUrssafV2][All] loadList — début");
+        		console.log("[VoxUrssafV2][All] loadList — début", { q: this.searchQuery });
         		const store = this.getStoreSync();
         		if (!store) {
         			console.warn("[VoxUrssafV2][All] store introuvable");
@@ -34,6 +34,13 @@ scriptContent:
         		console.log("[VoxUrssafV2][All] loadList — fin", {
         			count: (this.local.filtered || []).length,
         			cacheCount: store.listForHome().length
+        		});
+        	}
+        	public onSearchInput(ev: any): void {
+        		const v = (ev && ev.detail && ev.detail.value != null) ? String(ev.detail.value) : "";
+        		this.searchQuery = v;
+        		this.loadList().then(() => {
+        			this.ref.markForCheck();
         		});
         	}
         	public async goInterview(iv: any): Promise<void> {
@@ -183,22 +190,18 @@ title: Toutes les interviews
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: plain:vu-searchbar
-        ↓Event [ngx.components.UIControlEvent-1779290003025]: 
-          ↓Filter [ngx.components.UICustomAction-1779290003026]: 
-            actionValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-                - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                  →: |
-                    '		page.loadList().then(() => {
-                    			page.ref.markForCheck();
-                    			resolve();
-                    		}).catch((e: any) => {
-                    			console.error("[VoxUrssafV2][All] filter loadList", e);
-                    			page.ref.markForCheck();
-                    			resolve();
-                    		});
-                    '
+        ↓AttrIonInput [ngx.components.UIAttribute-1779400400100]: 
+          attrName: (ionInput)
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:onSearchInput($event)
+        ↓AttrIonClear [ngx.components.UIAttribute-1779400400101]: 
+          attrName: (ionClear)
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:onSearchInput($event)
     ↓ListArea [ngx.components.UIElement-1779290003030]: 
       tagName: div
       ↓AttrClass [ngx.components.UIAttribute-1779290003031]: 

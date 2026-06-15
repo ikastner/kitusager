@@ -188,6 +188,15 @@ componentScriptContent:
         					filterDeletedInterviews(list: any[]): any[] {
         						return (list || []).filter((iv: any) => iv && iv.interviewId && !this.isInterviewDeleted(iv.interviewId));
         					},
+        					isInterviewPublished(iv: any): boolean {
+        						if (!iv) { return false; }
+        						const st = String(iv.status || "draft").toLowerCase();
+        						return st !== "draft";
+        					},
+        					listPublishedInterviews(): any[] {
+        						return this.filterDeletedInterviews(this.load().interviews || [])
+        							.filter((iv: any) => this.isInterviewPublished(iv));
+        					},
         	
         					init() { /* compat — init réel via initWithPage */ },
         	
@@ -920,7 +929,7 @@ componentScriptContent:
         						this.saveSync(this._page);
         					},
         					listForHome() {
-        						return this.filterDeletedInterviews(this.load().interviews || []).map((iv: any) => ({
+        						return this.listPublishedInterviews().map((iv: any) => ({
         							id: iv.interviewId,
         							intervieweeName: iv.format === "salon"
         								? ((iv.firstName || iv.sheetCode || "Fiche salon").trim() || "Fiche salon")
@@ -941,7 +950,7 @@ componentScriptContent:
         						}));
         					},
         					countTotalNotes() {
-        						return (this.load().interviews || []).reduce((acc: number, iv: any) => {
+        						return this.listPublishedInterviews().reduce((acc: number, iv: any) => {
         							if (iv.format === "salon") {
         								let n = 0;
         								if ((iv.verbatimText || "").trim()) { n++; }
@@ -2600,6 +2609,47 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
             :root:not(.force-light) .vu-hero-badge {
               color: #b91c1c;
             }
+            /* Accueil + liste — textes sur fond sombre */
+            :root:not(.force-light) .vu-home-header .vu-greeting-title,
+            :root:not(.force-light) .vu-home-header .vu-greeting-sub,
+            :root:not(.force-light) .vu-section-title,
+            :root:not(.force-light) .vu-section-head-row .vu-section-title,
+            :root:not(.force-light) .vu-list-count {
+              color: #f1f5f9;
+            }
+            :root:not(.force-light) .vu-home-header .vu-greeting-sub {
+              color: #94a3b8;
+            }
+            :root:not(.force-light) .vu-link-action {
+              color: #7eb8ff;
+            }
+            :root:not(.force-light) .vu-page-header--elevated,
+            :root:not(.force-light) .vu-search-wrap {
+              background: #1e293b;
+              box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+            }
+            :root:not(.force-light) .vu-page-header .vu-greeting-title {
+              color: #f1f5f9;
+            }
+            :root:not(.force-light) .vu-searchbar {
+              --background: #0f172a;
+              --color: #f1f5f9;
+              --placeholder-color: #94a3b8;
+              --placeholder-opacity: 1;
+              --icon-color: #94a3b8;
+              --clear-button-color: #94a3b8;
+            }
+            :root:not(.force-light) .vu-searchbar input {
+              color: #f1f5f9 !important;
+            }
+            :root:not(.force-light) .vu-back-btn {
+              background: #334155;
+              color: #e2e8f0;
+              box-shadow: none;
+            }
+            :root:not(.force-light) .vu-empty-inline {
+              color: #94a3b8;
+            }
           }
           :root.force-dark ion-content.vu-page {
             --background: #0f172a;
@@ -2651,6 +2701,42 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
           }
           :root.force-dark .vu-hero-badge {
             color: #b91c1c;
+          }
+          :root.force-dark .vu-home-header .vu-greeting-title,
+          :root.force-dark .vu-home-header .vu-greeting-sub,
+          :root.force-dark .vu-section-title,
+          :root.force-dark .vu-section-head-row .vu-section-title,
+          :root.force-dark .vu-list-count {
+            color: #f1f5f9;
+          }
+          :root.force-dark .vu-home-header .vu-greeting-sub {
+            color: #94a3b8;
+          }
+          :root.force-dark .vu-link-action {
+            color: #7eb8ff;
+          }
+          :root.force-dark .vu-page-header--elevated,
+          :root.force-dark .vu-search-wrap {
+            background: #1e293b;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+          }
+          :root.force-dark .vu-page-header .vu-greeting-title {
+            color: #f1f5f9;
+          }
+          :root.force-dark .vu-searchbar {
+            --background: #0f172a;
+            --color: #f1f5f9;
+            --placeholder-color: #94a3b8;
+            --placeholder-opacity: 1;
+            --icon-color: #94a3b8;
+            --clear-button-color: #94a3b8;
+          }
+          :root.force-dark .vu-back-btn {
+            background: #334155;
+            color: #e2e8f0;
+          }
+          :root.force-dark .vu-empty-inline {
+            color: #94a3b8;
           }
           /* === end VoxUrssaf React UI === */
           

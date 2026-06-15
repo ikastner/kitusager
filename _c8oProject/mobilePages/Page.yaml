@@ -561,6 +561,7 @@ title: Accueil
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                       - MobileSmartSourceType: 'script:iv.entryCount + '' note'' + (iv.entryCount > 1 ? ''s'' : '''')'
       ↓SectionKpi [ngx.components.UIElement-1779290001120]: 
+        isEnabled: false
         tagName: div
         ↓AttrClass [ngx.components.UIAttribute-1779290001119]: 
           attrName: class
@@ -713,7 +714,7 @@ title: Accueil
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:1.0.6
+                  - MobileSmartSourceType: plain:1.0.7
 ↓BottomNav [ngx.components.UIUseShared-1779290001199]: 
   sharedcomponent: VoxUrssafV2.Application.NgxApp.BottomNavPill
   ↓current [ngx.components.UIUseVariable-1779290001198]: 
