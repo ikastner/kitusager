@@ -13,105 +13,27 @@ scriptContent:
         /*Begin_c8o_PageConstructor*/
         		/*End_c8o_PageConstructor*/
         /*Begin_c8o_PageFunction*/
-        	public getStoreSync(): any {
-        		return (this.global && this.global.interviewStore) || null;
+        	public getStore(): any {
+        		return this.global.interviewStore;
         	}
         	public async loadList(): Promise<void> {
-        		console.log("[VoxUrssafV2][All] loadList — début", { q: this.searchQuery });
-        		const store = this.getStoreSync();
-        		if (!store) {
-        			console.warn("[VoxUrssafV2][All] store introuvable");
-        			this.local.filtered = [];
-        			return;
-        		}
-        		if (store._page !== this) { store._page = this; }
-        		if (store.initDeletedIds) { store.initDeletedIds(); }
-        		if (store.shouldHydrateFromSnapshot && store.shouldHydrateFromSnapshot()) {
-        			const hydrated = store.hydrateFromLocalSnapshot();
-        			console.log("[VoxUrssafV2][All] hydrateFromLocalSnapshot", hydrated);
-        		}
-        		this.local.filtered = store.searchInterviews(this.searchQuery);
-        		console.log("[VoxUrssafV2][All] loadList — fin", {
-        			count: (this.local.filtered || []).length,
-        			cacheCount: store.listForHome().length
-        		});
-        	}
-        	public onSearchInput(ev: any): void {
-        		const v = (ev && ev.detail && ev.detail.value != null) ? String(ev.detail.value) : "";
-        		this.searchQuery = v;
-        		this.loadList().then(() => {
-        			this.ref.markForCheck();
-        		});
+        		const store = this.getStore();
+        		if (store && store.whenReady) { await store.whenReady(); }
+        		this.local.filtered = store ? store.searchInterviews(this.searchQuery) : [];
         	}
         	public async goInterview(iv: any): Promise<void> {
-        		const store = this.getStoreSync();
+        		const store = this.getStore();
+        		if (store && store.whenReady) { await store.whenReady(); }
         		if (!iv || !store) { return; }
         		if (store._page !== this) { store._page = this; }
         		const r = store.resumeInterview(iv);
         		if (!r || !r.route) { return; }
         		if (r.route === "/interview-recap") {
-        			console.log("[VoxUrssafV2][All] goInterview recap", { id: iv.id });
-        			await this.angularRouter.navigate(["/interview-recap"], { queryParams: { interviewId: iv.id } });
+        			const navController = this.getInstance(NavController);
+        			await navController.navigateForward("/interview-recap");
         			return;
         		}
         		this.angularRouter.navigate([r.route]);
-        	}
-        	public interviewLabel(iv: any): string {
-        		if (!iv) { return "cette fiche"; }
-        		return ((iv.sheetCode || iv.intervieweeName || "cette fiche") + "").trim();
-        	}
-        	public async confirmDeleteInterview(iv: any, event?: any): Promise<void> {
-        		if (event && event.stopPropagation) { event.stopPropagation(); }
-        		if (!iv || !iv.id) { return; }
-        		const label = this.interviewLabel(iv);
-        		const self = this;
-        		const alertCtrl = this.getInstance(AlertController);
-        		const alert = await alertCtrl.create({
-        			header: "Supprimer l''interview ?",
-        			message: "La fiche « " + label + " » sera supprimée de cet appareil.",
-        			buttons: [
-        				{ text: "Annuler", role: "cancel" },
-        				{
-        					text: "Supprimer",
-        					role: "destructive",
-        					handler: () => {
-        						self.deleteInterviewConfirmed(iv);
-        						return true;
-        					}
-        				}
-        			]
-        		});
-        		await alert.present();
-        	}
-        	public async deleteInterviewConfirmed(iv: any): Promise<void> {
-        		const store = this.getStoreSync();
-        		if (!store || !iv || !iv.id) {
-        			console.warn("[VoxUrssafV2][All] delete — store ou id manquant");
-        			return;
-        		}
-        		if (store._page !== this) { store._page = this; }
-        		const ok = store.deleteInterview ? await store.deleteInterview(this, iv.id) : false;
-        		if (!ok) {
-        			const toastCtrl = this.getInstance(ToastController);
-        			const toast = await toastCtrl.create({
-        				message: "Impossible de supprimer cette fiche",
-        				duration: 2800,
-        				position: "bottom",
-        				color: "danger"
-        			});
-        			await toast.present();
-        			return;
-        		}
-        		await this.loadList();
-        		this.ref.markForCheck();
-        		const toastCtrl = this.getInstance(ToastController);
-        		const toast = await toastCtrl.create({
-        			message: "Interview supprimée",
-        			duration: 2200,
-        			position: "bottom",
-        			color: "success"
-        		});
-        		await toast.present();
         	}
         	/*End_c8o_PageFunction*/'
 segment: interview-all
@@ -190,18 +112,16 @@ title: Toutes les interviews
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: plain:vu-searchbar
-        ↓AttrIonInput [ngx.components.UIAttribute-1779400400100]: 
-          attrName: (ionInput)
-          attrValue: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:onSearchInput($event)
-        ↓AttrIonClear [ngx.components.UIAttribute-1779400400101]: 
-          attrName: (ionClear)
-          attrValue: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:onSearchInput($event)
+        ↓Event [ngx.components.UIControlEvent-1779290003025]: 
+          ↓Filter [ngx.components.UICustomAction-1779290003026]: 
+            actionValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                  →: |
+                    		page.loadList();
+                    		resolve();
+                    
     ↓ListArea [ngx.components.UIElement-1779290003030]: 
       tagName: div
       ↓AttrClass [ngx.components.UIAttribute-1779290003031]: 
@@ -251,30 +171,6 @@ title: Toutes les interviews
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:vu-card-accent
-        ↓BtnDelete [ngx.components.UIDynamicElement-1779400300200]: 
-          beanData: |
-            '{
-             "ionBean": "Button",
-             "IonColor": "plain:danger",
-             "IonFill": "plain:clear",
-             "IonSize": "plain:small"
-            }'
-          tagName: ion-button
-          ↓AttrClass [ngx.components.UIAttribute-1779400300201]: 
-            attrName: class
-            attrValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:vu-card-delete
-          ↓AttrClick [ngx.components.UIAttribute-1779400300202]: 
-            attrName: (click)
-            attrValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:confirmDeleteInterview(iv, $event)
-          ↓IconDel [ngx.components.UIDynamicElement-1779400300203]: 
-            beanData: '{"ionBean":"Icon","IconName":"plain:trash"}'
-            tagName: ion-icon
         ↓Body [ngx.components.UIElement-1779290003048]: 
           tagName: div
           ↓AttrClass [ngx.components.UIAttribute-1779290003049]: 
@@ -340,13 +236,6 @@ title: Toutes les interviews
         - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
         - com.twinsoft.convertigo.beans.common.FormatedContent: 
           →: |
-            '		console.log("[VoxUrssafV2][All] OnShow");
-            		page.loadList().then(() => {
-            			page.ref.markForCheck();
-            			resolve();
-            		}).catch((e: any) => {
-            			console.error("[VoxUrssafV2][All] OnShow loadList", e);
-            			page.ref.markForCheck();
-            			resolve();
-            		});
-            '
+            		page.loadList();
+            		resolve();
+            

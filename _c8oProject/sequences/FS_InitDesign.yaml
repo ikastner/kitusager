@@ -1,6 +1,6 @@
 comment: Publie le design document _design/vu (vues interviews_by_device et config_by_device)
 ↓Post_Design [steps.TransactionStep-1779373001001]: 
-  sourceTransaction: VoxUrssafV2.voxurssafv2_fullsync.PostDocument
+  sourceTransaction: KitUsager.voxurssafv2_fullsync.PostDocument
   ↓_id [variables.StepVariable-1779373001002]: 
     value: _design/vu
   ↓views [variables.StepVariable-1779373001003]: 

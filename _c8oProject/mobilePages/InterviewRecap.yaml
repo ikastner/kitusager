@@ -24,7 +24,6 @@ scriptContent:
         	public consentText: string = "";
         	public recontactText: string = "";
         	public photoDataUrl: string = "";
-        	public photoDataUrls: string[] = [];
         	public syncError: string = "";
         	public isDraft: boolean = false;
         	public isSalon: boolean = true;
@@ -34,34 +33,10 @@ scriptContent:
         		/*End_c8o_PageConstructor*/
         /*Begin_c8o_PageFunction*/
         	public async ensureStore(): Promise<any> {
-        		console.log("[VoxUrssafV2][Recap] ensureStore — début", {
-        			globalStore: !!(this.global && this.global.interviewStore),
-        			navParamsData: this.navParams ? this.navParams.data : null,
-        			url: this.angularRouter ? this.angularRouter.url : ""
-        		});
-        		// Même accès synchrone que Page.getStore / InterviewAll — évite le blocage whenReady()
-        		const store = (this.global && this.global.interviewStore) || null;
-        		const count = (store && store.load) ? (store.load().interviews || []).length : -1;
-        		console.log("[VoxUrssafV2][Recap] ensureStore — fin", { storeOk: !!store, interviewsCache: count });
-        		return store;
-        	}
-        	public getRecapNavInterviewId(): string {
-        		let id = "";
-        		if (this.navParams && this.navParams.get) {
-        			id = this.navParams.get("interviewId") || "";
-        		}
-        		if (!id && this.navParams && this.navParams.data) {
-        			id = this.navParams.data.interviewId || "";
-        		}
-        		if (!id && this.angularRouter) {
-        			try {
-        				const tree = this.angularRouter.parseUrl(this.angularRouter.url || "");
-        				id = (tree.queryParams && tree.queryParams.interviewId) ? String(tree.queryParams.interviewId) : "";
-        			} catch (e) {
-        				console.warn("[VoxUrssafV2][Recap] parseUrl interviewId", e);
-        			}
-        		}
-        		return id || "";
+        		const app: any = this.router && this.router.sharedObject;
+        		if (app && app.ensureInterviewStore) { return app.ensureInterviewStore(this); }
+        		if (app && app.initVuApp) { app.initVuApp(); }
+        		return (app && app.getInterviewStore) ? app.getInterviewStore() : null;
         	}
         	public displayOrDash(v: string): string {
         		const s = (v || "").trim();
@@ -110,105 +85,44 @@ scriptContent:
         		return "vu-badge-pill";
         	}
         	public async loadRecap(): Promise<void> {
-        		console.log("[VoxUrssafV2][Recap] loadRecap — début");
-        		try {
-        			const store = await this.ensureStore();
-        			if (!store) {
-        				console.error("[VoxUrssafV2][Recap] store introuvable");
-        				this.notFound = true;
-        				return;
-        			}
-        			if (store._page !== this) { store._page = this; }
-        			if (store.shouldHydrateFromSnapshot && store.shouldHydrateFromSnapshot()) {
-        				const hydrated = store.hydrateFromLocalSnapshot();
-        				console.log("[VoxUrssafV2][Recap] hydrateFromLocalSnapshot", hydrated);
-        			}
-        			const navInterviewId = this.getRecapNavInterviewId();
-        			console.log("[VoxUrssafV2][Recap] navInterviewId", navInterviewId, {
-        				recapViewId: store._recapViewId,
-        				activeInterviewId: store.load().activeInterviewId,
-        				cacheIds: (store.load().interviews || []).map((i: any) => i.interviewId)
-        			});
-        			let iv: any = null;
-        			let source = "";
-        			if (navInterviewId) {
-        				iv = store.getInterview(navInterviewId);
-        				if (store.enrichInterviewFromSnapshot) {
-        					iv = store.enrichInterviewFromSnapshot(iv, navInterviewId);
-        				}
-        				source = "cache+snapshot";
-        				const sparse = iv && store.isInterviewSparse ? store.isInterviewSparse(iv) : !iv;
-        				if (sparse && store.getInterviewForRecap) {
-        					console.log("[VoxUrssafV2][Recap] cache vide/sparse — fsGet", navInterviewId);
-        					iv = await store.getInterviewForRecap(this, navInterviewId);
-        					source = "getInterviewForRecap";
-        				}
-        			}
-        			if (!iv) {
-        				iv = store.getRecapInterview();
-        				source = source || "getRecapInterview";
-        				if (iv && store.enrichInterviewFromSnapshot) {
-        					iv = store.enrichInterviewFromSnapshot(iv, iv.interviewId);
-        				}
-        			}
-        			console.log("[VoxUrssafV2][Recap] interview chargée", {
-        				source: source,
-        				found: !!iv,
-        				interviewId: iv ? iv.interviewId : null,
-        				sheetCode: iv ? iv.sheetCode : null,
-        				firstName: iv ? iv.firstName : null,
-        				verbatimLen: iv && iv.verbatimText ? iv.verbatimText.length : 0,
-        				format: iv ? iv.format : null,
-        				status: iv ? iv.status : null,
-        				sparse: iv && store.isInterviewSparse ? store.isInterviewSparse(iv) : null
-        			});
-        			if (!iv) {
-        				this.notFound = true;
-        				console.warn("[VoxUrssafV2][Recap] fiche introuvable pour id", navInterviewId);
-        				return;
-        			}
-        			if (store.setRecapView) { store.setRecapView(iv.interviewId); }
-        			this.notFound = false;
-        			this.isSalon = iv.format === "salon";
-        			this.isDraft = iv.status === "draft";
-        			this.status = iv.status || "";
-        			this.sheetCode = iv.sheetCode || iv.context || "";
-        			this.firstName = iv.firstName || iv.intervieweeName || "";
-        			this.intervieweeEmail = iv.intervieweeEmail || "";
-        			this.dateLabel = store.formatDate(iv.updatedAt || iv.createdAt);
-        			const steps = (iv.journeySteps || []).map((id: string) => this.labelJourney(id));
-        			this.journeyText = steps.length ? steps.join(", ") : "";
-        			this.globalSatisfaction = this.labelSatisfaction(iv.globalSatisfaction || "");
-        			this.verbatimText = iv.verbatimText || "";
-        			this.sector = iv.sector || "";
-        			this.age = iv.age || "";
-        			this.urssafSince = iv.urssafSince || "";
-        			if (iv.multiProfile === true) {
-        				this.multiProfileText = "Oui" + ((iv.profileCount || "").trim() ? " (" + iv.profileCount + ")" : "");
-        			} else if (iv.multiProfile === false) {
-        				this.multiProfileText = "Non";
-        			} else {
-        				this.multiProfileText = "";
-        			}
-        			this.contactMode = this.labelContact(iv.contactMode || "");
-        			this.consentText = iv.consentAccepted ? "Accepté" : "Non accepté";
-        			this.recontactText = iv.recontactOk ? "Oui" : "Non";
-        			this.photoDataUrls = (iv.photoDataUrls && iv.photoDataUrls.length)
-        				? iv.photoDataUrls.slice()
-        				: (iv.photoDataUrl ? [iv.photoDataUrl] : []);
-        			this.photoDataUrl = this.photoDataUrls[0] || "";
-        			this.syncError = iv.syncError || "";
-        			console.log("[VoxUrssafV2][Recap] champs bindés", {
-        				sheetCode: this.sheetCode,
-        				firstName: this.firstName,
-        				journeyText: this.journeyText,
-        				verbatimText: (this.verbatimText || "").substring(0, 80),
-        				notFound: this.notFound
-        			});
-        		} catch (e) {
-        			console.error("[VoxUrssafV2][Recap] loadRecap erreur", e);
-        			this.notFound = true;
+        		const store = await this.ensureStore();
+        		if (store && store._page !== this) { store._page = this; }
+        		let iv = store ? store.getRecapInterview() : null;
+        		if (!iv && store && this.navParams && this.navParams.data && this.navParams.data.interviewId) {
+        			iv = store.getInterview(this.navParams.data.interviewId);
         		}
+        		if (!iv) {
+        			this.notFound = true;
+        			return;
+        		}
+        		if (store && store.setRecapView) { store.setRecapView(iv.interviewId); }
+        		this.notFound = false;
+        		this.isSalon = iv.format === "salon";
+        		this.isDraft = iv.status === "draft";
+        		this.status = iv.status || "";
+        		this.sheetCode = iv.sheetCode || iv.context || "";
+        		this.firstName = iv.firstName || iv.intervieweeName || "";
+        		this.intervieweeEmail = iv.intervieweeEmail || "";
+        		this.dateLabel = store.formatDate(iv.updatedAt || iv.createdAt);
+        		const steps = (iv.journeySteps || []).map((id: string) => this.labelJourney(id));
+        		this.journeyText = steps.length ? steps.join(", ") : "";
+        		this.globalSatisfaction = this.labelSatisfaction(iv.globalSatisfaction || "");
+        		this.verbatimText = iv.verbatimText || "";
+        		this.sector = iv.sector || "";
+        		this.age = iv.age || "";
+        		this.urssafSince = iv.urssafSince || "";
+        		if (iv.multiProfile === true) {
+        			this.multiProfileText = "Oui" + ((iv.profileCount || "").trim() ? " (" + iv.profileCount + ")" : "");
+        		} else if (iv.multiProfile === false) {
+        			this.multiProfileText = "Non";
+        		} else {
+        			this.multiProfileText = "";
+        		}
+        		this.contactMode = this.labelContact(iv.contactMode || "");
+        		this.consentText = iv.consentAccepted ? "Accepté" : "Non accepté";
+        		this.recontactText = iv.recontactOk ? "Oui" : "Non";
+        		this.photoDataUrl = iv.photoDataUrl || "";
+        		this.syncError = iv.syncError || "";
         	}
         	public async continueEdit(): Promise<void> {
         		const store = await this.ensureStore();
@@ -218,7 +132,7 @@ scriptContent:
         		this.angularRouter.navigate([route]);
         	}
         	public hasPhoto(): boolean {
-        		return (this.photoDataUrls && this.photoDataUrls.length > 0) || !!(this.photoDataUrl || "").trim();
+        		return !!(this.photoDataUrl || "").trim();
         	}
         	public hasVerbatim(): boolean {
         		return !!(this.verbatimText || "").trim();
@@ -736,49 +650,27 @@ title: Récap fiche
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:Photo
-          ↓PhotoGrid [ngx.components.UIElement-1779400001123]: 
-            tagName: div
-            ↓AttrIf [ngx.components.UIAttribute-1779400001124]: 
+          ↓Photo [ngx.components.UIDynamicElement-1779400001119]: 
+            beanData: '{"ionBean":"Image"}'
+            tagName: ion-img
+            ↓AttrIf [ngx.components.UIAttribute-1779400001120]: 
               attrName: '*ngIf'
               attrValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:hasPhoto()
-            ↓AttrClass [ngx.components.UIAttribute-1779400001125]: 
+            ↓AttrSrc [ngx.components.UIAttribute-1779400001122]: 
+              attrName: '[src]'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:photoDataUrl
+            ↓AttrClass [ngx.components.UIAttribute-1779400001121]: 
               attrName: class
               attrValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:vu-recap-photo-grid
-            ↓PhotoItem [ngx.components.UIElement-1779400001126]: 
-              tagName: div
-              ↓AttrFor [ngx.components.UIAttribute-1779400001127]: 
-                attrName: '*ngFor'
-                attrValue: 
-                  - xmlizable: 
-                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                    - MobileSmartSourceType: plain:let photo of photoDataUrls
-              ↓AttrClass [ngx.components.UIAttribute-1779400001128]: 
-                attrName: class
-                attrValue: 
-                  - xmlizable: 
-                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                    - MobileSmartSourceType: plain:vu-photo-thumb-wrap
-              ↓Photo [ngx.components.UIDynamicElement-1779400001119]: 
-                beanData: '{"ionBean":"Image"}'
-                tagName: ion-img
-                ↓AttrSrc [ngx.components.UIAttribute-1779400001122]: 
-                  attrName: '[src]'
-                  attrValue: 
-                    - xmlizable: 
-                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: script:photo
-                ↓AttrClass [ngx.components.UIAttribute-1779400001121]: 
-                  attrName: class
-                  attrValue: 
-                    - xmlizable: 
-                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: plain:vu-photo-thumb
+                  - MobileSmartSourceType: plain:vu-recap-photo
           ↓ErrBlock [ngx.components.UIElement-1779400001130]: 
             tagName: div
             ↓AttrIf [ngx.components.UIAttribute-1779400001131]: 
@@ -849,13 +741,11 @@ title: Récap fiche
         - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
         - com.twinsoft.convertigo.beans.common.FormatedContent: 
           →: |
-            '		console.log("[VoxUrssafV2][Recap] OnShow");
             		page.loadRecap().then(() => {
             			page.ref.markForCheck();
             			resolve();
-            		}).catch((err: any) => {
-            			console.error("[VoxUrssafV2][Recap] OnShow loadRecap", err);
+            		}).catch(() => {
             			page.ref.markForCheck();
             			resolve();
             		});
-            '
+            

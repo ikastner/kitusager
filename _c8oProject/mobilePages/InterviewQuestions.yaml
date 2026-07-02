@@ -279,7 +279,7 @@ title: Questions
               beanData: '{"ionBean":"Icon","IconName":"plain:checkmark"}'
               tagName: ion-icon
 ↓BottomNav [ngx.components.UIUseShared-1779290005099]: 
-  sharedcomponent: VoxUrssafV2.Application.NgxApp.BottomNavPill
+  sharedcomponent: KitUsager.Application.NgxApp.BottomNavPill
   ↓current [ngx.components.UIUseVariable-1779290005098]: 
     varValue: 
       - xmlizable: 

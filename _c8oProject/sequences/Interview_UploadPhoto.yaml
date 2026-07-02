@@ -1,9 +1,9 @@
 comment: Enregistre une photo d'interview SQL (appeler Interview_EnsureSchema avant)
 ↓Delete_Photo [steps.TransactionStep-1779372003014]: 
-  sourceTransaction: VoxUrssafV2.voxurssaf.Photo_Delete_Tx
+  sourceTransaction: KitUsager.voxurssaf.Photo_Delete_Tx
   ↓photo_id [variables.StepVariable-1779372003015]: 
 ↓Save_Photo [steps.TransactionStep-1779372003002]: 
-  sourceTransaction: VoxUrssafV2.voxurssaf.Photo_Save_Tx
+  sourceTransaction: KitUsager.voxurssaf.Photo_Save_Tx
   ↓photo_id [variables.StepVariable-1779372003003]: 
   ↓interview_id [variables.StepVariable-1779372003004]: 
   ↓sort_order [variables.StepVariable-1779372003005]: 

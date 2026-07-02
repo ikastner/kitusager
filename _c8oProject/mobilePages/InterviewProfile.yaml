@@ -184,7 +184,7 @@ title: Mon Profil
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:Enregistrer
 ↓BottomNav [ngx.components.UIUseShared-1779290006099]: 
-  sharedcomponent: VoxUrssafV2.Application.NgxApp.BottomNavPill
+  sharedcomponent: KitUsager.Application.NgxApp.BottomNavPill
   ↓current [ngx.components.UIUseVariable-1779290006098]: 
     varValue: 
       - xmlizable: 

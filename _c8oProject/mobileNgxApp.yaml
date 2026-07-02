@@ -152,51 +152,11 @@ componentScriptContent:
         					CACHE_LS_KEY: "voxurssaf_v2_offline_cache",
         					DEVICE_LS_KEY: "voxurssaf_v2_device_id",
         					INTERVIEWS_LS_KEY: "voxurssaf_v2_interview_ids",
-        					DELETED_LS_KEY: "voxurssaf_v2_deleted_ids",
         					_cache: null as any,
         					_ready: null as Promise<void> | null,
         					_page: null as any,
         					_saveQueue: null as Promise<void> | null,
         					_recapViewId: null as string | null,
-        					_deletedIds: null as any,
-        	
-        					initDeletedIds() {
-        						if (!this._deletedIds) { this._deletedIds = {}; }
-        						try {
-        							const raw = localStorage.getItem(this.DELETED_LS_KEY);
-        							const ids: string[] = raw ? JSON.parse(raw) : [];
-        							for (const id of ids) {
-        								if (id) { this._deletedIds[id] = true; }
-        							}
-        						} catch (e) { /* ignore */ }
-        					},
-        					isInterviewDeleted(interviewId: string): boolean {
-        						return !!(interviewId && this._deletedIds && this._deletedIds[interviewId]);
-        					},
-        					markInterviewDeleted(interviewId: string) {
-        						if (!interviewId) { return; }
-        						this.initDeletedIds();
-        						this._deletedIds[interviewId] = true;
-        						try {
-        							const ids: string[] = [];
-        							for (const k in this._deletedIds) {
-        								if (this._deletedIds[k]) { ids.push(k); }
-        							}
-        							localStorage.setItem(this.DELETED_LS_KEY, JSON.stringify(ids));
-        						} catch (e) { /* ignore */ }
-        					},
-        					filterDeletedInterviews(list: any[]): any[] {
-        						return (list || []).filter((iv: any) => iv && iv.interviewId && !this.isInterviewDeleted(iv.interviewId));
-        					},
-        					isInterviewPublished(iv: any): boolean {
-        						if (!iv) { return false; }
-        						const st = String(iv.status || "draft").toLowerCase();
-        						return st !== "draft";
-        					},
-        					listPublishedInterviews(): any[] {
-        						return this.filterDeletedInterviews(this.load().interviews || [])
-        							.filter((iv: any) => this.isInterviewPublished(iv));
-        					},
         	
         					init() { /* compat — init réel via initWithPage */ },
         	
@@ -206,7 +166,6 @@ componentScriptContent:
         	
         					async initWithPage(page: any): Promise<void> {
         						this._page = page;
-        						this.initDeletedIds();
         						await page.c8o.finalizeInit();
         						this.hydrateFromLocalSnapshot();
         						await this.migrateLegacyIfNeeded(page);
@@ -247,24 +206,12 @@ componentScriptContent:
         							localStorage.setItem(this.INTERVIEWS_LS_KEY, JSON.stringify(ids));
         						} catch (e) { /* ignore */ }
         					},
-        					forgetInterviewId(id: string) {
-        						if (!id) { return; }
-        						try {
-        							const raw = localStorage.getItem(this.INTERVIEWS_LS_KEY);
-        							const ids: string[] = raw ? JSON.parse(raw) : [];
-        							const next = ids.filter((x: string) => x !== id);
-        							localStorage.setItem(this.INTERVIEWS_LS_KEY, JSON.stringify(next));
-        						} catch (e) { /* ignore */ }
-        					},
         	
         					hydrateFromLocalSnapshot(): boolean {
-        						this.initDeletedIds();
         						const snap = this.loadLocalSnapshot();
         						if (!snap || !Array.isArray(snap.interviews) || snap.interviews.length === 0) {
         							return false;
         						}
-        						const alive = this.filterDeletedInterviews(snap.interviews);
-        						if (!alive.length) { return false; }
         						const empty = this.getEmptyData();
         						const deviceId = snap.deviceId || this.readDeviceIdFromLocal() || empty.deviceId;
         						this.rememberDeviceId(deviceId);
@@ -274,23 +221,17 @@ componentScriptContent:
         							investigatorName: snap.investigatorName || empty.investigatorName,
         							speechLocale: snap.speechLocale || empty.speechLocale,
         							questions: (snap.questions || []).slice(),
-        							interviews: alive.map((iv: any) => Object.assign({}, iv)),
+        							interviews: snap.interviews.map((iv: any) => Object.assign({}, iv)),
         							activeInterviewId: snap.activeInterviewId || null
         						};
         						return true;
         					},
-        					shouldHydrateFromSnapshot(): boolean {
-        						if (this.listForHome().length > 0) { return false; }
-        						const snap = this.loadLocalSnapshot();
-        						if (!snap || !Array.isArray(snap.interviews)) { return false; }
-        						return this.filterDeletedInterviews(snap.interviews).length > 0;
-        					},
         	
-        					saveLocalSnapshot(allowEmpty?: boolean) {
+        					saveLocalSnapshot() {
         						try {
         							const c = this.ensureCache();
         							const prev = this.loadLocalSnapshot();
-        							if (!allowEmpty && (c.interviews || []).length === 0 && prev && (prev.interviews || []).length > 0) {
+        							if ((c.interviews || []).length === 0 && prev && (prev.interviews || []).length > 0) {
         								return;
         							}
         							const interviews = (c.interviews || []).map((iv: any) => {
@@ -300,16 +241,6 @@ componentScriptContent:
         								if (copy.photoDataUrl && copy.photoDataUrl.length > 120000) {
         									copy._photoOmitted = true;
         									delete copy.photoDataUrl;
-        								}
-        								if (copy.photoDataUrls && copy.photoDataUrls.length) {
-        									copy.photoDataUrls = copy.photoDataUrls.map((p: string, idx: number) => {
-        										if (p && p.length > 120000) {
-        											copy._photosOmitted = true;
-        											return "";
-        										}
-        										return p;
-        									}).filter((p: string) => !!p);
-        									copy.photoDataUrl = copy.photoDataUrls[0] || "";
         								}
         								return copy;
         							});
@@ -542,7 +473,6 @@ componentScriptContent:
         							journeySteps: [] as string[],
         							globalSatisfaction: "",
         							verbatimText: "",
-        							verbatimAudioDataUrl: "",
         							sector: "",
         							age: "",
         							urssafSince: "",
@@ -553,7 +483,6 @@ componentScriptContent:
         							recontactOk: false,
         							firstName: "",
         							photoDataUrl: "",
-        							photoDataUrls: [] as string[],
         							wizardStep: 1
         						};
         					},
@@ -574,14 +503,13 @@ componentScriptContent:
         							context: doc.context,
         							entries: (doc.entries || []).slice()
         						};
-        						if (doc.format === "salon" || doc.sheetCode || doc.wizardStep || (doc.journeySteps && doc.journeySteps.length)) {
+        						if (doc.format === "salon") {
         							Object.assign(base, {
         								format: "salon",
         								sheetCode: doc.sheetCode || "",
         								journeySteps: (doc.journeySteps || []).slice(),
         								globalSatisfaction: doc.globalSatisfaction || "",
         								verbatimText: doc.verbatimText || "",
-        								verbatimAudioDataUrl: doc.verbatimAudioDataUrl || "",
         								sector: doc.sector || "",
         								age: doc.age || "",
         								urssafSince: doc.urssafSince || "",
@@ -592,9 +520,6 @@ componentScriptContent:
         								recontactOk: !!doc.recontactOk,
         								firstName: doc.firstName || "",
         								photoDataUrl: doc.photoDataUrl || "",
-        								photoDataUrls: (doc.photoDataUrls && doc.photoDataUrls.length)
-        									? doc.photoDataUrls.slice()
-        									: (doc.photoDataUrl ? [doc.photoDataUrl] : []),
         								wizardStep: doc.wizardStep || 1
         							});
         						}
@@ -628,7 +553,6 @@ componentScriptContent:
         								journeySteps: iv.journeySteps || [],
         								globalSatisfaction: iv.globalSatisfaction || "",
         								verbatimText: iv.verbatimText || "",
-        								verbatimAudioDataUrl: iv.verbatimAudioDataUrl || "",
         								sector: iv.sector || "",
         								age: iv.age || "",
         								urssafSince: iv.urssafSince || "",
@@ -639,9 +563,6 @@ componentScriptContent:
         								recontactOk: !!iv.recontactOk,
         								firstName: iv.firstName || "",
         								photoDataUrl: iv.photoDataUrl || "",
-        								photoDataUrls: (iv.photoDataUrls && iv.photoDataUrls.length)
-        									? iv.photoDataUrls.slice()
-        									: (iv.photoDataUrl ? [iv.photoDataUrl] : []),
         								wizardStep: iv.wizardStep || 1
         							});
         						}
@@ -720,75 +641,25 @@ componentScriptContent:
         						});
         					},
         	
-        					isInterviewSparse(iv: any): boolean {
-        						if (!iv) { return true; }
-        						if (iv.format === "salon" || iv.sheetCode || (iv.journeySteps && iv.journeySteps.length)) {
-        							const code = (iv.sheetCode || "").trim();
-        							const hasCode = code && code !== "F-";
-        							const hasText = !!(iv.verbatimText || "").trim() || !!(iv.firstName || "").trim();
-        							const hasJourney = !!(iv.journeySteps && iv.journeySteps.length);
-        							return !hasCode && !hasText && !hasJourney;
-        						}
-        						return !(iv.intervieweeName || "").trim() && !((iv.entries || []).length);
-        					},
-        					mergeInterviewRecords(a: any, b: any): any {
-        						if (!a) { return b; }
-        						if (!b) { return a; }
-        						const newer = ((b.updatedAt || "") >= (a.updatedAt || "")) ? b : a;
-        						const older = (newer === b) ? a : b;
-        						const out = Object.assign({}, older, newer);
-        						const keys = [
-        							"format", "sheetCode", "journeySteps", "globalSatisfaction", "verbatimText",
-        							"sector", "age", "urssafSince", "multiProfile", "profileCount", "contactMode",
-        							"consentAccepted", "recontactOk", "firstName", "photoDataUrl", "photoDataUrls",
-        							"wizardStep", "intervieweeName", "context", "status", "intervieweeEmail"
-        						];
-        						const isEmpty = (k: string, v: any) => {
-        							if (v == null || v === "") { return true; }
-        							if (k === "sheetCode" && v === "F-") { return true; }
-        							if (Array.isArray(v) && v.length === 0) { return true; }
-        							return false;
-        						};
-        						for (const k of keys) {
-        							if (isEmpty(k, out[k])) {
-        								if (!isEmpty(k, older[k])) { out[k] = older[k]; }
-        								else if (!isEmpty(k, newer[k])) { out[k] = newer[k]; }
-        							}
-        						}
-        						if (!out.format && (older.format === "salon" || newer.format === "salon")) {
-        							out.format = "salon";
-        						}
-        						return out;
-        					},
-        					enrichInterviewFromSnapshot(iv: any, id: string): any {
-        						const snap = this.loadLocalSnapshot();
-        						if (!snap || !Array.isArray(snap.interviews) || !id) { return iv; }
-        						const rich = snap.interviews.find((i: any) => i && i.interviewId === id);
-        						if (!rich) {
-        							console.log("[VoxUrssafV2][Store] enrichSnapshot — pas d''entrée LS", id);
-        							return iv;
-        						}
-        						const out = !iv ? Object.assign({}, rich) : this.mergeInterviewRecords(iv, rich);
-        						console.log("[VoxUrssafV2][Store] enrichSnapshot", id, { hadIv: !!iv, sheetCode: out ? out.sheetCode : null });
-        						return out;
-        					},
         					mergeInterviewsById(target: any[], source: any[]): any[] {
-        						this.initDeletedIds();
-        						const out = this.filterDeletedInterviews(target || []);
+        						const out = (target || []).slice();
         						for (const mem of (source || [])) {
-        							if (!mem || !mem.interviewId || this.isInterviewDeleted(mem.interviewId)) { continue; }
+        							if (!mem || !mem.interviewId) { continue; }
         							const idx = out.findIndex((x: any) => x.interviewId === mem.interviewId);
         							if (idx < 0) {
         								out.push(mem);
         							} else {
-        								out[idx] = this.mergeInterviewRecords(out[idx], mem);
+        								const a = mem.updatedAt || mem.createdAt || "";
+        								const b = out[idx].updatedAt || out[idx].createdAt || "";
+        								if (a >= b) { out[idx] = mem; }
         							}
         						}
         						return out;
         					},
         	
         					async reloadCache(page: any): Promise<void> {
-        						this.initDeletedIds();
+        						const memoryInterviews = (this._cache && this._cache.interviews)
+        							? this._cache.interviews.slice() : [];
         						const memoryActiveId = (this._cache && this._cache.activeInterviewId)
         							? this._cache.activeInterviewId : null;
         						const recapViewId = this._recapViewId;
@@ -838,7 +709,7 @@ componentScriptContent:
         							const rows = (viewRes && viewRes.rows) ? viewRes.rows : [];
         							for (const row of rows) {
         								const id = (row.value && row.value.interviewId) ? row.value.interviewId : String(row.id || "").replace("interview:", "");
-        								if (!id || this.isInterviewDeleted(id)) { continue; }
+        								if (!id) { continue; }
         								try {
         									const doc = await this.fsGet(page, this.interviewDocId(id));
         									const iv = this.docToInterview(doc);
@@ -855,46 +726,36 @@ componentScriptContent:
         						if (!loadedFromView || interviews.length === 0) {
         							const fallback = await this.loadInterviewsFallback(page, this._cache.deviceId);
         							for (const iv of fallback) {
-        								if (iv && iv.interviewId && !this.isInterviewDeleted(iv.interviewId)
-        									&& !interviews.find((x: any) => x.interviewId === iv.interviewId)) {
+        								if (!interviews.find((x: any) => x.interviewId === iv.interviewId)) {
         									interviews.push(iv);
         								}
         							}
         						}
-        						const freshSnap = this.loadLocalSnapshot();
-        						if (freshSnap && freshSnap.interviews && freshSnap.interviews.length) {
-        							if (freshSnap.deviceId && freshSnap.deviceId !== this._cache.deviceId) {
-        								this._cache.deviceId = freshSnap.deviceId;
-        								this.rememberDeviceId(freshSnap.deviceId);
+        						if (offlineSnap && offlineSnap.interviews && offlineSnap.interviews.length) {
+        							if (offlineSnap.deviceId && offlineSnap.deviceId !== this._cache.deviceId) {
+        								this._cache.deviceId = offlineSnap.deviceId;
+        								this.rememberDeviceId(offlineSnap.deviceId);
         							}
-        							interviews = this.mergeInterviewsById(interviews, freshSnap.interviews);
+        							interviews = this.mergeInterviewsById(interviews, offlineSnap.interviews);
         						}
-        						const currentMemory = (this._cache && this._cache.interviews)
-        							? this._cache.interviews.slice() : [];
-        						const merged = this.filterDeletedInterviews(
-        							this.mergeInterviewsById(interviews, currentMemory)
-        						);
+        						const merged = this.mergeInterviewsById(interviews, memoryInterviews);
         						merged.sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
         						this._cache.interviews = merged;
-        						if (memoryActiveId && !this.isInterviewDeleted(memoryActiveId)) {
+        						if (memoryActiveId) {
         							this._cache.activeInterviewId = memoryActiveId;
-        						} else if (this.isInterviewDeleted(this._cache.activeInterviewId)) {
-        							this._cache.activeInterviewId = null;
         						}
-        						if (recapViewId && !this.isInterviewDeleted(recapViewId)) {
+        						if (recapViewId) {
         							this._recapViewId = recapViewId;
-        						} else if (this.isInterviewDeleted(recapViewId)) {
-        							this._recapViewId = null;
         						}
-        						if (freshSnap && freshSnap.investigatorName && !this._cache.investigatorName) {
-        							this._cache.investigatorName = freshSnap.investigatorName;
+        						if (offlineSnap && offlineSnap.investigatorName && !this._cache.investigatorName) {
+        							this._cache.investigatorName = offlineSnap.investigatorName;
         						}
-        						if (freshSnap && freshSnap.questions && (!this._cache.questions || !this._cache.questions.length)) {
-        							this._cache.questions = (freshSnap.questions || []).slice();
+        						if (offlineSnap && offlineSnap.questions && (!this._cache.questions || !this._cache.questions.length)) {
+        							this._cache.questions = (offlineSnap.questions || []).slice();
         						}
-        						try {
-        							this.saveLocalSnapshot(merged.length === 0);
-        						} catch (e) { /* ignore */ }
+        						if (merged.length > 0) {
+        							try { this.saveLocalSnapshot(); } catch (e) { /* ignore */ }
+        						}
         					},
         	
         					async migrateLegacyIfNeeded(page: any): Promise<void> {
@@ -929,7 +790,7 @@ componentScriptContent:
         						this.saveSync(this._page);
         					},
         					listForHome() {
-        						return this.listPublishedInterviews().map((iv: any) => ({
+        						return (this.load().interviews || []).map((iv: any) => ({
         							id: iv.interviewId,
         							intervieweeName: iv.format === "salon"
         								? ((iv.firstName || iv.sheetCode || "Fiche salon").trim() || "Fiche salon")
@@ -943,21 +804,18 @@ componentScriptContent:
         							isDraft: iv.status === "draft",
         							wizardStep: iv.wizardStep || 1,
         							entryCount: iv.format === "salon"
-        								? (iv.verbatimText ? 1 : 0) + ((iv.photoDataUrls && iv.photoDataUrls.length) || (iv.photoDataUrl ? 1 : 0))
+        								? (iv.verbatimText ? 1 : 0) + (iv.photoDataUrl ? 1 : 0)
         								: ((iv.entries || []).length),
         							dateLabel: this.formatDate(iv.updatedAt || iv.createdAt),
         							status: iv.status || "saved"
         						}));
         					},
         					countTotalNotes() {
-        						return this.listPublishedInterviews().reduce((acc: number, iv: any) => {
+        						return (this.load().interviews || []).reduce((acc: number, iv: any) => {
         							if (iv.format === "salon") {
         								let n = 0;
         								if ((iv.verbatimText || "").trim()) { n++; }
-        								const photoN = (iv.photoDataUrls && iv.photoDataUrls.length)
-        									? iv.photoDataUrls.length
-        									: (iv.photoDataUrl ? 1 : 0);
-        								n += photoN;
+        								if (iv.photoDataUrl) { n++; }
         								return acc + n;
         							}
         							return acc + ((iv.entries || []).length);
@@ -976,35 +834,7 @@ componentScriptContent:
         						});
         					},
         					getInterview(id: string) {
-        						if (this.isInterviewDeleted(id)) { return null; }
         						return (this.load().interviews || []).find((i: any) => i.interviewId === id) || null;
-        					},
-        					async getInterviewForRecap(page: any, id: string): Promise<any> {
-        						if (!id) { return null; }
-        						const fromCache = this.getInterview(id);
-        						console.log("[VoxUrssafV2][Store] getInterviewForRecap", id, { fromCache: !!fromCache, sparse: fromCache ? this.isInterviewSparse(fromCache) : null });
-        						let iv = this.enrichInterviewFromSnapshot(fromCache, id);
-        						if ((!iv || this.isInterviewSparse(iv)) && page) {
-        							try {
-        								const doc = await this.fsGet(page, this.interviewDocId(id));
-        								console.log("[VoxUrssafV2][Store] fsGet interview", id, { docKeys: doc ? Object.keys(doc) : null, format: doc ? doc.format : null, sheetCode: doc ? doc.sheetCode : null });
-        								const fromDoc = this.docToInterview(doc);
-        								iv = this.mergeInterviewRecords(iv, fromDoc);
-        								if (iv) {
-        									const data = this.load();
-        									const idx = data.interviews.findIndex((i: any) => i.interviewId === id);
-        									if (idx >= 0) {
-        										data.interviews[idx] = this.mergeInterviewRecords(data.interviews[idx], iv);
-        									} else {
-        										data.interviews.push(iv);
-        									}
-        								}
-        							} catch (e) {
-        								console.warn("[VoxUrssafV2][Store] getInterviewForRecap fsGet échec", id, e);
-        							}
-        						}
-        						console.log("[VoxUrssafV2][Store] getInterviewForRecap résultat", id, { ok: !!iv, sheetCode: iv ? iv.sheetCode : null });
-        						return iv;
         					},
         					getActiveInterview() {
         						const data = this.load();
@@ -1020,50 +850,11 @@ componentScriptContent:
         					setRecapView(id: string) {
         						if (!id) { return null; }
         						this._recapViewId = id;
+        						this.setActive(id);
         						return this.getInterview(id);
         					},
         					clearRecapView() {
         						this._recapViewId = null;
-        					},
-        					async deleteInterview(page: any, interviewId: string): Promise<boolean> {
-        						if (!interviewId) { return false; }
-        						this.initDeletedIds();
-        						this.markInterviewDeleted(interviewId);
-        						let data = this.load();
-        						let idx = (data.interviews || []).findIndex((i: any) => i.interviewId === interviewId);
-        						if (idx < 0 && this.shouldHydrateFromSnapshot()) {
-        							this.hydrateFromLocalSnapshot();
-        							data = this.load();
-        							idx = (data.interviews || []).findIndex((i: any) => i.interviewId === interviewId);
-        						}
-        						if (idx >= 0) {
-        							data.interviews.splice(idx, 1);
-        						}
-        						if (data.activeInterviewId === interviewId) {
-        							data.activeInterviewId = null;
-        						}
-        						if (this._recapViewId === interviewId) {
-        							this._recapViewId = null;
-        						}
-        						this.forgetInterviewId(interviewId);
-        						try { this.saveLocalSnapshot(true); } catch (e) { /* ignore */ }
-        						const p = page || this._page;
-        						if (p) {
-        							this.enqueuePersist(p, async () => {
-        								await this.persistConfig(p);
-        								try {
-        									const docId = this.interviewDocId(interviewId);
-        									const doc = await this.fsGet(p, docId);
-        									if (doc && doc._rev) {
-        										await this.fsPost(p, { _id: docId, _rev: doc._rev, _deleted: true });
-        									}
-        								} catch (e) {
-        									try { p.c8o.log.warn("[VoxUrssafV2] deleteInterview couch", e); } catch (e2) { /* ignore */ }
-        								}
-        							});
-        						}
-        						console.log("[VoxUrssafV2] deleteInterview OK", interviewId, { restant: (data.interviews || []).length });
-        						return true;
         					},
         					setActive(id: string) {
         						const data = this.load();
@@ -1240,28 +1031,18 @@ componentScriptContent:
         					},
         					resumeInterview(homeItem: any) {
         						if (!homeItem || !homeItem.id) { return null; }
-        						const iv = this.enrichInterviewFromSnapshot(this.getInterview(homeItem.id), homeItem.id);
+        						const iv = this.getInterview(homeItem.id);
         						if (!iv) { return null; }
-        						this._recapViewId = homeItem.id;
+        						this.setRecapView(homeItem.id);
         						if (iv.format === "salon" && iv.status === "draft") {
-        							this.setActive(homeItem.id);
         							return { iv: iv, route: this.getWizardRoute(iv.wizardStep || 1) };
         						}
         						return { iv: iv, route: "/interview-recap" };
         					},
         					buildSalonSyncPayload(iv: any) {
         						const photos: any[] = [];
-        						const salonPhotos = (iv.photoDataUrls && iv.photoDataUrls.length)
-        							? iv.photoDataUrls.slice()
-        							: (iv.photoDataUrl ? [iv.photoDataUrl] : []);
-        						for (let pi = 0; pi < salonPhotos.length; pi++) {
-        							const dataUrl = salonPhotos[pi];
-        							if (dataUrl) {
-        								photos.push({ photoId: "salon-photo-" + (pi + 1), order: pi, dataUrl: dataUrl });
-        							}
-        						}
-        						if (iv.verbatimAudioDataUrl) {
-        							photos.push({ photoId: "salon-verbatim-audio", order: photos.length, dataUrl: iv.verbatimAudioDataUrl });
+        						if (iv.photoDataUrl) {
+        							photos.push({ photoId: "salon-photo-1", order: 0, dataUrl: iv.photoDataUrl });
         						}
         						return {
         							payload: {
@@ -1270,7 +1051,6 @@ componentScriptContent:
         								journeySteps: iv.journeySteps || [],
         								globalSatisfaction: iv.globalSatisfaction,
         								verbatimText: iv.verbatimText,
-        								verbatimAudioDataUrl: iv.verbatimAudioDataUrl || "",
         								sector: iv.sector,
         								age: iv.age,
         								urssafSince: iv.urssafSince,
@@ -1417,179 +1197,16 @@ componentScriptContent:
         			}
         			return app._interviewStore;
         		}
-        	private isSpeechUnavailableMessage(msg: any): boolean {
-        		const s = String(msg || "").toLowerCase();
-        		return s.indexOf("not available") >= 0
-        			|| s.indexOf("unavailable") >= 0
-        			|| s.indexOf("service is not available") >= 0;
-        	}
-        
-        	private ensureMicPermissionCordova(page: any): Promise<void> {
-        		const w = typeof window !== "undefined" ? (window as any) : null;
-        		const cordovaSr = w && w.plugins && w.plugins.speechRecognition ? w.plugins.speechRecognition : null;
-        		return new Promise((resolve, reject) => {
-        			if (!cordovaSr || typeof cordovaSr.hasPermission !== "function") {
-        				resolve();
-        				return;
-        			}
-        			cordovaSr.hasPermission(
-        				(granted: boolean) => {
-        					if (granted) { resolve(); return; }
-        					if (typeof cordovaSr.requestPermission === "function") {
-        						cordovaSr.requestPermission(() => resolve(), (err: any) => reject(err || "Speech recognition permission missing"));
-        					} else {
-        						reject("Speech recognition permission missing");
-        					}
-        			},
-        				(err: any) => reject(err || "Speech recognition permission missing")
-        			);
-        		});
-        	}
-        
-        	private pickMediaRecorderMimeType(): string {
-        		const types = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus", "audio/aac"];
-        		for (let i = 0; i < types.length; i++) {
-        			try {
-        				if (typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(types[i])) {
-        					return types[i];
-        				}
-        			} catch (e) { /* ignore */ }
-        		}
-        		return "";
-        	}
-        
-        	private startMediaRecordingFallback(page: any): Promise<void> {
-        		return new Promise((resolve, reject) => {
-        			const w = typeof window !== "undefined" ? (window as any) : null;
-        			if (!w || !navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function") {
-        				reject("speech_recognition_unavailable");
-        				return;
-        			}
-        			if (typeof MediaRecorder === "undefined") {
-        				reject("speech_recognition_unavailable");
-        				return;
-        			}
-        			this.ensureMicPermissionCordova(page).then(() => {
-        				return navigator.mediaDevices.getUserMedia({ audio: true });
-        			}).then((stream: MediaStream) => {
-        				page.speechMediaStream = stream;
-        				page.speechMediaChunks = [];
-        				const mimeType = this.pickMediaRecorderMimeType();
-        				const recorder = mimeType ? new MediaRecorder(stream, { mimeType: mimeType }) : new MediaRecorder(stream);
-        				page.speechMediaRecorder = recorder;
-        				recorder.ondataavailable = (ev: BlobEvent) => {
-        					if (ev.data && ev.data.size > 0) { page.speechMediaChunks.push(ev.data); }
-        				};
-        				recorder.start(250);
-        				page.speechAudioFallback = true;
-        				page.speechCordovaListening = true;
-        				resolve();
-        			}).catch((err: any) => {
-        				reject(err || "speech_recognition_unavailable");
-        			});
-        		});
-        	}
-        
-        	private stopMediaRecordingFallback(page: any): Promise<string | null> {
-        		return new Promise((resolve) => {
-        			const recorder = page.speechMediaRecorder;
-        			if (!recorder || recorder.state === "inactive") {
-        				page.speechAudioFallback = false;
-        				resolve(null);
-        				return;
-        			}
-        			recorder.onstop = () => {
-        				try {
-        					const blob = new Blob(page.speechMediaChunks || [], { type: recorder.mimeType || "audio/webm" });
-        					if (!blob || blob.size < 1) {
-        						page.speechMediaChunks = [];
-        						page.speechMediaRecorder = null;
-        						if (page.speechMediaStream) {
-        							try { page.speechMediaStream.getTracks().forEach((t: MediaStreamTrack) => t.stop()); } catch (e) {}
-        							page.speechMediaStream = null;
-        						}
-        						page.speechAudioFallback = false;
-        						resolve(null);
-        						return;
-        					}
-        					const reader = new FileReader();
-        					reader.onload = () => {
-        						const dataUrl = typeof reader.result === "string" ? reader.result : null;
-        						page.speechMediaChunks = [];
-        						page.speechMediaRecorder = null;
-        						if (page.speechMediaStream) {
-        							try { page.speechMediaStream.getTracks().forEach((t: MediaStreamTrack) => t.stop()); } catch (e) {}
-        							page.speechMediaStream = null;
-        						}
-        						page.speechAudioFallback = false;
-        						resolve(dataUrl);
-        					};
-        					reader.onerror = () => {
-        						page.speechAudioFallback = false;
-        						resolve(null);
-        					};
-        					reader.readAsDataURL(blob);
-        				} catch (e) {
-        					page.speechAudioFallback = false;
-        					resolve(null);
-        				}
-        			};
-        			try { recorder.stop(); } catch (e) {
-        				page.speechAudioFallback = false;
-        				resolve(null);
-        			}
-        		});
-        	}
-        
         	public startSpeechListening(page: any): Promise<void> {
         		const locale = (this.global && this.global.speechLocale) ? this.global.speechLocale : "fr-FR";
         		return new Promise((resolve, reject) => {
         			const w = typeof window !== "undefined" ? (window as any) : null;
         			const isCordova = !!(w && w.cordova && w.cordova.platformId && w.cordova.platformId !== "browser");
         			const hasWebSpeech = !!(w && ("webkitSpeechRecognition" in w || "SpeechRecognition" in w));
-        			const cordovaSr = w && w.plugins && w.plugins.speechRecognition ? w.plugins.speechRecognition : null;
-        			const isAndroid = isCordova && w.cordova.platformId === "android";
-        			const app: any = this;
         
-        			const publishCordovaMatches = (matches: any) => {
-        				const text = Array.isArray(matches) ? matches.join(" ") : String(matches != null ? matches : "");
-        				if (text.trim()) {
-        					page.events.publish("speechReceived", text);
-        				}
-        			};
-        
-        			const restartAndroidListening = (startFn: () => void) => {
-        				if (!isAndroid || !page.speechCordovaListening) { return; }
-        				setTimeout(() => {
-        					if (page.speechCordovaListening) { startFn(); }
-        				}, 250);
-        			};
-        
-        			const tryMediaFallback = () => {
-        				app.startMediaRecordingFallback(page).then(() => {
-        					if (page.events) {
-        						page.events.publish("speechModeChanged", {
-        							mode: "audio",
-        							message: "Dictée automatique indisponible sur cet appareil. Parlez, puis retouchez le micro pour arrêter. Saisissez ensuite le texte du verbatim (ou installez l''app Google depuis le Play Store)."
-        						});
-        					}
-        					resolve();
-        				}).catch(() => {
-        					reject("speech_recognition_unavailable");
-        				});
-        			};
-        
-        			const tryWebSpeech = () => {
-        				if (!w || !hasWebSpeech) {
-        					tryMediaFallback();
-        					return;
-        				}
+        			const startWebSpeech = () => {
+        				if (!w || !hasWebSpeech) { reject("Speech recognition unavailable"); return; }
         				const Ctor = w.SpeechRecognition || w.webkitSpeechRecognition;
-        				let gotResult = false;
-        				let webTimeout: any = null;
-        				const clearWebTimeout = () => {
-        					if (webTimeout) { clearTimeout(webTimeout); webTimeout = null; }
-        				};
         				try {
         					if (page.speechWebRecognition) {
         						try { page.speechWebRecognition.stop(); } catch (e) {}
@@ -1601,8 +1218,6 @@ componentScriptContent:
         					page.speechWebRecognition.continuous = true;
         					page.speechWebRecognition.interimResults = true;
         					page.speechWebRecognition.onresult = (ev: any) => {
-        						gotResult = true;
-        						clearWebTimeout();
         						let finalTranscript = "";
         						let interimTranscript = "";
         						for (let i = 0; i < ev.results.length; ++i) {
@@ -1617,93 +1232,51 @@ componentScriptContent:
         							page.events.publish("speechReceived", { final: finalTranscript, interim: interimTranscript, mode: "snapshot" });
         						}
         					};
-        					page.speechWebRecognition.onerror = () => {
-        						clearWebTimeout();
+        					page.speechWebRecognition.onerror = (ev: any) => {
         						try { page.speechWebRecognition.stop(); } catch (e) {}
         						page.speechWebRecognition = null;
-        						if (!gotResult) { tryMediaFallback(); }
+        						reject(ev && ev.error ? ev.error : ev);
         					};
-        					page.speechWebRecognition.onstart = () => {
-        						clearWebTimeout();
-        						webTimeout = setTimeout(() => {
-        							if (!gotResult) {
-        								try { page.speechWebRecognition.stop(); } catch (e) {}
-        								page.speechWebRecognition = null;
-        								tryMediaFallback();
-        							}
-        						}, 4000);
-        						resolve();
-        					};
+        					page.speechWebRecognition.onstart = () => resolve();
         					page.speechWebRecognition.start();
         				} catch (e) {
-        					clearWebTimeout();
-        					tryMediaFallback();
+        					reject(e);
         				}
-        			};
-        
-        			const tryCordovaStt = (usePopup: boolean) => {
-        				if (!cordovaSr || typeof cordovaSr.startListening !== "function") {
-        					if (isAndroid) { tryMediaFallback(); } else { tryWebSpeech(); }
-        					return;
-        				}
-        				const options = { language: locale, locale: locale, matches: 5, showPopup: usePopup, showPartial: !usePopup, prompt: "Parlez pour votre verbatim…" };
-        				const runListening = () => {
-        					page.speechCordovaListening = true;
-        					page.speechAudioFallback = false;
-        					cordovaSr.startListening(
-        						(matches: any) => {
-        							publishCordovaMatches(matches);
-        							if (!usePopup) {
-        								restartAndroidListening(runListening);
-        							}
-        						},
-        						(err: any) => {
-        							const msg = String(err || "");
-        							if (app.isSpeechUnavailableMessage(msg)) {
-        								page.speechCordovaListening = false;
-        								if (isAndroid) { tryMediaFallback(); } else { tryWebSpeech(); }
-        								return;
-        							}
-        							if (page.speechCordovaListening && isAndroid && usePopup === false && msg.indexOf("Missing permission") < 0) {
-        								restartAndroidListening(runListening);
-        							} else if (!page.speechCordovaListening) {
-        								reject(err);
-        							}
-        						},
-        						options
-        					);
-        				};
-        				runListening();
-        				resolve();
-        			};
-        
-        			const routeAfterMicPermission = () => {
-        				if (!cordovaSr || typeof cordovaSr.isRecognitionAvailable !== "function") {
-        					tryCordovaStt(true);
-        					return;
-        				}
-        				cordovaSr.isRecognitionAvailable(
-        					(available: boolean) => {
-        						if (available) {
-        							tryCordovaStt(true);
-        						} else if (isAndroid) {
-        							tryMediaFallback();
-        						} else {
-        							tryWebSpeech();
-        						}
-        					},
-        					() => {
-        						if (isAndroid) { tryMediaFallback(); } else { tryWebSpeech(); }
-        					}
-        				);
         			};
         
         			if (isCordova) {
-        				app.ensureMicPermissionCordova(page).then(routeAfterMicPermission).catch((err: any) => {
-        					reject(err);
-        				});
+        				let stt: any = null;
+        				try { stt = page.getInstance(SpeechRecognition); } catch (e) { stt = null; }
+        				if (!stt || typeof stt.startListening !== "function") {
+        					startWebSpeech();
+        					return;
+        				}
+        				stt.isRecognitionAvailable().then((available: boolean) => {
+        					if (!available) { reject("Speech recognition not available"); return; }
+        
+        					const doStart = () => {
+        						const options = { locale, language: locale, matches: 5, showPopup: true, showPartial: true };
+        						page.speechCordovaListening = true;
+        						page.speechCordovaSub = stt.startListening(options).subscribe(
+        							(matches: string[]) => {
+        								const text = Array.isArray(matches) ? matches.join(" ") : String(matches);
+        								page.events.publish("speechReceived", text);
+        							},
+        							() => {}
+        						);
+        						resolve();
+        					};
+        
+        					stt.hasPermission().then(doStart).catch(() => {
+        						if (typeof stt.requestPermission === "function") {
+        							stt.requestPermission().then(doStart).catch(reject);
+        						} else {
+        							reject("Speech recognition permission missing");
+        						}
+        					});
+        				}).catch(reject);
         			} else {
-        				tryWebSpeech();
+        				startWebSpeech();
         			}
         		});
         	}
@@ -1711,35 +1284,10 @@ componentScriptContent:
         	public stopSpeechListening(page: any): void {
         		const w = typeof window !== "undefined" ? (window as any) : null;
         		const isCordova = !!(w && w.cordova && w.cordova.platformId && w.cordova.platformId !== "browser");
-        		const cordovaSr = w && w.plugins && w.plugins.speechRecognition ? w.plugins.speechRecognition : null;
-        		const app: any = this;
-        
-        		if (page.speechAudioFallback && page.speechMediaRecorder) {
-        			page.speechCordovaListening = false;
-        			app.stopMediaRecordingFallback(page).then((dataUrl: string | null) => {
-        				if (dataUrl) {
-        					if (typeof page.applyAudioRecorded === "function") {
-        						page.applyAudioRecorded(dataUrl);
-        					} else if (page.events) {
-        						page.events.publish("speechAudioRecorded", dataUrl);
-        					}
-        				} else if (typeof page.onAudioRecordingEmpty === "function") {
-        					page.onAudioRecordingEmpty();
-        				} else if (page.events) {
-        					page.events.publish("speechAudioEmpty", null);
-        				}
-        			});
-        			return;
-        		}
-        
         		if (isCordova) {
         			page.speechCordovaListening = false;
         			if (page.speechCordovaSub) { page.speechCordovaSub.unsubscribe(); page.speechCordovaSub = null; }
-        			if (cordovaSr && typeof cordovaSr.stopListening === "function") {
-        				try { cordovaSr.stopListening(() => {}, () => {}); } catch (e) {}
-        			} else {
-        				try { page.getInstance(SpeechRecognition).stopListening(); } catch (e) {}
-        			}
+        			try { page.getInstance(SpeechRecognition).stopListening(); } catch (e) {}
         		} else if (page.speechWebRecognition) {
         			try { page.speechWebRecognition.stop(); } catch (e) {}
         			try { page.speechWebRecognition.abort && page.speechWebRecognition.abort(); } catch (e) {}
@@ -1754,6 +1302,7 @@ componentScriptContent:
         	/*End_c8o_AppFunction*/
         '
 tplProjectName: mobilebuilder_tpl_8_4_0_ngx
+↓Menu [ngx.components.UIDynamicMenu-1779283399740]: 🗏 mobileMenus/Menu.yaml
 ↓BottomNavPill [ngx.components.UISharedRegularComponent-1779290000001]: 🗏 mobileSharedComponents/BottomNavPill.yaml
 ↓Page [ngx.components.PageComponent-1779283399741]: 🗏 mobilePages/Page.yaml
 ↓InterviewStep1 [ngx.components.PageComponent-1779300000001]: 🗏 mobilePages/InterviewStep1.yaml
@@ -1920,7 +1469,7 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
             letter-spacing: 0.05em;
             margin-bottom: 16px;
           }
-          .vu-card-body { padding-left: 12px; padding-right: 36px; }
+          .vu-card-body { padding-left: 12px; }
           .vu-empty-inline {
             text-align: center;
             color: #94a3b8;
@@ -2046,17 +1595,6 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
             font-size: 12px; color: #64748b; background: #f8fafc;
             padding: 6px 12px; border-radius: 8px; margin-top: 12px;
           }
-          .vu-card-delete {
-            position: absolute;
-            top: 12px;
-            right: 12px;
-            z-index: 3;
-            margin: 0;
-            --padding-start: 6px;
-            --padding-end: 6px;
-            --padding-top: 6px;
-            --padding-bottom: 6px;
-          }
           .vu-empty-card {
             text-align: center;
             padding: 32px 24px;
@@ -2116,15 +1654,11 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
           }
           .vu-field {
             --background: #f8f9fa;
-            --color: #1e293b;
-            --placeholder-color: #64748b;
-            --placeholder-opacity: 1;
             --padding-start: 16px;
             --padding-end: 16px;
             border-radius: 16px;
             margin-bottom: 16px;
             border: 1px solid #f1f5f9;
-            color: #1e293b;
           }
           .vu-btn-primary {
             --background: #0050AA;
@@ -2437,7 +1971,6 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
             background: #fff;
             margin: 4px;
             font-size: 13px;
-            color: #334155;
             cursor: pointer;
           }
           .vu-toggle-chip--on {
@@ -2456,7 +1989,6 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
             border: 1px solid #e2e8f0;
             background: #fff;
             font-size: 14px;
-            color: #334155;
             cursor: pointer;
           }
           .vu-satisfaction-option--on {
@@ -2479,264 +2011,6 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
             object-fit: cover;
             border-radius: 16px;
             margin-top: 12px;
-          }
-          .vu-photo-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin: 8px 0 16px;
-            align-items: flex-start;
-          }
-          .vu-photo-thumb-wrap,
-          .vu-photo-add-btn {
-            width: 88px;
-            height: 88px;
-            border-radius: 12px;
-            flex: 0 0 88px;
-            box-sizing: border-box;
-          }
-          .vu-photo-thumb-wrap {
-            position: relative;
-            overflow: hidden;
-            border: 1px solid #e2e8f0;
-            background: #f8fafc;
-          }
-          .vu-photo-thumb,
-          .vu-photo-thumb-wrap ion-img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: block;
-          }
-          .vu-photo-thumb::part(image),
-          .vu-photo-thumb-wrap ion-img::part(image) {
-            object-fit: cover;
-          }
-          .vu-photo-add-btn {
-            border: 2px dashed #cbd5e1;
-            background: #f8fafc;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0;
-            margin: 0;
-            cursor: pointer;
-            color: #64748b;
-          }
-          .vu-photo-add-btn ion-icon {
-            font-size: 32px;
-            pointer-events: none;
-          }
-          .vu-photo-remove {
-            position: absolute;
-            top: 4px;
-            right: 4px;
-            z-index: 2;
-            width: 22px;
-            height: 22px;
-            border-radius: 50%;
-            border: none;
-            background: rgba(15, 23, 42, 0.72);
-            color: #fff;
-            font-size: 14px;
-            line-height: 22px;
-            text-align: center;
-            padding: 0;
-            cursor: pointer;
-          }
-          .vu-recap-photo-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-top: 8px;
-          }
-          .vu-recap-photo-grid .vu-photo-thumb-wrap {
-            width: 72px;
-            height: 72px;
-            flex: 0 0 72px;
-          }
-          
-          /* Cartes claires du wizard salon — textes lisibles en mode sombre système */
-          @media (prefers-color-scheme: dark) {
-            :root:not(.force-light) ion-content.vu-page {
-              --background: #0f172a;
-            }
-            :root:not(.force-light) .vu-form-card,
-            :root:not(.force-light) .vu-entry,
-            :root:not(.force-light) .vu-kpi-card {
-              color: #334155;
-            }
-            :root:not(.force-light) .vu-form-card .vu-section-title,
-            :root:not(.force-light) .vu-form-card h2,
-            :root:not(.force-light) .vu-form-card .vu-field-label {
-              color: #1e293b;
-            }
-            :root:not(.force-light) .vu-toggle-chip,
-            :root:not(.force-light) .vu-satisfaction-option {
-              color: #334155;
-              background: #fff;
-            }
-            :root:not(.force-light) .vu-toggle-chip--on,
-            :root:not(.force-light) .vu-satisfaction-option--on {
-              color: #0050AA;
-            }
-            :root:not(.force-light) .vu-form-card ion-textarea,
-            :root:not(.force-light) .vu-form-card ion-input,
-            :root:not(.force-light) ion-textarea.vu-field,
-            :root:not(.force-light) ion-input.vu-field {
-              --color: #1e293b;
-              --placeholder-color: #64748b;
-              --placeholder-opacity: 1;
-            }
-            :root:not(.force-light) .vu-form-card ion-textarea::part(native),
-            :root:not(.force-light) .vu-form-card ion-input::part(native),
-            :root:not(.force-light) ion-textarea.vu-field::part(native),
-            :root:not(.force-light) ion-input.vu-field::part(native) {
-              color: #1e293b;
-            }
-            :root:not(.force-light) .vu-form-card ion-textarea::part(placeholder),
-            :root:not(.force-light) ion-textarea.vu-field::part(placeholder) {
-              color: #64748b;
-              opacity: 1;
-            }
-            :root:not(.force-light) .vu-wizard-actions ion-button[fill="outline"] {
-              --color: #475569;
-              --border-color: #94a3b8;
-            }
-            :root:not(.force-light) .vu-hint-text {
-              color: #475569;
-            }
-            :root:not(.force-light) .vu-hero-badge {
-              color: #b91c1c;
-            }
-            /* Accueil + liste — textes sur fond sombre */
-            :root:not(.force-light) .vu-home-header .vu-greeting-title,
-            :root:not(.force-light) .vu-home-header .vu-greeting-sub,
-            :root:not(.force-light) .vu-section-title,
-            :root:not(.force-light) .vu-section-head-row .vu-section-title,
-            :root:not(.force-light) .vu-list-count {
-              color: #f1f5f9;
-            }
-            :root:not(.force-light) .vu-home-header .vu-greeting-sub {
-              color: #94a3b8;
-            }
-            :root:not(.force-light) .vu-link-action {
-              color: #7eb8ff;
-            }
-            :root:not(.force-light) .vu-page-header--elevated,
-            :root:not(.force-light) .vu-search-wrap {
-              background: #1e293b;
-              box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
-            }
-            :root:not(.force-light) .vu-page-header .vu-greeting-title {
-              color: #f1f5f9;
-            }
-            :root:not(.force-light) .vu-searchbar {
-              --background: #0f172a;
-              --color: #f1f5f9;
-              --placeholder-color: #94a3b8;
-              --placeholder-opacity: 1;
-              --icon-color: #94a3b8;
-              --clear-button-color: #94a3b8;
-            }
-            :root:not(.force-light) .vu-searchbar input {
-              color: #f1f5f9 !important;
-            }
-            :root:not(.force-light) .vu-back-btn {
-              background: #334155;
-              color: #e2e8f0;
-              box-shadow: none;
-            }
-            :root:not(.force-light) .vu-empty-inline {
-              color: #94a3b8;
-            }
-          }
-          :root.force-dark ion-content.vu-page {
-            --background: #0f172a;
-          }
-          :root.force-dark .vu-form-card,
-          :root.force-dark .vu-entry,
-          :root.force-dark .vu-kpi-card {
-            color: #334155;
-          }
-          :root.force-dark .vu-form-card .vu-section-title,
-          :root.force-dark .vu-form-card h2,
-          :root.force-dark .vu-form-card .vu-field-label {
-            color: #1e293b;
-          }
-          :root.force-dark .vu-toggle-chip,
-          :root.force-dark .vu-satisfaction-option {
-            color: #334155;
-            background: #fff;
-          }
-          :root.force-dark .vu-toggle-chip--on,
-          :root.force-dark .vu-satisfaction-option--on {
-            color: #0050AA;
-          }
-          :root.force-dark .vu-form-card ion-textarea,
-          :root.force-dark .vu-form-card ion-input,
-          :root.force-dark ion-textarea.vu-field,
-          :root.force-dark ion-input.vu-field {
-            --color: #1e293b;
-            --placeholder-color: #64748b;
-            --placeholder-opacity: 1;
-          }
-          :root.force-dark .vu-form-card ion-textarea::part(native),
-          :root.force-dark .vu-form-card ion-input::part(native),
-          :root.force-dark ion-textarea.vu-field::part(native),
-          :root.force-dark ion-input.vu-field::part(native) {
-            color: #1e293b;
-          }
-          :root.force-dark .vu-form-card ion-textarea::part(placeholder),
-          :root.force-dark ion-textarea.vu-field::part(placeholder) {
-            color: #64748b;
-            opacity: 1;
-          }
-          :root.force-dark .vu-wizard-actions ion-button[fill="outline"] {
-            --color: #475569;
-            --border-color: #94a3b8;
-          }
-          :root.force-dark .vu-hint-text {
-            color: #475569;
-          }
-          :root.force-dark .vu-hero-badge {
-            color: #b91c1c;
-          }
-          :root.force-dark .vu-home-header .vu-greeting-title,
-          :root.force-dark .vu-home-header .vu-greeting-sub,
-          :root.force-dark .vu-section-title,
-          :root.force-dark .vu-section-head-row .vu-section-title,
-          :root.force-dark .vu-list-count {
-            color: #f1f5f9;
-          }
-          :root.force-dark .vu-home-header .vu-greeting-sub {
-            color: #94a3b8;
-          }
-          :root.force-dark .vu-link-action {
-            color: #7eb8ff;
-          }
-          :root.force-dark .vu-page-header--elevated,
-          :root.force-dark .vu-search-wrap {
-            background: #1e293b;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
-          }
-          :root.force-dark .vu-page-header .vu-greeting-title {
-            color: #f1f5f9;
-          }
-          :root.force-dark .vu-searchbar {
-            --background: #0f172a;
-            --color: #f1f5f9;
-            --placeholder-color: #94a3b8;
-            --placeholder-opacity: 1;
-            --icon-color: #94a3b8;
-            --clear-button-color: #94a3b8;
-          }
-          :root.force-dark .vu-back-btn {
-            background: #334155;
-            color: #e2e8f0;
-          }
-          :root.force-dark .vu-empty-inline {
-            color: #94a3b8;
           }
           /* === end VoxUrssaf React UI === */
           

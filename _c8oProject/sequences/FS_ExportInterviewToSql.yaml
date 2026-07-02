@@ -2,10 +2,10 @@ comment: |
   'Export métier vers SQL (paramètres passés par l''''app).
   CouchDB optionnel : l''''app envoie answers_json / métadonnées ; pas de GetDocument obligatoire.'
 ↓Delete_SQL [steps.TransactionStep-1779374001015]: 
-  sourceTransaction: VoxUrssafV2.voxurssaf.Interview_Delete_Tx
+  sourceTransaction: KitUsager.voxurssaf.Interview_Delete_Tx
   ↓interview_id [variables.StepVariable-1779374001014]: 
 ↓Save_SQL [steps.TransactionStep-1779374001004]: 
-  sourceTransaction: VoxUrssafV2.voxurssaf.Interview_Save_Tx
+  sourceTransaction: KitUsager.voxurssaf.Interview_Save_Tx
   ↓interview_id [variables.StepVariable-1779374001005]: 
   ↓event_id [variables.StepVariable-1779374001006]: 
   ↓status [variables.StepVariable-1779374001007]: 
