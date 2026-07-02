@@ -467,9 +467,14 @@ componentScriptContent:
         					},
         	
         					emptySalonFields(): any {
+        						const data = this.load();
+        						const eventId = data.eventId || "salon-externe-2026";
+        						const d = new Date();
+        						const pad = (n: number) => n < 10 ? ''0'' + n : n;
+        						const dateStr = pad(d.getDate()) + "/" + pad(d.getMonth() + 1) + "/" + d.getFullYear() + " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
         						return {
         							format: "salon",
-        							sheetCode: "F-",
+        							sheetCode: "F-" + dateStr + " - " + eventId,
         							journeySteps: [] as string[],
         							globalSatisfaction: "",
         							verbatimText: "",

@@ -196,7 +196,7 @@ title: Etape 1
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:Lier la fiche physique
+                - MobileSmartSourceType: plain:Nommer la fiche
         ↓Lbl [ngx.components.UIElement-1779300001045]: 
           tagName: label
           ↓AttrClass [ngx.components.UIAttribute-1779300001046]: 
