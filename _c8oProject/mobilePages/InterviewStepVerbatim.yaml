@@ -56,10 +56,11 @@ scriptContent:
         		const alert = await alertCtrl.create({
         			header: ''Dictée vocale hors connexion'',
         			subHeader: ''Configuration requise'',
-        			message: `Pour dicter vos témoignages sans connexion internet, configurez votre appareil Android :<br><br>
-        			<b>1.</b> Allez dans les <b>Paramètres</b> de votre appareil.<br>
-        			<b>2.</b> Recherchez et sélectionnez <b>Reconnaissance vocale hors connexion</b>.<br>
-        			<b>3.</b> Téléchargez la langue <b>Français</b> (vous pouvez utiliser un <b>partage de connexion</b> si vous n''avez pas de Wi-Fi).`,
+        			message: `Pour dicter vos témoignages sans connexion internet, configurez votre appareil Android :
+
+1. Allez dans les PARAMÈTRES de votre appareil.
+2. Recherchez et sélectionnez RECONNAISSANCE VOCALE HORS CONNEXION.
+3. Téléchargez la langue FRANÇAIS (vous pouvez utiliser un partage de connexion si vous n''avez pas de Wi-Fi).`,
         			buttons: [''Compris'']
         		});
         		await alert.present();
