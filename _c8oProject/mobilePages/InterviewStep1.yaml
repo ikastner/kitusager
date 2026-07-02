@@ -8,9 +8,10 @@ scriptContent:
         '/*Begin_c8o_PageImport*/
         /*End_c8o_PageImport*/
         /*Begin_c8o_PageDeclaration*/
-        	public sheetCode: string = "F-";
-        	public wizardCanProceed: boolean = false;
+        	public sheetCode: string = "";
+        	public salonName: string = "";
         	public fieldError: string = "";
+        	public wizardCanProceed: boolean = false;
         	/*End_c8o_PageDeclaration*/
         /*Begin_c8o_PageConstructor*/
         		/*End_c8o_PageConstructor*/
@@ -39,15 +40,18 @@ scriptContent:
         		if (!iv || iv.format !== "salon") {
         			iv = store.createSalonDraft();
         		}
-        		this.sheetCode = iv.sheetCode || "F-";
-        	}
-        	public normalizeSheetCode(raw: string): string {
-        		let c = (raw || "").trim().toUpperCase();
-        		if (!c || c === "F-") { return ""; }
-        		if (!c.startsWith("F-")) {
-        			c = "F-" + c.replace(/^F-?/i, "");
+        		this.sheetCode = iv.sheetCode || "";
+        		if (this.sheetCode.startsWith("F-") && this.sheetCode.includes(" - ")) {
+        			this.salonName = this.sheetCode.substring(this.sheetCode.indexOf(" - ") + 3);
+        		} else {
+        			this.salonName = this.sheetCode.replace(/^F-?/i, "");
         		}
-        		return c;
+        	}
+        	public getFicheLabel(): string {
+        		const store = this.getStoreSync();
+        		const iv = store ? store.getActiveInterview() : null;
+        		if (!iv || !iv.sheetCode || iv.sheetCode === "F-") { return ""; }
+        		return iv.sheetCode;
         	}
         	public getStoreSync(): any {
         		const app: any = this.router && this.router.sharedObject;
@@ -70,13 +74,17 @@ scriptContent:
         		if (!iv || iv.format !== "salon") {
         			iv = store.createSalonDraft();
         		}
-        		const code = this.normalizeSheetCode(this.sheetCode);
-        		if (!code || code.length < 4) {
-        			this.fieldError = "Indiquez le code fiche (ex. F-123)";
+        		const sName = (this.salonName || "").trim();
+        		if (!sName) {
+        			this.fieldError = "Indiquez le nom du salon";
         			return;
         		}
-        		this.sheetCode = code;
-        		store.updateSalonDraft({ sheetCode: code, wizardStep: 2 });
+        		const d = new Date(iv.createdAt || new Date());
+        		const pad = (n: number) => n < 10 ? ''0'' + n : n;
+        		const dateStr = pad(d.getDate()) + "/" + pad(d.getMonth() + 1) + "/" + d.getFullYear() + " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+        		const computedCode = "F-" + dateStr + " - " + sName;
+        		this.sheetCode = computedCode;
+        		store.updateSalonDraft({ sheetCode: computedCode, wizardStep: 2 });
         		this.wizardCanProceed = true;
         	}
         	/*End_c8o_PageFunction*/'
@@ -119,7 +127,7 @@ title: Etape 1
           textValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:Verbatims usagers
+              - MobileSmartSourceType: 'script:''Verbatims usagers'' + (getFicheLabel() ? '' • '' + getFicheLabel() : '''')'
       ↓Title [ngx.components.UIElement-1779300001015]: 
         tagName: h1
         ↓AttrClass [ngx.components.UIAttribute-1779300001016]: 
@@ -209,14 +217,14 @@ title: Etape 1
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:Code fiche
+                - MobileSmartSourceType: plain:Nom du salon
         ↓InCode [ngx.components.UIDynamicElement-1779300001048]: 
           beanData: |
             '{
              "ionBean": "Input",
-             "ControlName": "plain:sheetCode",
-             "DoubleBinding": "script:sheetCode",
-             "Placeholder": "plain:F-..."
+             "ControlName": "plain:salonName",
+             "DoubleBinding": "script:salonName",
+             "Placeholder": "plain:Saisissez le nom du salon..."
             }'
           tagName: ion-input
           ↓AttrClass [ngx.components.UIAttribute-1779300001049]: 
@@ -256,7 +264,7 @@ title: Etape 1
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:Le code relie uniquement les données à la fiche papier. Aucune donnée personnelle n'est stockée à cette étape.
+                - MobileSmartSourceType: plain:Le nom du salon permet d'identifier l'événement et de classer vos verbatims. Aucune donnée personnelle n'est stockée à cette étape.
         ↓IntroTitle [ngx.components.UIElement-1779300001053]: 
           tagName: h3
           ↓AttrClass [ngx.components.UIAttribute-1779300001054]: 

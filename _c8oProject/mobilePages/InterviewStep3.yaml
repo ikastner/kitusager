@@ -86,6 +86,12 @@ scriptContent:
         	public contactClass(mode: string): string {
         		return "vu-satisfaction-option" + (this.contactMode === mode ? " vu-satisfaction-option--on" : "");
         	}
+        	public getFicheLabel(): string {
+        		const store = this.getStoreSync();
+        		const iv = store ? store.getActiveInterview() : null;
+        		if (!iv || !iv.sheetCode || iv.sheetCode === "F-") { return ""; }
+        		return iv.sheetCode;
+        	}
         	/*End_c8o_PageFunction*/'
 segment: interview-step-3
 title: Etape 3
@@ -126,7 +132,7 @@ title: Etape 3
           textValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:Verbatims usagers
+              - MobileSmartSourceType: 'script:''Verbatims usagers'' + (getFicheLabel() ? '' • '' + getFicheLabel() : '''')'
       ↓Title [ngx.components.UIElement-1779300020015]: 
         tagName: h1
         ↓AttrClass [ngx.components.UIAttribute-1779300020016]: 
