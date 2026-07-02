@@ -12,6 +12,7 @@ scriptContent:
         	public isRecording: boolean = false;
         	public showMicError: boolean = false;
         	public micErrorMessage: string = "";
+        	public previousText: string = "";
         	public wizardCanProceed: boolean = false;
         	/*End_c8o_PageDeclaration*/
         /*Begin_c8o_PageConstructor*/
@@ -32,6 +33,7 @@ scriptContent:
         	}
         	public applySpeechReceived(data: any): void {
         		if (!this.isRecording) { return; }
+        		const prefix = this.previousText ? this.previousText.trim() + " " : "";
         		if (data != null && typeof data === "object" && !Array.isArray(data)) {
         			if (data.mode === "snapshot" || "final" in data || "interim" in data) {
         				const committed = (data.final || "").trim();
@@ -40,26 +42,24 @@ scriptContent:
         				if (interim) {
         					display = (display ? display + " " : "") + interim + " (en cours...)";
         				}
-        				this.verbatimDraft = display.trim();
+        				this.verbatimDraft = (prefix + display).trim();
         				return;
         			}
         		}
         		const chunk = Array.isArray(data) ? data.join(" ") : String(data != null ? data : "");
         		if (!chunk.trim()) { return; }
-        		this.verbatimDraft = chunk.trim();
+        		this.verbatimDraft = (prefix + chunk).trim();
         	}
         	public async showOfflineAlert(): Promise<void> {
         		const alertCtrl = this.getInstance(AlertController);
         		if (!alertCtrl) { return; }
         		const alert = await alertCtrl.create({
         			header: ''Dictée vocale hors connexion'',
-        			subHeader: ''Moteur de dictée Android'',
+        			subHeader: ''Configuration requise'',
         			message: `Pour dicter vos témoignages sans connexion internet, configurez votre appareil Android :<br><br>
-        			<b>1.</b> Ouvrez l''application <b>Google</b> de votre appareil.<br>
-        			<b>2.</b> Accédez aux <b>Paramètres</b> (via votre profil) > <b>Voix</b>.<br>
-        			<b>3.</b> Choisissez <b>Reconnaissance vocale hors connexion</b>.<br>
-        			<b>4.</b> Dans l''onglet ''Toutes'', recherchez et téléchargez le pack <b>Français (France)</b>.<br><br>
-        			Une fois installé, la dictée fonctionnera automatiquement sans aucune connexion !`,
+        			<b>1.</b> Allez dans les <b>Paramètres</b> de votre appareil.<br>
+        			<b>2.</b> Recherchez et sélectionnez <b>Reconnaissance vocale hors connexion</b>.<br>
+        			<b>3.</b> Téléchargez la langue <b>Français</b> (vous pouvez utiliser un <b>partage de connexion</b> si vous n''avez pas de Wi-Fi).`,
         			buttons: [''Compris'']
         		});
         		await alert.present();
@@ -74,6 +74,7 @@ scriptContent:
         		this.showMicError = false;
         		this.micErrorMessage = "";
         		try {
+        			this.previousText = (this.verbatimDraft || "").trim();
         			await this.global.startSpeechListening(this);
         			this.isRecording = true;
         		} catch (e) {
@@ -140,10 +141,8 @@ title: Etape 3
         - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
         - com.twinsoft.convertigo.beans.common.FormatedContent: 
           →: |
-            		if (event && event.text) {
-            			page.verbatimDraft = (page.verbatimDraft || "") + " " + event.text;
-            			page.ref.markForCheck();
-            		}
+            		page.applySpeechReceived(event);
+            		page.ref.markForCheck();
             		resolve();
             
 ↓Content [ngx.components.UIDynamicElement-1779300010001]: 

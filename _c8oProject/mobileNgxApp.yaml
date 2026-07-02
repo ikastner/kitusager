@@ -1265,7 +1265,7 @@ componentScriptContent:
         						page.speechCordovaListening = true;
         						page.speechCordovaSub = stt.startListening(options).subscribe(
         							(matches: string[]) => {
-        								const text = Array.isArray(matches) ? matches.join(" ") : String(matches);
+        								const text = (Array.isArray(matches) && matches.length > 0) ? matches[0] : String(matches || "");
         								page.events.publish("speechReceived", text);
         							},
         							() => {}
