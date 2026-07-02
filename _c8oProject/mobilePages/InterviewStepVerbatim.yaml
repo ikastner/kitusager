@@ -64,6 +64,25 @@ scriptContent:
         		});
         		await alert.present();
         	}
+        	public async handleSpeechError(e: any): Promise<void> {
+        		this.isRecording = false;
+        		const msg = (typeof e === "string") ? e : ((e && (e.message || e.error)) ? (e.message || e.error) : String(e));
+        		if (msg && (msg.indexOf("not-allowed") >= 0 || msg.indexOf("NotAllowed") >= 0)) {
+        			this.micErrorMessage = "Accès micro refusé. Autorisez le microphone pour ce site.";
+        		} else if (msg && msg.indexOf("no-speech") >= 0) {
+        			this.micErrorMessage = "Aucun son détecté. Parlez après avoir démarré la dictée.";
+        		} else {
+        			this.micErrorMessage = "Erreur dictée : " + (msg || "inconnue");
+        		}
+        		this.showMicError = true;
+        		this.ref.markForCheck();
+        		
+        		if (!navigator.onLine || (msg && (msg.indexOf("network") >= 0 || msg.indexOf("connection") >= 0 || msg.indexOf("service") >= 0))) {
+        			await this.showOfflineAlert();
+        		}
+        		
+        		setTimeout(() => { this.showMicError = false; this.ref.markForCheck(); }, 3000);
+        	}
         	public async toggleRecording(): Promise<void> {
         		if (this.isRecording) {
         			this.global.stopSpeechListening(this);
@@ -78,23 +97,7 @@ scriptContent:
         			await this.global.startSpeechListening(this);
         			this.isRecording = true;
         		} catch (e) {
-        			const msg = (typeof e === "string") ? e : ((e && (e.message || e.error)) ? (e.message || e.error) : String(e));
-        			if (msg && (msg.indexOf("not-allowed") >= 0 || msg.indexOf("NotAllowed") >= 0)) {
-        				this.micErrorMessage = "Accès micro refusé. Autorisez le microphone pour ce site.";
-        			} else if (msg && msg.indexOf("no-speech") >= 0) {
-        				this.micErrorMessage = "Aucun son détecté. Parlez après avoir démarré la dictée.";
-        			} else {
-        				this.micErrorMessage = "Erreur dictée : " + (msg || "inconnue");
-        			}
-        			this.showMicError = true;
-        			this.isRecording = false;
-        			this.ref.markForCheck();
-        			
-        			if (!navigator.onLine || (msg && (msg.indexOf("network") >= 0 || msg.indexOf("connection") >= 0 || msg.indexOf("service") >= 0))) {
-        				await this.showOfflineAlert();
-        			}
-        			
-        			setTimeout(() => { this.showMicError = false; this.ref.markForCheck(); }, 3000);
+        			await this.handleSpeechError(e);
         		}
         	}
         	public getStoreSync(): any {
@@ -143,6 +146,17 @@ title: Etape 3
           →: |
             		page.applySpeechReceived(event);
             		page.ref.markForCheck();
+            		resolve();
+            
+↓Subscribe_Handler_SpeechError [ngx.components.UIEventSubscriber-1779300010996]: 
+  topic: speechError
+  ↓ApplySpeechError [ngx.components.UICustomAction-1779300010997]: 
+    actionValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+          →: |
+            		page.handleSpeechError(event);
             		resolve();
             
 ↓Content [ngx.components.UIDynamicElement-1779300010001]: 

@@ -1241,6 +1241,7 @@ componentScriptContent:
         					page.speechWebRecognition.onerror = (ev: any) => {
         						try { page.speechWebRecognition.stop(); } catch (e) {}
         						page.speechWebRecognition = null;
+        						page.events.publish("speechError", ev && ev.error ? ev.error : ev);
         						reject(ev && ev.error ? ev.error : ev);
         					};
         					page.speechWebRecognition.onstart = () => resolve();
@@ -1268,7 +1269,9 @@ componentScriptContent:
         								const text = (Array.isArray(matches) && matches.length > 0) ? matches[0] : String(matches || "");
         								page.events.publish("speechReceived", text);
         							},
-        							() => {}
+        							(err: any) => {
+        								page.events.publish("speechError", err);
+        							}
         						);
         						resolve();
         					};
