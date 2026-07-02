@@ -48,6 +48,22 @@ scriptContent:
         		if (!chunk.trim()) { return; }
         		this.verbatimDraft = chunk.trim();
         	}
+        	public async showOfflineAlert(): Promise<void> {
+        		const alertCtrl = this.getInstance(AlertController);
+        		if (!alertCtrl) { return; }
+        		const alert = await alertCtrl.create({
+        			header: ''Dictée vocale hors connexion'',
+        			subHeader: ''Moteur de dictée Android'',
+        			message: `Pour dicter vos témoignages sans connexion internet, configurez votre appareil Android :<br><br>
+        			<b>1.</b> Ouvrez l''application <b>Google</b> de votre appareil.<br>
+        			<b>2.</b> Accédez aux <b>Paramètres</b> (via votre profil) > <b>Voix</b>.<br>
+        			<b>3.</b> Choisissez <b>Reconnaissance vocale hors connexion</b>.<br>
+        			<b>4.</b> Dans l''onglet ''Toutes'', recherchez et téléchargez le pack <b>Français (France)</b>.<br><br>
+        			Une fois installé, la dictée fonctionnera automatiquement sans aucune connexion !`,
+        			buttons: [''Compris'']
+        		});
+        		await alert.present();
+        	}
         	public async toggleRecording(): Promise<void> {
         		if (this.isRecording) {
         			this.global.stopSpeechListening(this);
@@ -71,6 +87,12 @@ scriptContent:
         			}
         			this.showMicError = true;
         			this.isRecording = false;
+        			this.ref.markForCheck();
+        			
+        			if (!navigator.onLine || (msg && (msg.indexOf("network") >= 0 || msg.indexOf("connection") >= 0 || msg.indexOf("service") >= 0))) {
+        				await this.showOfflineAlert();
+        			}
+        			
         			setTimeout(() => { this.showMicError = false; this.ref.markForCheck(); }, 3000);
         		}
         	}
