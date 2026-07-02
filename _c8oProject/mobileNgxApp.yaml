@@ -2342,6 +2342,34 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
                 border-color: #60a5fa !important;
                 color: #60a5fa !important;
               }
+              .vu-card {
+                background: #1e293b !important;
+                border-color: #334155 !important;
+                box-shadow: 0 8px 30px rgba(0,0,0,0.2) !important;
+              }
+              .vu-card-name {
+                color: #f8fafc !important;
+              }
+              .vu-card-notes {
+                background: #0f172a !important;
+                color: #94a3b8 !important;
+              }
+              .vu-section-title {
+                color: #f8fafc !important;
+              }
+              .vu-link-action {
+                color: #60a5fa !important;
+              }
+              .vu-greeting-title {
+                color: #f8fafc !important;
+              }
+              .vu-greeting-sub {
+                color: #94a3b8 !important;
+              }
+              .vu-avatar {
+                border-color: #334155 !important;
+                background: #334155 !important;
+              }
             }
           }
           '
