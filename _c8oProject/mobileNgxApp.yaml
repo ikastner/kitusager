@@ -2275,6 +2275,55 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
             --background: transparent;
             background: transparent;
           }
+          
+          @media (prefers-color-scheme: dark) {
+            :root:not(.force-light) {
+              .vu-form-card {
+                background: #1e293b;
+                border-color: #334155;
+                box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+              }
+              .vu-kpi {
+                background: #1e293b;
+                border-color: #334155;
+              }
+              .vu-back-btn {
+                background: #334155;
+                color: #cbd5e1;
+              }
+              .vu-search-wrap {
+                background: #0f172a;
+              }
+              .vu-searchbar {
+                --background: #1e293b;
+              }
+              .vu-questions-list > div {
+                background: #1e293b;
+                border-color: #334155;
+              }
+              .vu-field {
+                --background: #0f172a;
+                border-color: #334155;
+                --color: #f8fafc;
+                color: #f8fafc;
+              }
+              .vu-entry {
+                background: #1e293b;
+                border-color: #334155;
+              }
+              .vu-kpi-value {
+                color: #f8fafc;
+              }
+              .vu-recap-value {
+                color: #cbd5e1;
+              }
+              ion-input, ion-textarea, ion-select {
+                --color: #f8fafc !important;
+                color: #f8fafc !important;
+                --placeholder-color: #64748b !important;
+              }
+            }
+          }
           '
 ↓AutoDarkTheme [ngx.components.UIStyle-1779283399749]: 
   comment: This will define the dark theme for the application. This will be selected if the device is in dark mode. You can disable this to disable automatic dark mode switching

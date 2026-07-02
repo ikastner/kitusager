@@ -414,19 +414,6 @@ title: Accueil
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                     - MobileSmartSourceType: plain:vu-card-body
-              ↓Date [ngx.components.UIElement-1779290001101]: 
-                tagName: span
-                ↓AttrClass [ngx.components.UIAttribute-1779290001102]: 
-                  attrName: class
-                  attrValue: 
-                    - xmlizable: 
-                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: plain:vu-card-date
-                ↓Text [ngx.components.UIText-1779290001103]: 
-                  textValue: 
-                    - xmlizable: 
-                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: script:iv.dateLabel
               ↓Name [ngx.components.UIElement-1779290001104]: 
                 tagName: h3
                 ↓AttrClass [ngx.components.UIAttribute-1779290001105]: 
@@ -440,25 +427,6 @@ title: Accueil
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                       - MobileSmartSourceType: script:iv.intervieweeName
-              ↓Meta [ngx.components.UIElement-1779290001107]: 
-                tagName: p
-                ↓AttrClass [ngx.components.UIAttribute-1779290001108]: 
-                  attrName: class
-                  attrValue: 
-                    - xmlizable: 
-                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: plain:vu-card-meta
-                ↓AttrIf [ngx.components.UIAttribute-1779290001109]: 
-                  attrName: '*ngIf'
-                  attrValue: 
-                    - xmlizable: 
-                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: plain:hasCardMeta(iv)
-                ↓Text [ngx.components.UIText-1779290001110]: 
-                  textValue: 
-                    - xmlizable: 
-                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: script:cardMeta(iv)
               ↓Notes [ngx.components.UIElement-1779290001111]: 
                 tagName: span
                 ↓AttrClass [ngx.components.UIAttribute-1779290001112]: 
