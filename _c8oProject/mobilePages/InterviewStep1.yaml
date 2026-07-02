@@ -224,6 +224,8 @@ title: Etape 1
              "ionBean": "Input",
              "ControlName": "plain:salonName",
              "DoubleBinding": "script:salonName",
+             "IonMode": "plain:md",
+             "Fill": "plain:outline",
              "Placeholder": "plain:Saisissez le nom du salon..."
             }'
           tagName: ion-input

@@ -109,6 +109,7 @@ componentScriptContent:
         				"Page": "/",
         				"InterviewStep1": "/interview-step-1",
         				"InterviewStep2": "/interview-step-2",
+        				"InterviewStepVerbatim": "/interview-step-verbatim",
         				"InterviewStep3": "/interview-step-3",
         				"InterviewStep4": "/interview-step-4",
         				"InterviewRecap": "/interview-recap"
@@ -956,8 +957,8 @@ componentScriptContent:
         					},
         	
         					getWizardRoute(step: number): string {
-        						const routes: string[] = ["", "/interview-step-1", "/interview-step-2", "/interview-step-3", "/interview-step-4"];
-        						const s = Math.max(1, Math.min(4, step || 1));
+        						const routes: string[] = ["", "/interview-step-1", "/interview-step-2", "/interview-step-verbatim", "/interview-step-3", "/interview-step-4"];
+        						const s = Math.max(1, Math.min(5, step || 1));
         						return routes[s] || "/interview-step-1";
         					},
         	
@@ -971,7 +972,7 @@ componentScriptContent:
         						row.intervieweeName = (row.firstName || row.sheetCode || "Fiche salon").trim();
         						row.intervieweeEmail = row.intervieweeEmail || "";
         						row.context = row.sheetCode || "";
-        						row.wizardStep = 4;
+        						row.wizardStep = 5;
         						row.status = "saved";
         						row.updatedAt = new Date().toISOString();
         						data.activeInterviewId = null;
@@ -1312,6 +1313,7 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
 ↓Page [ngx.components.PageComponent-1779283399741]: 🗏 mobilePages/Page.yaml
 ↓InterviewStep1 [ngx.components.PageComponent-1779300000001]: 🗏 mobilePages/InterviewStep1.yaml
 ↓InterviewStep2 [ngx.components.PageComponent-1779300000002]: 🗏 mobilePages/InterviewStep2.yaml
+↓InterviewStepVerbatim [ngx.components.PageComponent-1779300000005]: 🗏 mobilePages/InterviewStepVerbatim.yaml
 ↓InterviewStep3 [ngx.components.PageComponent-1779300000003]: 🗏 mobilePages/InterviewStep3.yaml
 ↓InterviewStep4 [ngx.components.PageComponent-1779300000004]: 🗏 mobilePages/InterviewStep4.yaml
 ↓InterviewAll [ngx.components.PageComponent-1779290000004]: 🗏 mobilePages/InterviewAll.yaml

@@ -97,7 +97,7 @@ scriptContent:
         			firstName: (this.firstName || "").trim(),
         			intervieweeEmail: email,
         			photoDataUrl: this.photoDataUrl || "",
-        			wizardStep: 4
+        			wizardStep: 5
         		});
         		store.completeSalonInterview();
         	}
@@ -111,7 +111,7 @@ scriptContent:
         			firstName: (this.firstName || "").trim(),
         			intervieweeEmail: (this.intervieweeEmail || "").trim(),
         			photoDataUrl: this.photoDataUrl || "",
-        			wizardStep: 3
+        			wizardStep: 4
         		});
         	}
         	public getFicheLabel(): string {
@@ -186,7 +186,7 @@ title: Etape 4
           textValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:Etape 4/4
+              - MobileSmartSourceType: plain:Etape 5/5
       ↓Progress [ngx.components.UIElement-1779300030021]: 
         tagName: div
         ↓AttrClass [ngx.components.UIAttribute-1779300030022]: 
@@ -283,6 +283,7 @@ title: Etape 4
              "ionBean": "Input",
              "ControlName": "plain:firstName",
              "DoubleBinding": "script:firstName",
+             "Fill": "plain:outline",
              "Placeholder": "plain:Votre prénom"
             }'
           tagName: ion-input
@@ -311,6 +312,7 @@ title: Etape 4
              "ionBean": "Input",
              "ControlName": "plain:intervieweeEmail",
              "DoubleBinding": "script:intervieweeEmail",
+             "Fill": "plain:outline",
              "Placeholder": "plain:email@exemple.fr",
              "Type": "plain:email"
             }'
