@@ -141,6 +141,19 @@ title: Etape 1
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: plain:Salon
+      ↓StepSub [ngx.components.UIElement-1779300001019b]: 
+        tagName: p
+        ↓AttrClass [ngx.components.UIAttribute-1779300001019c]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-wizard-step-sub
+        ↓Text [ngx.components.UIText-1779300001019d]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:Identifiant de la fiche
       ↓StepLbl [ngx.components.UIElement-1779300001018]: 
         tagName: span
         ↓AttrClass [ngx.components.UIAttribute-1779300001019]: 

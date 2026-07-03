@@ -211,6 +211,19 @@ title: Etape 3
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: plain:Votre profil
+      ↓StepSub [ngx.components.UIElement-1779300020015b]: 
+        tagName: p
+        ↓AttrClass [ngx.components.UIAttribute-1779300020015c]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-wizard-step-sub
+        ↓Text [ngx.components.UIText-1779300020015d]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:Informations optionnelles
       ↓StepLbl [ngx.components.UIElement-1779300020018]: 
         tagName: span
         ↓AttrClass [ngx.components.UIAttribute-1779300020019]: 

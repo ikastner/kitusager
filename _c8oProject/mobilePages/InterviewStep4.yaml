@@ -28,7 +28,7 @@ scriptContent:
         		const store = await this.ensureStore();
         		const iv = store ? store.getActiveInterview() : null;
         		if (!iv || iv.format !== "salon") { return; }
-        		this.consentAccepted = true;
+        		this.consentAccepted = !!iv.consentAccepted;
         		this.recontactOk = !!iv.recontactOk;
         		this.firstName = iv.firstName || "";
         		this.intervieweeEmail = iv.intervieweeEmail || "";
@@ -48,9 +48,9 @@ scriptContent:
         		const st = await this.ensureStore();
         		if (st) { st.updateSalonDraft({ photoDataUrl: imageUrl }); }
         	}
-        	public async showToast(msg: string): Promise<void> {
+        	public async showToast(msg: string, color: string = "success"): Promise<void> {
         		const toastCtrl = this.getInstance(ToastController);
-        		const toast = await toastCtrl.create({ message: msg, duration: 2800, position: "bottom" });
+        		const toast = await toastCtrl.create({ message: msg, duration: 3200, position: "bottom", color });
         		await toast.present();
         	}
         	public getStoreSync(): any {
@@ -82,13 +82,17 @@ scriptContent:
         			this.validationError = "Le verbatim est obligatoire (étape 2).";
         			return;
         		}
+        		if (!this.consentAccepted) {
+        			this.validationError = "Vous devez accepter le traitement de vos données (case RGPD).";
+        			return;
+        		}
         		const email = (this.intervieweeEmail || "").trim();
         		if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         			this.validationError = "Adresse e-mail invalide.";
         			return;
         		}
         		store.updateSalonDraft({
-        			consentAccepted: true,
+        			consentAccepted: !!this.consentAccepted,
         			recontactOk: !!this.recontactOk,
         			firstName: (this.firstName || "").trim(),
         			intervieweeEmail: email,
@@ -170,6 +174,19 @@ title: Etape 4
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: plain:Consentement et envoi
+      ↓StepSub [ngx.components.UIElement-1779300030017b]: 
+        tagName: p
+        ↓AttrClass [ngx.components.UIAttribute-1779300030017c]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-wizard-step-sub
+        ↓Text [ngx.components.UIText-1779300030017d]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:Validation et envoi de la fiche
       ↓StepLbl [ngx.components.UIElement-1779300030018]: 
         tagName: span
         ↓AttrClass [ngx.components.UIAttribute-1779300030019]: 
@@ -234,6 +251,19 @@ title: Etape 4
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:Vos données sont traitées conformément au RGPD, uniquement dans le cadre de l'amélioration du service Urssaf. Elles ne seront pas revendues à des tiers.
+        ↓CheckBoxRgpd [ngx.components.UIDynamicElement-1779300030049]: 
+          beanData: |
+            '{
+             "ionBean": "CheckBox",
+             "ControlName": "plain:consentAccepted",
+             "DoubleBinding": "script:consentAccepted"
+            }'
+          tagName: ion-checkbox
+          ↓Text [ngx.components.UIText-1779300030049b]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:J'accepte que mes données soient traitées dans le cadre de cette étude
         ↓CheckBox1 [ngx.components.UIDynamicElement-1779984847151]: 
           beanData: |
             '{

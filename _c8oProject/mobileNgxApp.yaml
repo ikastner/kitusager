@@ -1997,6 +1997,13 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
           }
           .vu-wizard-header .vu-greeting-sub { color: #7aa2d6; }
           .vu-wizard-header .vu-greeting-title { color: #fff; font-size: 16px; }
+          .vu-wizard-step-sub {
+            font-size: 13px;
+            color: rgba(255,255,255,0.75);
+            margin: 2px 0 10px;
+            font-weight: 400;
+            font-style: italic;
+          }
           .vu-wizard-step-label {
             display: inline-block;
             background: #ed7226;
