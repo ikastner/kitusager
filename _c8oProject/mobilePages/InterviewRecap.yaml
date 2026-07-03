@@ -422,8 +422,9 @@ title: Récap fiche
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: 'script:hasVerbatim() ? ''vu-recap-value vu-recap-verbatim'' : ''vu-recap-value vu-recap-muted vu-recap-verbatim'''
-            ↓Text [ngx.components.UIText-1779400001208]: 
-              textValue: 
+            ↓AttrText [ngx.components.UIAttribute-1779400001208]: 
+              attrName: '[innerText]'
+              attrValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: script:displayOrDash(verbatimText)

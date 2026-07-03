@@ -1648,6 +1648,8 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
             padding: 20px var(--vu-shell-pad, 16px) 16px !important;
             margin-bottom: 24px !important;
             border-radius: 0 !important;
+            width: auto !important;
+            max-width: none !important;
           }
           .vu-back-btn {
             width: 40px; height: 40px; border-radius: 50%;
