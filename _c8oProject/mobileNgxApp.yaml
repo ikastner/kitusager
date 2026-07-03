@@ -1318,8 +1318,7 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
 ↓InterviewStep3 [ngx.components.PageComponent-1779300000003]: 🗏 mobilePages/InterviewStep3.yaml
 ↓InterviewStep4 [ngx.components.PageComponent-1779300000004]: 🗏 mobilePages/InterviewStep4.yaml
 ↓InterviewAll [ngx.components.PageComponent-1779290000004]: 🗏 mobilePages/InterviewAll.yaml
-↓InterviewQuestions [ngx.components.PageComponent-1779290000005]: 🗏 mobilePages/InterviewQuestions.yaml
-↓InterviewProfile [ngx.components.PageComponent-1779290000006]: 🗏 mobilePages/InterviewProfile.yaml
+
 ↓InterviewRecap [ngx.components.PageComponent-1779400000001]: 🗏 mobilePages/InterviewRecap.yaml
 ↓Style [ngx.components.UIStyle-1779283399742]: 
   comment: You can add some global application styles here

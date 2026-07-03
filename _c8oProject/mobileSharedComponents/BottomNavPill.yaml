@@ -74,7 +74,7 @@ comment: Navigation pilule style voxUrssafReact (Accueil, Questions, FAB, Profil
             - MobileSmartSourceType: 'script:''vu-pill-btn '' + (this.current === ''profile'' ? ''vu-pill-btn--active'' : '''')'
       ↓Event [ngx.components.UIControlEvent-1779290000143]: 
         ↓GoProfile [ngx.components.UIDynamicAction-1779290000144]: 
-          beanData: '{"ionBean":"RootPageAction","page":"plain:InterviewProfile"}'
+          beanData: '{"ionBean":"RootPageAction","page":"plain:Page"}'
       ↓Icon [ngx.components.UIDynamicElement-1779290000145]: 
         beanData: '{"ionBean":"Icon","IconName":"plain:person"}'
         tagName: ion-icon
