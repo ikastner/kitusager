@@ -1641,7 +1641,12 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
           .vu-kpi-label { font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px; }
           .vu-page-header {
             display: flex; align-items: center; gap: 16px;
-            padding: 40px 24px 16px;
+            margin-left: calc(-1 * clamp(16px, 3vw, 40px)) !important;
+            margin-right: calc(-1 * clamp(16px, 3vw, 40px)) !important;
+            margin-top: 0 !important;
+            padding: 20px clamp(16px, 3vw, 40px) 16px !important;
+            margin-bottom: 24px !important;
+            border-radius: 0 !important;
           }
           .vu-back-btn {
             width: 40px; height: 40px; border-radius: 50%;
