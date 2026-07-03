@@ -87,11 +87,25 @@ scriptContent:
         	public async loadRecap(): Promise<void> {
         		const store = await this.ensureStore();
         		if (store && store._page !== this) { store._page = this; }
-        		const route = this.getInstance(ActivatedRoute);
-        		const routeId = route && route.snapshot && route.snapshot.queryParamMap ? route.snapshot.queryParamMap.get("interviewId") : null;
+        		
+        		const urlParams = new URLSearchParams(window.location.search);
+        		let routeId = urlParams.get("interviewId");
+        		if (!routeId) {
+        			const route = this.getInstance(ActivatedRoute);
+        			routeId = route && route.snapshot && route.snapshot.queryParamMap ? route.snapshot.queryParamMap.get("interviewId") : null;
+        		}
+        		
         		let iv = null;
         		if (routeId) {
         			iv = store ? store.getInterview(routeId) : null;
+        			if (!iv && store && store.fsGet) {
+        				try {
+        					const doc = await store.fsGet(this, "interview:" + routeId);
+        					if (doc) {
+        						iv = store.docToInterview(doc);
+        					}
+        				} catch (e) { /* ignore */ }
+        			}
         			if (iv && store && store.setRecapView) { store.setRecapView(routeId); }
         		}
         		if (!iv) {
