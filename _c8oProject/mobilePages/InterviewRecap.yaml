@@ -35,9 +35,15 @@ scriptContent:
         /*Begin_c8o_PageFunction*/
         	public async ensureStore(): Promise<any> {
         		const app: any = this.router && this.router.sharedObject;
-        		if (app && app.ensureInterviewStore) { return app.ensureInterviewStore(this); }
+        		if (app && app.ensureInterviewStore) {
+        			return app.ensureInterviewStore(this);
+        		}
         		if (app && app.initVuApp) { app.initVuApp(); }
-        		return (app && app.getInterviewStore) ? app.getInterviewStore() : null;
+        		const store = (app && app.getInterviewStore)
+        			? app.getInterviewStore()
+        			: ((this.global && this.global.interviewStore) || null);
+        		if (store && store.whenReady) { await store.whenReady(); }
+        		return store;
         	}
         	public displayOrDash(v: string): string {
         		const s = (v || "").trim();

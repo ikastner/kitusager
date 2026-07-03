@@ -398,13 +398,13 @@ componentScriptContent:
         	
         					async fsGet(page: any, docid: string): Promise<any> {
         						await page.c8o.finalizeInit();
-        						return page.c8o.callJsonObject("fs://" + this.FS_DB + ".get", { docid: docid });
+        						return page.c8o.callJsonObject("fs://" + this.FS_DB + ".get", { docid: docid }).async();
         					},
         	
         					async fsPost(page: any, doc: any): Promise<any> {
         						await page.c8o.finalizeInit();
         						const body = Object.assign({}, doc, { _use_policy: "override" });
-        						return page.c8o.callJsonObject("fs://" + this.FS_DB + ".post", body);
+        						return page.c8o.callJsonObject("fs://" + this.FS_DB + ".post", body).async();
         					},
         	
         					async fsPostSafe(page: any, doc: any): Promise<any> {
@@ -450,21 +450,21 @@ componentScriptContent:
         						await page.c8o.finalizeInit();
         						return page.c8o.callJsonObject("fs://" + this.FS_DB + ".view", {
         							ddoc: "vu", view: view, key: key, include_docs: false
-        						});
+        						}).async();
         					},
         	
         					async fsPull(page: any): Promise<any> {
         						await page.c8o.finalizeInit();
         						return page.c8o.callJsonObject("fs://" + this.FS_DB + ".replicate_pull", {
         							continuous: false, retry: false, heartbeat: 10000, timeout: false
-        						});
+        						}).async();
         					},
         	
         					async fsPush(page: any): Promise<any> {
         						await page.c8o.finalizeInit();
         						return page.c8o.callJsonObject("fs://" + this.FS_DB + ".replicate_push", {
         							continuous: false, retry: false, heartbeat: 10000, timeout: false
-        						});
+        						}).async();
         					},
         	
         					emptySalonFields(): any {
