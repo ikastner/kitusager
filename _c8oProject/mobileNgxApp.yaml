@@ -2476,7 +2476,7 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
                 border-color: #334155 !important;
                 background: #334155 !important;
               }
-              .vu-active-header {
+              .vu-active-header, .vu-page-header--elevated {
                 background: #1e293b !important;
                 border-color: #334155 !important;
                 box-shadow: 0 4px 20px rgba(0,0,0,0.15) !important;
@@ -2504,7 +2504,7 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
             }
           }
           :root.force-dark {
-            .vu-active-header {
+            .vu-active-header, .vu-page-header--elevated {
               background: #1e293b !important;
               border-color: #334155 !important;
               box-shadow: 0 4px 20px rgba(0,0,0,0.15) !important;
