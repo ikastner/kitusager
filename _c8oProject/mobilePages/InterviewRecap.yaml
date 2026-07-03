@@ -91,6 +91,14 @@ scriptContent:
         		if (s === "error") { return "vu-badge-pill vu-status-error"; }
         		return "vu-badge-pill";
         	}
+        	public satClass(val: string): string {
+        		const s = (val || "").trim().toLowerCase();
+        		if (s.indexOf("insatisfait") >= 0) return "vu-sat-pill vu-sat-sad";
+        		if (s.indexOf("très satisfait") >= 0) return "vu-sat-pill vu-sat-very-happy";
+        		if (s.indexOf("satisfait") >= 0) return "vu-sat-pill vu-sat-happy";
+        		if (s.indexOf("moyen") >= 0) return "vu-sat-pill vu-sat-medium";
+        		return "vu-recap-muted";
+        	}
         	public async loadRecap(): Promise<void> {
         		const store = await this.ensureStore();
         		if (store && store._page !== this) { store._page = this; }
@@ -387,7 +395,7 @@ title: Récap fiche
               attrValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: 'script:globalSatisfaction ? ''vu-recap-value'' : ''vu-recap-value vu-recap-muted'''
+                  - MobileSmartSourceType: script:satClass(globalSatisfaction)
             ↓Text [ngx.components.UIText-1779400001206]: 
               textValue: 
                 - xmlizable: 
@@ -413,7 +421,7 @@ title: Récap fiche
               attrValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: 'script:hasVerbatim() ? ''vu-recap-value'' : ''vu-recap-value vu-recap-muted'''
+                  - MobileSmartSourceType: 'script:hasVerbatim() ? ''vu-recap-value vu-recap-verbatim'' : ''vu-recap-value vu-recap-muted vu-recap-verbatim'''
             ↓Text [ngx.components.UIText-1779400001208]: 
               textValue: 
                 - xmlizable: 
