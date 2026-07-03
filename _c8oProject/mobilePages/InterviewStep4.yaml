@@ -174,15 +174,15 @@ title: Etape 4
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: plain:Consentement et envoi
-      ↓StepSub [ngx.components.UIElement-1779300030017b]: 
+      ↓StepSub [ngx.components.UIElement-1779300030901]: 
         tagName: p
-        ↓AttrClass [ngx.components.UIAttribute-1779300030017c]: 
+        ↓AttrClass [ngx.components.UIAttribute-1779300030902]: 
           attrName: class
           attrValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: plain:vu-wizard-step-sub
-        ↓Text [ngx.components.UIText-1779300030017d]: 
+        ↓Text [ngx.components.UIText-1779300030903]: 
           textValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -259,7 +259,7 @@ title: Etape 4
              "DoubleBinding": "script:consentAccepted"
             }'
           tagName: ion-checkbox
-          ↓Text [ngx.components.UIText-1779300030049b]: 
+          ↓Text [ngx.components.UIText-1779300030904]: 
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType

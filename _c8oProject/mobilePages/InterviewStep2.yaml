@@ -136,15 +136,15 @@ title: Etape 2
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: plain:Parcours et ressenti
-      ↓StepSub [ngx.components.UIElement-1779300010015b]: 
+      ↓StepSub [ngx.components.UIElement-1779300010901]: 
         tagName: p
-        ↓AttrClass [ngx.components.UIAttribute-1779300010015c]: 
+        ↓AttrClass [ngx.components.UIAttribute-1779300010902]: 
           attrName: class
           attrValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: plain:vu-wizard-step-sub
-        ↓Text [ngx.components.UIText-1779300010015d]: 
+        ↓Text [ngx.components.UIText-1779300010903]: 
           textValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
