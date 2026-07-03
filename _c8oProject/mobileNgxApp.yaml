@@ -2006,6 +2006,55 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
             background: rgba(0,80,170,0.08);
             font-weight: 600;
           }
+          .vu-skip-container {
+            text-align: center;
+            margin-top: 24px;
+            margin-bottom: 8px;
+          }
+          .vu-skip-button {
+            background: none;
+            border: none;
+            color: #64748b;
+            font-size: 13px;
+            font-weight: 500;
+            text-decoration: underline;
+            cursor: pointer;
+            padding: 8px 16px;
+            transition: color 0.2s;
+          }
+          .vu-skip-button:hover, .vu-skip-button:active {
+            color: #0050AA;
+          }
+          .vu-other-input-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+          }
+          .vu-other-input-row ion-input {
+            flex: 1;
+          }
+          .vu-back-to-list-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            color: #475569;
+            border-radius: 12px;
+            width: 48px;
+            height: 48px;
+            cursor: pointer;
+            transition: all 0.2s;
+          }
+          .vu-back-to-list-btn:hover, .vu-back-to-list-btn:active {
+            background: #e2e8f0;
+            color: #0050AA;
+            border-color: #0050AA;
+          }
+          .vu-back-to-list-btn ion-icon {
+            font-size: 20px;
+          }
           .vu-wizard-actions {
             display: flex;
             gap: 12px;

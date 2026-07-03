@@ -15,6 +15,9 @@ scriptContent:
         	public profileCount: string = "";
         	public contactMode: string = "";
         	public wizardCanProceed: boolean = false;
+        	public sectorIsOther: boolean = false;
+        	public ageIsOther: boolean = false;
+        	public urssafSinceIsOther: boolean = false;
         	/*End_c8o_PageDeclaration*/
         /*Begin_c8o_PageConstructor*/
         		/*End_c8o_PageConstructor*/
@@ -29,12 +32,52 @@ scriptContent:
         		const store = await this.ensureStore();
         		const iv = store ? store.getActiveInterview() : null;
         		if (!iv || iv.format !== "salon") { return; }
+        		
+        		const sectorChoices = ["Artisanat", "Commerce", "Professions libérales", "Services aux entreprises", "Services à la personne"];
         		this.sector = iv.sector || "";
+        		this.sectorIsOther = !!this.sector && !sectorChoices.includes(this.sector);
+        		
+        		const ageChoices = ["Moins de 25 ans", "25-34 ans", "35-44 ans", "45-54 ans", "55 ans et plus"];
         		this.age = iv.age || "";
+        		this.ageIsOther = !!this.age && !ageChoices.includes(this.age);
+        		
+        		const sinceChoices = ["Moins de 2 ans", "De 2 à 5 ans", "Plus de 5 ans"];
         		this.urssafSince = iv.urssafSince || "";
+        		this.urssafSinceIsOther = !!this.urssafSince && !sinceChoices.includes(this.urssafSince);
+        		
         		this.multiProfile = iv.multiProfile;
         		this.profileCount = iv.profileCount || "";
         		this.contactMode = iv.contactMode || "";
+        	}
+        	public onSectorChange(val: string): void {
+        		if (val === "Autre") {
+        			this.sectorIsOther = true;
+        			this.sector = "";
+        		}
+        	}
+        	public resetSectorToSelect(): void {
+        		this.sectorIsOther = false;
+        		this.sector = "";
+        	}
+        	public onAgeChange(val: string): void {
+        		if (val === "Autre") {
+        			this.ageIsOther = true;
+        			this.age = "";
+        		}
+        	}
+        	public resetAgeToSelect(): void {
+        		this.ageIsOther = false;
+        		this.age = "";
+        	}
+        	public onSinceChange(val: string): void {
+        		if (val === "Autre") {
+        			this.urssafSinceIsOther = true;
+        			this.urssafSince = "";
+        		}
+        	}
+        	public resetSinceToSelect(): void {
+        		this.urssafSinceIsOther = false;
+        		this.urssafSince = "";
         	}
         	public setMultiProfile(val: boolean): void {
         		this.multiProfile = val;
@@ -243,12 +286,31 @@ title: Etape 3
              "Placeholder": "plain:Sélectionner..."
             }'
           tagName: ion-select
+          ↓AttrIf [ngx.components.UIAttribute-1779300020615]: 
+            attrName: '*ngIf'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:!sectorIsOther
           ↓AttrClass [ngx.components.UIAttribute-1779300020054]: 
             attrName: class
             attrValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:vu-field
+          ↓Event [ngx.components.UIControlEvent-1779300020616]: 
+            attrName: (ionChange)
+            eventName: ionChange
+            ↓ChangeAction [ngx.components.UICustomAction-1779300020617]: 
+              actionValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                    →: |
+                      		page.onSectorChange(event.detail.value);
+                      		page.ref.markForCheck();
+                      		resolve();
+                      
           ↓OptSec1 [ngx.components.UIDynamicElement-1779300020501]: 
             beanData: '{"ionBean":"SelectOption","Value":"plain:Artisanat"}'
             tagName: ion-select-option
@@ -297,6 +359,69 @@ title: Etape 3
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:Autre
+        ↓InSectorOther [ngx.components.UIElement-1779300020601]: 
+          tagName: div
+          ↓AttrIf [ngx.components.UIAttribute-1779300020602]: 
+            attrName: '*ngIf'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:sectorIsOther
+          ↓AttrClass [ngx.components.UIAttribute-1779300020603]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-other-input-row
+          ↓InSectorInput [ngx.components.UIDynamicElement-1779300020604]: 
+            beanData: |
+              '{
+               "ionBean": "Input",
+               "ControlName": "plain:sector",
+               "DoubleBinding": "script:sector",
+               "Fill": "plain:outline",
+               "Placeholder": "plain:Saisir votre secteur..."
+              }'
+            tagName: ion-input
+            ↓AttrClass [ngx.components.UIAttribute-1779300020605]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-field
+          ↓BtnBackSec [ngx.components.UIElement-1779300020606]: 
+            tagName: button
+            ↓AttrType [ngx.components.UIAttribute-1779300020607]: 
+              attrName: type
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:button
+            ↓AttrClass [ngx.components.UIAttribute-1779300020608]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-back-to-list-btn
+            ↓Event [ngx.components.UIControlEvent-1779300020609]: 
+              ↓Reset [ngx.components.UICustomAction-1779300020610]: 
+                actionValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                      →: |
+                        		page.resetSectorToSelect();
+                        		page.ref.markForCheck();
+                        		resolve();
+                        
+            ↓Icon [ngx.components.UIElement-1779300020611]: 
+              tagName: ion-icon
+              ↓Attr [ngx.components.UIAttribute-1779300020612]: 
+                attrName: name
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:list-outline
         ↓Lbl2 [ngx.components.UIElement-1779300020055]: 
           tagName: label
           ↓AttrClass [ngx.components.UIAttribute-1779300020056]: 
@@ -321,12 +446,31 @@ title: Etape 3
              "Placeholder": "plain:Sélectionner..."
             }'
           tagName: ion-select
+          ↓AttrIf [ngx.components.UIAttribute-1779300020633]: 
+            attrName: '*ngIf'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:!ageIsOther
           ↓AttrClass [ngx.components.UIAttribute-1779300020059]: 
             attrName: class
             attrValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:vu-field
+          ↓Event [ngx.components.UIControlEvent-1779300020634]: 
+            attrName: (ionChange)
+            eventName: ionChange
+            ↓ChangeAction [ngx.components.UICustomAction-1779300020635]: 
+              actionValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                    →: |
+                      		page.onAgeChange(event.detail.value);
+                      		page.ref.markForCheck();
+                      		resolve();
+                      
           ↓OptAge1 [ngx.components.UIDynamicElement-1779300020521]: 
             beanData: '{"ionBean":"SelectOption","Value":"plain:Moins de 25 ans"}'
             tagName: ion-select-option
@@ -367,6 +511,77 @@ title: Etape 3
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:55 ans et plus
+          ↓OptAge6 [ngx.components.UIDynamicElement-1779300020531]: 
+            beanData: '{"ionBean":"SelectOption","Value":"plain:Autre"}'
+            tagName: ion-select-option
+            ↓Text [ngx.components.UIText-1779300020532]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:Autre
+        ↓InAgeOther [ngx.components.UIElement-1779300020621]: 
+          tagName: div
+          ↓AttrIf [ngx.components.UIAttribute-1779300020622]: 
+            attrName: '*ngIf'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:ageIsOther
+          ↓AttrClass [ngx.components.UIAttribute-1779300020623]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-other-input-row
+          ↓InAgeInput [ngx.components.UIDynamicElement-1779300020624]: 
+            beanData: |
+              '{
+               "ionBean": "Input",
+               "ControlName": "plain:age",
+               "DoubleBinding": "script:age",
+               "Fill": "plain:outline",
+               "Placeholder": "plain:Saisir votre tranche d''âge..."
+              }'
+            tagName: ion-input
+            ↓AttrClass [ngx.components.UIAttribute-1779300020625]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-field
+          ↓BtnBackAge [ngx.components.UIElement-1779300020626]: 
+            tagName: button
+            ↓AttrType [ngx.components.UIAttribute-1779300020627]: 
+              attrName: type
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:button
+            ↓AttrClass [ngx.components.UIAttribute-1779300020628]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-back-to-list-btn
+            ↓Event [ngx.components.UIControlEvent-1779300020629]: 
+              ↓Reset [ngx.components.UICustomAction-1779300020630]: 
+                actionValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                      →: |
+                        		page.resetAgeToSelect();
+                        		page.ref.markForCheck();
+                        		resolve();
+                        
+            ↓Icon [ngx.components.UIElement-1779300020631]: 
+              tagName: ion-icon
+              ↓Attr [ngx.components.UIAttribute-1779300020632]: 
+                attrName: name
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:list-outline
         ↓Lbl3 [ngx.components.UIElement-1779300020060]: 
           tagName: label
           ↓AttrClass [ngx.components.UIAttribute-1779300020061]: 
@@ -391,12 +606,31 @@ title: Etape 3
              "Placeholder": "plain:Sélectionner..."
             }'
           tagName: ion-select
+          ↓AttrIf [ngx.components.UIAttribute-1779300020653]: 
+            attrName: '*ngIf'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:!urssafSinceIsOther
           ↓AttrClass [ngx.components.UIAttribute-1779300020064]: 
             attrName: class
             attrValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:vu-field
+          ↓Event [ngx.components.UIControlEvent-1779300020654]: 
+            attrName: (ionChange)
+            eventName: ionChange
+            ↓ChangeAction [ngx.components.UICustomAction-1779300020655]: 
+              actionValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                    →: |
+                      		page.onSinceChange(event.detail.value);
+                      		page.ref.markForCheck();
+                      		resolve();
+                      
           ↓OptSin1 [ngx.components.UIDynamicElement-1779300020541]: 
             beanData: '{"ionBean":"SelectOption","Value":"plain:Moins de 2 ans"}'
             tagName: ion-select-option
@@ -421,6 +655,77 @@ title: Etape 3
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:Plus de 5 ans
+          ↓OptSin4 [ngx.components.UIDynamicElement-1779300020547]: 
+            beanData: '{"ionBean":"SelectOption","Value":"plain:Autre"}'
+            tagName: ion-select-option
+            ↓Text [ngx.components.UIText-1779300020548]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:Autre
+        ↓InSinceOther [ngx.components.UIElement-1779300020641]: 
+          tagName: div
+          ↓AttrIf [ngx.components.UIAttribute-1779300020642]: 
+            attrName: '*ngIf'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:urssafSinceIsOther
+          ↓AttrClass [ngx.components.UIAttribute-1779300020643]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-other-input-row
+          ↓InSinceInput [ngx.components.UIDynamicElement-1779300020644]: 
+            beanData: |
+              '{
+               "ionBean": "Input",
+               "ControlName": "plain:urssafSince",
+               "DoubleBinding": "script:urssafSince",
+               "Fill": "plain:outline",
+               "Placeholder": "plain:Saisir votre ancienneté..."
+              }'
+            tagName: ion-input
+            ↓AttrClass [ngx.components.UIAttribute-1779300020645]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-field
+          ↓BtnBackSin [ngx.components.UIElement-1779300020646]: 
+            tagName: button
+            ↓AttrType [ngx.components.UIAttribute-1779300020647]: 
+              attrName: type
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:button
+            ↓AttrClass [ngx.components.UIAttribute-1779300020648]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-back-to-list-btn
+            ↓Event [ngx.components.UIControlEvent-1779300020649]: 
+              ↓Reset [ngx.components.UICustomAction-1779300020650]: 
+                actionValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                      →: |
+                        		page.resetSinceToSelect();
+                        		page.ref.markForCheck();
+                        		resolve();
+                        
+            ↓Icon [ngx.components.UIElement-1779300020651]: 
+              tagName: ion-icon
+              ↓Attr [ngx.components.UIAttribute-1779300020652]: 
+                attrName: name
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:list-outline
         ↓Lbl4 [ngx.components.UIElement-1779300020070]: 
           tagName: label
           ↓AttrClass [ngx.components.UIAttribute-1779300020071]: 
