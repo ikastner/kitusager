@@ -2503,6 +2503,33 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
               .vu-sat-sad { background: #7f1d1d !important; color: #fca5a5 !important; }
             }
           }
+          :root.force-dark {
+            .vu-active-header {
+              background: #1e293b !important;
+              border-color: #334155 !important;
+              box-shadow: 0 4px 20px rgba(0,0,0,0.15) !important;
+            }
+            .vu-badge-pill {
+              color: #cbd5e1 !important;
+              background: rgba(255, 255, 255, 0.1) !important;
+            }
+            .vu-field-label {
+              color: #94a3b8 !important;
+            }
+            .vu-recap-value {
+              color: #cbd5e1 !important;
+              border-bottom-color: #334155 !important;
+            }
+            .vu-recap-verbatim {
+              background: #0f172a !important;
+              border-left-color: #60a5fa !important;
+              color: #cbd5e1 !important;
+            }
+            .vu-sat-very-happy { background: #14532d !important; color: #4ade80 !important; }
+            .vu-sat-happy { background: #166534 !important; color: #86efac !important; }
+            .vu-sat-medium { background: #78350f !important; color: #fde047 !important; }
+            .vu-sat-sad { background: #7f1d1d !important; color: #fca5a5 !important; }
+          }
           '
 ↓AutoDarkTheme [ngx.components.UIStyle-1779283399749]: 
   comment: This will define the dark theme for the application. This will be selected if the device is in dark mode. You can disable this to disable automatic dark mode switching
@@ -2713,7 +2740,32 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
           
           :root.force-dark ion-title.title-large {
             --color: #e2e8f0;
-          }'
+          }
+          :root.force-dark .vu-active-header {
+            background: #1e293b !important;
+            border-color: #334155 !important;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15) !important;
+          }
+          :root.force-dark .vu-badge-pill {
+            color: #cbd5e1 !important;
+            background: rgba(255, 255, 255, 0.1) !important;
+          }
+          :root.force-dark .vu-field-label {
+            color: #94a3b8 !important;
+          }
+          :root.force-dark .vu-recap-value {
+            color: #cbd5e1 !important;
+            border-bottom-color: #334155 !important;
+          }
+          :root.force-dark .vu-recap-verbatim {
+            background: #0f172a !important;
+            border-left-color: #60a5fa !important;
+            color: #cbd5e1 !important;
+          }
+          :root.force-dark .vu-sat-very-happy { background: #14532d !important; color: #4ade80 !important; }
+          :root.force-dark .vu-sat-happy { background: #166534 !important; color: #86efac !important; }
+          :root.force-dark .vu-sat-medium { background: #78350f !important; color: #fde047 !important; }
+          :root.force-dark .vu-sat-sad { background: #7f1d1d !important; color: #fca5a5 !important; }'
 ↓TailwindTheme [ngx.components.UITheme-1779283399750]: 
   comment: Utility-like design token layer mapped to Ionic components (v8.4.0.7)
   styleContent: 
