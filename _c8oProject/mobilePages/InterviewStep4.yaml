@@ -28,7 +28,7 @@ scriptContent:
         		const store = await this.ensureStore();
         		const iv = store ? store.getActiveInterview() : null;
         		if (!iv || iv.format !== "salon") { return; }
-        		this.consentAccepted = !!iv.consentAccepted;
+        		this.consentAccepted = true;
         		this.recontactOk = !!iv.recontactOk;
         		this.firstName = iv.firstName || "";
         		this.intervieweeEmail = iv.intervieweeEmail || "";
@@ -80,10 +80,6 @@ scriptContent:
         		const verbatim = ((iv.verbatimText || "").trim());
         		if (!verbatim) {
         			this.validationError = "Le verbatim est obligatoire (étape 2).";
-        			return;
-        		}
-        		if (!this.consentAccepted) {
-        			this.validationError = "Veuillez accepter le consentement RGPD.";
         			return;
         		}
         		const email = (this.intervieweeEmail || "").trim();
@@ -238,19 +234,6 @@ title: Etape 4
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:Vos données sont traitées conformément au RGPD, uniquement dans le cadre de l'amélioration du service Urssaf. Elles ne seront pas revendues à des tiers.
-        ↓CheckBox [ngx.components.UIDynamicElement-1779984813413]: 
-          beanData: |
-            '{
-             "ionBean": "CheckBox",
-             "ControlName": "plain:consentAccepted",
-             "DoubleBinding": "script:consentAccepted"
-            }'
-          tagName: ion-checkbox
-          ↓Text [ngx.components.UIText-1779984813412]: 
-            textValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:J'accepte le traitement de mes données (obligatoire)
         ↓CheckBox1 [ngx.components.UIDynamicElement-1779984847151]: 
           beanData: |
             '{
@@ -263,7 +246,7 @@ title: Etape 4
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:J'accepte d'être recontacté(e) pour approfondir mon témoignage
+                - MobileSmartSourceType: plain:J'accepte de communiquer mes informations pour être recontacté
         ↓LblFn [ngx.components.UIElement-1779300030060]: 
           tagName: label
           ↓AttrClass [ngx.components.UIAttribute-1779300030061]: 
