@@ -2030,18 +2030,20 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
             align-items: center;
             gap: 8px;
             width: 100%;
+            margin-bottom: 16px;
           }
           .vu-other-input-row ion-input {
             flex: 1;
+            margin-bottom: 0 !important;
           }
           .vu-back-to-list-btn {
             display: flex;
             align-items: center;
             justify-content: center;
-            background: #f1f5f9;
-            border: 1px solid #cbd5e1;
-            color: #475569;
-            border-radius: 12px;
+            background: #f8f9fa;
+            border: 1px solid #f1f5f9;
+            color: #64748b;
+            border-radius: 16px;
             width: 48px;
             height: 48px;
             cursor: pointer;
@@ -2360,6 +2362,16 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
                 border-color: #334155;
                 --color: #f8fafc;
                 color: #f8fafc;
+              }
+              .vu-back-to-list-btn {
+                background: #0f172a !important;
+                border-color: #334155 !important;
+                color: #ffffff !important;
+              }
+              .vu-back-to-list-btn:hover, .vu-back-to-list-btn:active {
+                background: #1e293b !important;
+                border-color: #0050AA !important;
+                color: #ffffff !important;
               }
               .vu-entry {
                 background: #1e293b;
