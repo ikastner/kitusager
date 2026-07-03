@@ -28,6 +28,7 @@ scriptContent:
         	public isDraft: boolean = false;
         	public isSalon: boolean = true;
         	public notFound: boolean = false;
+        	public searchId: string = "";
         	/*End_c8o_PageDeclaration*/
         /*Begin_c8o_PageConstructor*/
         		/*End_c8o_PageConstructor*/
@@ -94,6 +95,7 @@ scriptContent:
         			const route = this.getInstance(ActivatedRoute);
         			routeId = route && route.snapshot && route.snapshot.queryParamMap ? route.snapshot.queryParamMap.get("interviewId") : null;
         		}
+        		this.searchId = routeId || "";
         		
         		let iv = null;
         		if (routeId) {
@@ -115,6 +117,14 @@ scriptContent:
         			iv = store.getInterview(this.navParams.data.interviewId);
         		}
         		if (!iv) {
+        			if (store) {
+        				try {
+        					const allDocs: any = await this.c8o.callJsonObject("fs://" + store.FS_DB + ".allDocs", { include_docs: false });
+        					console.log("[loadRecap] Fiche " + routeId + " non trouvee. Liste des documents en base :", (allDocs && allDocs.rows ? allDocs.rows.map((r: any) => r.id) : []));
+        				} catch (err) {
+        					console.error("[loadRecap] allDocs check failed:", err);
+        				}
+        			}
         			this.notFound = true;
         			return;
         		}
@@ -240,7 +250,7 @@ title: Récap fiche
           textValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:Fiche introuvable.
+              - MobileSmartSourceType: 'script:''Fiche introuvable (ID : '' + searchId + '').'''
       ↓Main [ngx.components.UIElement-1779400001030]: 
         tagName: div
         ↓AttrIf [ngx.components.UIAttribute-1779400001031]: 

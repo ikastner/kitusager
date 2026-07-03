@@ -288,7 +288,7 @@ componentScriptContent:
         							if (!id) { continue; }
         							try {
         								const doc = await this.fsGet(page, this.interviewDocId(id));
-        								if (doc && doc.deviceId === deviceId) {
+        								if (doc) {
         									const iv = this.docToInterview(doc);
         									if (iv) { interviews.push(iv); }
         								}
@@ -729,12 +729,10 @@ componentScriptContent:
         						} catch (e) {
         							page.c8o.log.warn("[VoxUrssafV2] vue interviews_by_device indisponible — fallback localStorage", e);
         						}
-        						if (!loadedFromView || interviews.length === 0) {
-        							const fallback = await this.loadInterviewsFallback(page, this._cache.deviceId);
-        							for (const iv of fallback) {
-        								if (!interviews.find((x: any) => x.interviewId === iv.interviewId)) {
-        									interviews.push(iv);
-        								}
+        						const fallback = await this.loadInterviewsFallback(page, this._cache.deviceId);
+        						for (const iv of fallback) {
+        							if (!interviews.find((x: any) => x.interviewId === iv.interviewId)) {
+        								interviews.push(iv);
         							}
         						}
         						if (offlineSnap && offlineSnap.interviews && offlineSnap.interviews.length) {
