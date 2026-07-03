@@ -1356,13 +1356,14 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
             box-sizing: border-box;
           }
           .vu-app-shell {
+            --vu-shell-pad: clamp(16px, 3vw, 40px);
             width: 100%;
             max-width: var(--vu-shell-max);
             margin-left: auto;
             margin-right: auto;
             min-height: 100%;
             font-family: system-ui, -apple-system, sans-serif;
-            padding: 0 clamp(16px, 3vw, 40px);
+            padding: 0 var(--vu-shell-pad);
             box-sizing: border-box;
           }
           .vu-flex-between {
@@ -1641,10 +1642,10 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
           .vu-kpi-label { font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px; }
           .vu-page-header {
             display: flex; align-items: center; gap: 16px;
-            margin-left: calc(-1 * clamp(16px, 3vw, 40px)) !important;
-            margin-right: calc(-1 * clamp(16px, 3vw, 40px)) !important;
+            margin-left: calc(-1 * var(--vu-shell-pad, 16px)) !important;
+            margin-right: calc(-1 * var(--vu-shell-pad, 16px)) !important;
             margin-top: 0 !important;
-            padding: 20px clamp(16px, 3vw, 40px) 16px !important;
+            padding: 20px var(--vu-shell-pad, 16px) 16px !important;
             margin-bottom: 24px !important;
             border-radius: 0 !important;
           }
@@ -1917,6 +1918,7 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
               margin-right: 0;
             }
             .vu-app-shell {
+              --vu-shell-pad: clamp(16px, 3vw, 24px);
               display: flex;
               flex-direction: column;
               align-items: stretch;
@@ -1924,8 +1926,8 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
               max-width: min(var(--vu-content-col-max), calc(100vw - 48px));
               margin-left: auto;
               margin-right: auto;
-              padding-left: clamp(16px, 3vw, 24px);
-              padding-right: clamp(16px, 3vw, 24px);
+              padding-left: var(--vu-shell-pad);
+              padding-right: var(--vu-shell-pad);
             }
             .vu-app-shell > * {
               width: 100%;
