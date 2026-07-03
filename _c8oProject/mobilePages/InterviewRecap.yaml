@@ -87,7 +87,16 @@ scriptContent:
         	public async loadRecap(): Promise<void> {
         		const store = await this.ensureStore();
         		if (store && store._page !== this) { store._page = this; }
-        		let iv = store ? store.getRecapInterview() : null;
+        		const route = this.getInstance(ActivatedRoute);
+        		const routeId = route && route.snapshot && route.snapshot.queryParamMap ? route.snapshot.queryParamMap.get("interviewId") : null;
+        		let iv = null;
+        		if (routeId) {
+        			iv = store ? store.getInterview(routeId) : null;
+        			if (iv && store && store.setRecapView) { store.setRecapView(routeId); }
+        		}
+        		if (!iv) {
+        			iv = store ? store.getRecapInterview() : null;
+        		}
         		if (!iv && store && this.navParams && this.navParams.data && this.navParams.data.interviewId) {
         			iv = store.getInterview(this.navParams.data.interviewId);
         		}
@@ -95,7 +104,6 @@ scriptContent:
         			this.notFound = true;
         			return;
         		}
-        		if (store && store.setRecapView) { store.setRecapView(iv.interviewId); }
         		this.notFound = false;
         		this.isSalon = iv.format === "salon";
         		this.isDraft = iv.status === "draft";
@@ -137,7 +145,7 @@ scriptContent:
         	public hasVerbatim(): boolean {
         		return !!(this.verbatimText || "").trim();
         	}
-        	/*End_c8o_PageFunction*/'
+        	/*End_c8o_PageFunction*/'''
 segment: interview-recap
 title: Récap fiche
 ↓Content [ngx.components.UIDynamicElement-1779400001001]: 

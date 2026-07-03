@@ -51,7 +51,9 @@ scriptContent:
         		if (!r || !r.route) { return; }
         		if (r.route === "/interview-recap") {
         			const navController = this.getInstance(NavController);
-        			await navController.navigateForward("/interview-recap");
+        			await navController.navigateForward("/interview-recap", {
+        				queryParams: { interviewId: iv.id }
+        			});
         			return;
         		}
         		this.angularRouter.navigate([r.route]);
