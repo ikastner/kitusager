@@ -39,6 +39,13 @@ scriptContent:
         	public canPublish(): boolean {
         		return this.canExport() && this.isOnline();
         	}
+        	public refreshActionFlags(): void {
+        		this.local.selected = this.selectedCount();
+        		this.local.online = this.isOnline();
+        		this.local.canExport = this.canExport();
+        		this.local.canPublish = this.canPublish();
+        		try { this.ref.markForCheck(); } catch (e) { /* ignore */ }
+        	}
         	public async toast(message: string, color: string = "medium", duration: number = 4500): Promise<void> {
         		const toastCtrl = this.getInstance(ToastController);
         		const t = await toastCtrl.create({ message: message, duration: duration, position: "bottom", color: color });
@@ -49,6 +56,8 @@ scriptContent:
         		if (!store) {
         			this.local.items = [];
         			this.local.totalValidated = 0;
+        			this.local.selected = 0;
+        			this.refreshActionFlags();
         			return;
         		}
         		if (store._page !== this) { store._page = this; }
@@ -63,20 +72,16 @@ scriptContent:
         			checked: hasPrev ? (prev[iv.id || iv.interviewId] !== false) : true
         		}));
         		this.local.totalValidated = list.length;
-        		this.local.selected = this.selectedCount();
-        		this.local.online = this.isOnline();
-        		this.ref.markForCheck();
+        		this.refreshActionFlags();
         	}
         	public toggleItem(it: any): void {
         		if (!it) { return; }
         		it.checked = !it.checked;
-        		this.local.selected = this.selectedCount();
-        		this.ref.markForCheck();
+        		this.refreshActionFlags();
         	}
         	public selectAll(on: boolean): void {
         		(this.local.items || []).forEach((it: any) => { it.checked = !!on; });
-        		this.local.selected = this.selectedCount();
-        		this.ref.markForCheck();
+        		this.refreshActionFlags();
         	}
         	public async exportJson(): Promise<void> {
         		if (!this.canExport()) { return; }
@@ -131,6 +136,7 @@ scriptContent:
         		const store = await this.ensureStore();
         		if (!store) { return; }
         		this.busy = true;
+        		this.refreshActionFlags();
         		try {
         			const kind = store.detectImportKind(filename, text);
         			const parsed = kind === "json" ? store.parseImportJson(text) : store.parseImportCsv(text);
@@ -169,7 +175,7 @@ scriptContent:
         			await this.toast(inserted + " ajoutée(s), " + skipped + " ignorée(s), " + replaced + " remplacée(s)", "success", 6000);
         		} finally {
         			this.busy = false;
-        			this.ref.markForCheck();
+        			this.refreshActionFlags();
         		}
         	}
         	public async publishSelected(): Promise<void> {
@@ -177,7 +183,7 @@ scriptContent:
         		const store = await this.ensureStore();
         		if (!store) { return; }
         		this.busy = true;
-        		this.ref.markForCheck();
+        		this.refreshActionFlags();
         		try {
         			const ids = this.selectedIds();
         			const res = await store.syncSelected(this, ids);
@@ -191,7 +197,7 @@ scriptContent:
         			await this.loadPage();
         		} finally {
         			this.busy = false;
-        			this.ref.markForCheck();
+        			this.refreshActionFlags();
         		}
         	}
         	/*End_c8o_PageFunction*/'
@@ -459,7 +465,7 @@ title: Import / Export
               attrValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:!canExport()
+                  - MobileSmartSourceType: script:!local?.canExport
             ↓AttrClick [ngx.components.UIAttribute-1786500001093]: 
               attrName: (click)
               attrValue: 
@@ -484,7 +490,7 @@ title: Import / Export
               attrValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:!canExport()
+                  - MobileSmartSourceType: script:!local?.canExport
             ↓AttrClick [ngx.components.UIAttribute-1786500001098]: 
               attrName: (click)
               attrValue: 
@@ -596,7 +602,7 @@ title: Import / Export
             attrValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:!canPublish()
+                - MobileSmartSourceType: script:!local?.canPublish
           ↓AttrClick [ngx.components.UIAttribute-1786500001131]: 
             attrName: (click)
             attrValue: 
