@@ -615,6 +615,5 @@ title: Import / Export
         - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
         - com.twinsoft.convertigo.beans.common.FormatedContent: 
           →: |
-            		await page.loadPage();
-            		resolve();
+            		page.loadPage().then(() => resolve()).catch(() => resolve());
             
