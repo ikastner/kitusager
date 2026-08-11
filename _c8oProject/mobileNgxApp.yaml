@@ -974,13 +974,16 @@ componentScriptContent:
         							dateLabel: this.formatDate(iv.updatedAt || iv.createdAt),
         							status: iv.status || "saved",
         							isValidated: true,
-        							validationLabel: "Interview validée"
+        							validationLabel: (iv.status === "error")
+        								? "Validée — échec publication"
+        								: ((iv.status === "synced") ? "Synchronisée" : "Interview validée")
         						}));
         					},
         					isInterviewValidated(iv: any): boolean {
         						if (!iv) { return false; }
         						const st = iv.status || "draft";
-        						return st === "saved" || st === "synced" || st === "syncing";
+        						// error = validée mais sync BDD échouée — doit rester visible
+        						return st === "saved" || st === "synced" || st === "syncing" || st === "error";
         					},
         					hasSalonSheet(iv: any): boolean {
         						if (!iv) { return false; }
@@ -1455,6 +1458,7 @@ componentScriptContent:
         							try { this.saveLocalSnapshot(); } catch (e) { /* ignore */ }
         							return true;
         						} catch (e) {
+        							// Revenir à "saved" pour rester visible + indiquer l''échec via syncError
         							iv.status = "error";
         							iv.syncErrorStep = (e && e.__syncStep) ? e.__syncStep : "Interview_Save";
         							iv.syncError = this.formatSyncError(e, iv.syncErrorStep);

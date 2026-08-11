@@ -181,15 +181,15 @@ scriptContent:
         	public humanizePublishError(raw: string): string {
         		const s = (raw || "").toLowerCase();
         		if (!s) {
-        			return "Vérifiez que la base de données est démarrée et accessible, puis réessayez.";
+        			return "Vérifiez que la base de données est démarrée (Docker Postgres), puis réessayez.";
         		}
-        		if (/connection refused|connect timed out|unreachable|could not connect|connection reset|network is unreachable|psql|jdbc|connexion|refused|timeout|ensure.?schema|interview_ensureschema/.test(s)) {
-        			return "Impossible de joindre la base de données. Démarrez Postgres (Docker) puis réessayez.";
+        		if (/connection refused|connect timed out|could not connect|failed to connect|connection reset|network is unreachable|unreachable|connexion refus|psqlexception|jdbc|ensure.?schema|interview_ensureschema|connection to .*refus/.test(s)) {
+        			return "La base de données n''est pas joignable. Relancez le container Docker Postgres, puis réessayez.";
         		}
-        		if (/authentication|password|auth|permission|denied|accès/.test(s)) {
+        		if (/authentication|password|permission denied|accès refusé|auth/.test(s)) {
         			return "Accès à la base refusé (identifiants ou droits). Contactez un administrateur.";
         		}
-        		if (/syntax|sql/.test(s)) {
+        		if (/syntax error|sql syntax/.test(s)) {
         			return "Erreur technique côté base de données. Réessayez ou contactez le support.";
         		}
         		const short = (raw || "").replace(/\s+/g, " ").trim();
