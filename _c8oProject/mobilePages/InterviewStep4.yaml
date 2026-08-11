@@ -254,8 +254,7 @@ title: Etape 4
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                 - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                  →: |
-                    		page.confirmQuit().then(() => resolve()).catch(() => resolve());
+                  →: 		page.confirmQuit().then(() => resolve()).catch(() => resolve());
       ↓Sub [ngx.components.UIElement-1779300030012]: 
         tagName: p
         ↓AttrClass [ngx.components.UIAttribute-1779300030013]: 
@@ -686,7 +685,7 @@ title: Etape 4
                     - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                     - com.twinsoft.convertigo.beans.common.FormatedContent: 
                       →: |
-                        '		page.commitSubmit();
+                        		page.commitSubmit();
                         		page.ref.markForCheck();
                         		if (page.validationError) {
                         			resolve();
@@ -695,7 +694,7 @@ title: Etape 4
                         		page.showToast("Merci pour votre temps !");
                         		page.ref.markForCheck();
                         		resolve();
-                        '
+                        
               ↓IfOk [ngx.components.UIDynamicAction-1779300030171]: 
                 beanData: '{"ionBean":"IfAction","condition":"script:!page.validationError"}'
                 ↓GoHome [ngx.components.UIDynamicAction-1779300030172]: 

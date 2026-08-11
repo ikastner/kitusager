@@ -1,7 +1,8 @@
-comment: Connecteur SQL interviews événement (HSQLDB dev — base voxurssaf_v2)
-jdbcDriverClassName: org.hsqldb.jdbcDriver
-jdbcURL: jdbc:hsqldb:file:.//hsqldb/voxurssaf_v2
-jdbcUserName: SA
+comment: Connecteur SQL interviews événement (Postgres Docker — voxurssaf_v2 @ localhost:5435)
+jdbcDriverClassName: org.postgresql.Driver
+jdbcURL: jdbc:postgresql://127.0.0.1:5435/voxurssaf_v2
+jdbcUserName: kitusager
+jdbcUserPassword: x2117be6b4453abdc2996c8bbedb14274
 ↓Interview_Delete_Tx [transactions.SqlTransaction]: 
   comment: Supprime une interview avant ré-insertion (un seul paramètre — évite doublon JDBC)
   sqlQuery: DELETE FROM interview WHERE interview_id = {interview_id}
@@ -26,8 +27,8 @@ jdbcUserName: SA
       device_id VARCHAR(64) NOT NULL,
       participant_label VARCHAR(255),
       zone VARCHAR(64),
-      answers_json CLOB NOT NULL,
-      photos_json CLOB,
+      answers_json TEXT NOT NULL,
+      photos_json TEXT,
       sync_error VARCHAR(512)
     )
 ↓Interview_InitPhotoTable_Tx [transactions.SqlTransaction]: 
@@ -38,7 +39,7 @@ jdbcUserName: SA
       interview_id VARCHAR(64) NOT NULL,
       sort_order INT NOT NULL,
       mime_type VARCHAR(64),
-      content_base64 CLOB NOT NULL
+      content_base64 TEXT NOT NULL
     )
 ↓Interview_InitSchema [transactions.SqlTransaction]: 
   comment: Alias legacy — préférer Interview_EnsureSchema (2 transactions séparées)

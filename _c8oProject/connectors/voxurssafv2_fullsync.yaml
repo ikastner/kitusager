@@ -4,6 +4,7 @@ comment: |
   Prod : secureDatabase true, anonymousReplication deny, auth Convertigo obligatoire.
   Après modification : republier le projet dans Studio pour mettre à jour _security CouchDB.'
 databaseName: voxurssafv2_fullsync
+secureDatabase: false
 ↓GetDocument [transactions.couchdb.GetDocumentTransaction]: 
   accessibility: Public
 ↓GetServerInfo [transactions.couchdb.GetServerInfoTransaction]: 

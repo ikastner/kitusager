@@ -292,8 +292,7 @@ title: Etape 3
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                 - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                  →: |
-                    		page.confirmQuit().then(() => resolve()).catch(() => resolve());
+                  →: 		page.confirmQuit().then(() => resolve()).catch(() => resolve());
       ↓Sub [ngx.components.UIElement-1779300020012]: 
         tagName: p
         ↓AttrClass [ngx.components.UIAttribute-1779300020013]: 

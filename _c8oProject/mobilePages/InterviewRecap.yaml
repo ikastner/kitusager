@@ -444,7 +444,7 @@ title: Récap fiche
                 textValue: 
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                    - MobileSmartSourceType: 'script:r.emoji + '' '' + r.satisfactionLabel'
+                    - MobileSmartSourceType: script:r.emoji + ' ' + r.satisfactionLabel
           ↓NoRatings [ngx.components.UIElement-1779400002010]: 
             tagName: p
             ↓AttrIf [ngx.components.UIAttribute-1779400002011]: 

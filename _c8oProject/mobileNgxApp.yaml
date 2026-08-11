@@ -266,7 +266,7 @@ componentScriptContent:
         							interviews: snap.interviews.map((iv: any) => Object.assign({}, iv)),
         							activeInterviewId: null
         						};
-        						// Ne pas restaurer un brouillon abandonné d'une session précédente
+        						// Ne pas restaurer un brouillon abandonné d''une session précédente
         						const snapActive = (snap.activeInterviewId || "").trim();
         						if (snapActive) {
         							const snapIv = this._cache.interviews.find((iv: any) => iv.interviewId === snapActive);
@@ -419,7 +419,7 @@ componentScriptContent:
         					},
         	
         					async ensureSqlSchema(page: any): Promise<void> {
-        						await this.callSequence(page, "VoxUrssafV2.Interview_EnsureSchema");
+        						await this.callSequence(page, "KitUsager.Interview_EnsureSchema");
         					},
         	
         					getEmptyData() {
@@ -499,6 +499,25 @@ componentScriptContent:
         	
         					flushPersist(): Promise<void> {
         						return this._saveQueue || Promise.resolve();
+        					},
+        	
+        					async ensureDesignDoc(page: any): Promise<void> {
+        						const design: any = {
+        							_id: "_design/vu",
+        							views: {
+        								interviews_by_device: {
+        									map: "function (doc) { if (doc.type === ''interview'' && doc.deviceId) { emit(doc.deviceId, { interviewId: doc.interviewId, status: doc.status, updatedAt: doc.updatedAt }); } }"
+        								},
+        								config_by_device: {
+        									map: "function (doc) { if (doc.type === ''config'' && doc.deviceId) { emit(doc.deviceId, null); } }"
+        								}
+        							}
+        						};
+        						try {
+        							await this.fsPostSafe(page, design);
+        						} catch (e) {
+        							try { page.c8o.log.warn("[VoxUrssafV2] ensureDesignDoc", e); } catch (e2) { /* ignore */ }
+        						}
         					},
         	
         					async fsView(page: any, view: string, key: string): Promise<any> {
@@ -790,6 +809,9 @@ componentScriptContent:
         						}
         						let interviews: any[] = [];
         						let loadedFromView = false;
+        						try {
+        							await this.ensureDesignDoc(page);
+        						} catch (e) { /* ignore */ }
         						try {
         							const viewRes = await this.fsView(page, "interviews_by_device", this._cache.deviceId);
         							const rows = (viewRes && viewRes.rows) ? viewRes.rows : [];
@@ -1380,7 +1402,7 @@ componentScriptContent:
         						};
         						try {
         							await runStep("Interview_Save", () =>
-        								this.callSequence(page, "VoxUrssafV2.Interview_Save", sqlParams));
+        								this.callSequence(page, "KitUsager.Interview_Save", sqlParams));
         							for (let i = 0; i < sync.photos.length; i++) {
         								const p = sync.photos[i];
         								let b64 = p.dataUrl || "";
@@ -1394,7 +1416,7 @@ componentScriptContent:
         									content_base64: b64
         								};
         								await runStep("Interview_UploadPhoto", () =>
-        									this.callSequence(page, "VoxUrssafV2.Interview_UploadPhoto", photoParams));
+        									this.callSequence(page, "KitUsager.Interview_UploadPhoto", photoParams));
         							}
         							iv.status = "synced";
         							iv.syncedAt = new Date().toISOString();
@@ -1421,8 +1443,9 @@ componentScriptContent:
         						await this.flushPersist();
         						if (this.persistAllNow) { await this.persistAllNow(page); }
         						try { this.saveLocalSnapshot(); } catch (e) { /* ignore */ }
+        						// saved/error = à exporter ; synced = ré-export SQL (ex. après changement de BDD)
         						const pendingList = (this.load().interviews || []).filter((iv: any) =>
-        							iv.status === "saved" || iv.status === "error");
+        							iv.status === "saved" || iv.status === "error" || iv.status === "synced");
         						let lastError = "";
         						try {
         							await this.ensureSqlSchema(page);
@@ -1430,13 +1453,14 @@ componentScriptContent:
         							lastError = this.formatSyncError(e, "Interview_EnsureSchema");
         							page.c8o.log.warn("[VoxUrssafV2] Interview_EnsureSchema", e);
         						}
+        						// CouchDB FullSync est optionnel en local : ne bloque pas l''export SQL
         						let pushOk = true;
         						try {
         							await this.pushToServer(page);
         						} catch (e) {
         							pushOk = false;
         							const msg = (e && e.message) ? e.message : String(e);
-        							page.c8o.log.warn("[VoxUrssafV2] push serveur impossible (republier connecteur secureDatabase:false ?)", msg);
+        							page.c8o.log.warn("[VoxUrssafV2] push CouchDB ignoré (export SQL continue)", msg);
         						}
         						let n = 0;
         						let failed = 0;

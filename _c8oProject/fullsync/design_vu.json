@@ -1,0 +1,11 @@
+{
+  "_id": "_design/vu",
+  "views": {
+    "interviews_by_device": {
+      "map": "function (doc) {\n  if (doc.type === 'interview' && doc.deviceId) {\n    emit(doc.deviceId, {\n      interviewId: doc.interviewId,\n      status: doc.status,\n      updatedAt: doc.updatedAt\n    });\n  }\n}"
+    },
+    "config_by_device": {
+      "map": "function (doc) {\n  if (doc.type === 'config' && doc.deviceId) {\n    emit(doc.deviceId, null);\n  }\n}"
+    }
+  }
+}

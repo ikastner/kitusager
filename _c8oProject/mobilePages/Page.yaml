@@ -78,11 +78,11 @@ scriptContent:
         		let message = "";
         		let color = "medium";
         		let duration = 4500;
-        		if (!pushOk) {
-        			message = "Fiches sauvegardées sur cet appareil. Push CouchDB refusé — republier VoxUrssafV2 (secureDatabase:false).";
-        			color = "warning";
-        		} else if (n > 0) {
+        		if (n > 0) {
         			message = n + " fiche(s) exportée(s) vers le serveur SQL";
+        			if (!pushOk) {
+        				message += " (push CouchDB ignoré — OK en local)";
+        			}
         			color = "success";
         		} else if (pending > 0 && failed > 0) {
         			let detail = lastError;
@@ -100,7 +100,7 @@ scriptContent:
         				message += " " + detail.substring(0, 380);
         				duration = 12000;
         			} else {
-        				message += " Republiez VoxUrssafV2 (Interview_EnsureSchema + Interview_Save).";
+        				message += " Vérifiez KitUsager.Interview_EnsureSchema + Interview_Save et Postgres.";
         			}
         			color = "danger";
         		} else if (pending > 0) {

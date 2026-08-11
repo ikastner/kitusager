@@ -108,7 +108,7 @@ scriptContent:
         		if (store._page !== this) { store._page = this; }
         		let iv = store.getActiveInterview();
         		if (!iv || iv.format !== "salon") {
-        			this.fieldError = "Session expirée. Recommencez depuis l'accueil.";
+        			this.fieldError = "Session expirée. Recommencez depuis l''accueil.";
         			return;
         		}
         		const sName = (this.salonName || "").trim();
@@ -177,8 +177,7 @@ title: Etape 1
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                 - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                  →: |
-                    		page.confirmQuit().then(() => resolve()).catch(() => resolve());
+                  →: 		page.confirmQuit().then(() => resolve()).catch(() => resolve());
       ↓Sub [ngx.components.UIElement-1779300001012]: 
         tagName: p
         ↓AttrClass [ngx.components.UIAttribute-1779300001013]: 
@@ -430,13 +429,13 @@ title: Etape 1
                     - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                     - com.twinsoft.convertigo.beans.common.FormatedContent: 
                       →: |
-                        '		page.commitStep1();
+                        		page.commitStep1();
                         		page.ref.markForCheck();
                         		if (page.fieldError) {
                         			page.showToast(page.fieldError);
                         		}
                         		resolve();
-                        '
+                        
               ↓IfProceed [ngx.components.UIDynamicAction-1779300001069]: 
                 beanData: '{"ionBean":"IfAction","condition":"script:page.wizardCanProceed"}'
                 ↓PushStep2 [ngx.components.UIDynamicAction-1779901880470]: 

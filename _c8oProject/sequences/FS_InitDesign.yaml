@@ -4,4 +4,4 @@ comment: Publie le design document _design/vu (vues interviews_by_device et conf
   ↓_id [variables.StepVariable-1779373001002]: 
     value: _design/vu
   ↓views [variables.StepVariable-1779373001003]: 
-    comment: Remplacer par import design_vu.json dans Studio si nécessaire
+    value: '{"interviews_by_device":{"map":"function (doc) { if (doc.type === ''interview'' && doc.deviceId) { emit(doc.deviceId, { interviewId: doc.interviewId, status: doc.status, updatedAt: doc.updatedAt }); } }"},"config_by_device":{"map":"function (doc) { if (doc.type === ''config'' && doc.deviceId) { emit(doc.deviceId, null); } }"}}'
