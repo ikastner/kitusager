@@ -290,6 +290,22 @@ title: Accueil
             ↓Icon [ngx.components.UIDynamicElement-1779290001055]: 
               beanData: '{"ionBean":"Icon","IconName":"plain:add"}'
               tagName: ion-icon
+      ↓DataIoLink [ngx.components.UIElement-1786500002001]: 
+        tagName: div
+        ↓AttrClass [ngx.components.UIAttribute-1786500002002]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-data-io-home-link
+        ↓Event [ngx.components.UIControlEvent-1786500002003]: 
+          ↓GoDataIo [ngx.components.UIDynamicAction-1786500002004]: 
+            beanData: '{"ionBean":"PushPageAction","page":"plain:InterviewDataIO"}'
+        ↓Text [ngx.components.UIText-1786500002005]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:Import / Export
       ↓SectionRecent [ngx.components.UIElement-1779290001060]: 
         tagName: div
         ↓AttrClass [ngx.components.UIAttribute-1779290001059]: 

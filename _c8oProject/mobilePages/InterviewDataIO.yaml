@@ -1,0 +1,620 @@
+comment: Import / Export — JSON CSV et publication SQL
+icon: cloud-upload
+scriptContent: 
+  - xmlizable: 
+    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+      →: |
+        '/*Begin_c8o_PageImport*/
+        /*End_c8o_PageImport*/
+        /*Begin_c8o_PageDeclaration*/
+        	public busy: boolean = false;
+        	/*End_c8o_PageDeclaration*/
+        /*Begin_c8o_PageConstructor*/
+        		/*End_c8o_PageConstructor*/
+        /*Begin_c8o_PageFunction*/
+        	public async ensureStore(): Promise<any> {
+        		const app: any = this.router && this.router.sharedObject;
+        		if (app && app.ensureInterviewStore) {
+        			return app.ensureInterviewStore(this);
+        		}
+        		const store = (app && app.getInterviewStore)
+        			? app.getInterviewStore()
+        			: ((this.global && this.global.interviewStore) || null);
+        		if (store && store.whenReady) { await store.whenReady(); }
+        		return store;
+        	}
+        	public selectedCount(): number {
+        		return (this.local.items || []).filter((it: any) => it && it.checked).length;
+        	}
+        	public selectedIds(): string[] {
+        		return (this.local.items || []).filter((it: any) => it && it.checked).map((it: any) => it.id);
+        	}
+        	public isOnline(): boolean {
+        		try { return typeof navigator === "undefined" ? true : !!navigator.onLine; } catch (e) { return true; }
+        	}
+        	public canExport(): boolean {
+        		return !this.busy && this.selectedCount() > 0;
+        	}
+        	public canPublish(): boolean {
+        		return this.canExport() && this.isOnline();
+        	}
+        	public async toast(message: string, color: string = "medium", duration: number = 4500): Promise<void> {
+        		const toastCtrl = this.getInstance(ToastController);
+        		const t = await toastCtrl.create({ message: message, duration: duration, position: "bottom", color: color });
+        		await t.present();
+        	}
+        	public async loadPage(): Promise<void> {
+        		const store = await this.ensureStore();
+        		if (!store) {
+        			this.local.items = [];
+        			this.local.totalValidated = 0;
+        			return;
+        		}
+        		if (store._page !== this) { store._page = this; }
+        		const list = store.listForHome() || [];
+        		const prev: any = {};
+        		(this.local.items || []).forEach((it: any) => { if (it && it.id) { prev[it.id] = !!it.checked; } });
+        		const hasPrev = Object.keys(prev).length > 0;
+        		this.local.items = list.map((iv: any) => ({
+        			id: iv.id || iv.interviewId,
+        			title: iv.sheetCode || iv.intervieweeName || iv.firstName || (iv.id || iv.interviewId),
+        			statusLabel: iv.validationLabel || iv.status || "Validée",
+        			checked: hasPrev ? (prev[iv.id || iv.interviewId] !== false) : true
+        		}));
+        		this.local.totalValidated = list.length;
+        		this.local.selected = this.selectedCount();
+        		this.local.online = this.isOnline();
+        		this.ref.markForCheck();
+        	}
+        	public toggleItem(it: any): void {
+        		if (!it) { return; }
+        		it.checked = !it.checked;
+        		this.local.selected = this.selectedCount();
+        		this.ref.markForCheck();
+        	}
+        	public selectAll(on: boolean): void {
+        		(this.local.items || []).forEach((it: any) => { it.checked = !!on; });
+        		this.local.selected = this.selectedCount();
+        		this.ref.markForCheck();
+        	}
+        	public async exportJson(): Promise<void> {
+        		if (!this.canExport()) { return; }
+        		const store = await this.ensureStore();
+        		const ids = this.selectedIds();
+        		const content = store.buildExportJson(ids);
+        		store.downloadTextFile("interviews-" + store.exportStamp() + ".json", content, "application/json");
+        		await this.toast(ids.length + " fiche(s) exportée(s) en JSON", "success");
+        	}
+        	public async exportCsv(): Promise<void> {
+        		if (!this.canExport()) { return; }
+        		const store = await this.ensureStore();
+        		const ids = this.selectedIds();
+        		const content = store.buildExportCsv(ids);
+        		store.downloadTextFile("interviews-" + store.exportStamp() + ".csv", content, "text/csv;charset=utf-8");
+        		await this.toast(ids.length + " fiche(s) exportée(s) en CSV", "success");
+        	}
+        	public pickImportFile(): void {
+        		const input = document.createElement("input");
+        		input.type = "file";
+        		input.accept = ".json,.csv,text/csv,application/json";
+        		input.onchange = async () => {
+        			const file = input.files && input.files[0];
+        			if (!file) { return; }
+        			try {
+        				const text = await file.text();
+        				await this.runImport(file.name || "", text);
+        			} catch (e: any) {
+        				await this.toast("Import impossible: " + ((e && e.message) ? e.message : String(e)), "danger", 8000);
+        			}
+        		};
+        		input.click();
+        	}
+        	public async askConflict(title: string): Promise<string> {
+        		const alertCtrl = this.getInstance(AlertController);
+        		return new Promise(async (resolve) => {
+        			const alert = await alertCtrl.create({
+        				header: "Conflit",
+        				message: title,
+        				backdropDismiss: false,
+        				buttons: [
+        					{ text: "Ignorer", handler: () => resolve("skip") },
+        					{ text: "Remplacer", handler: () => resolve("replace") },
+        					{ text: "Ignorer tous", handler: () => resolve("skip_all") },
+        					{ text: "Remplacer tous", handler: () => resolve("replace_all") }
+        			]
+        			});
+        			await alert.present();
+        		});
+        	}
+        	public async runImport(filename: string, text: string): Promise<void> {
+        		const store = await this.ensureStore();
+        		if (!store) { return; }
+        		this.busy = true;
+        		try {
+        			const kind = store.detectImportKind(filename, text);
+        			const parsed = kind === "json" ? store.parseImportJson(text) : store.parseImportCsv(text);
+        			let inserted = 0;
+        			let skipped = 0;
+        			let replaced = 0;
+        			let bulk: string | null = null;
+        			const touchIds: string[] = [];
+        			for (const iv of parsed.interviews) {
+        				const exists = !!store.getInterview(iv.interviewId);
+        				if (!exists) {
+        					await store.importInterview(this, iv, "replace");
+        					inserted++;
+        					touchIds.push(iv.interviewId);
+        					continue;
+        				}
+        				let mode = bulk;
+        				if (!mode) {
+        					const choice = await this.askConflict("La fiche " + (iv.sheetCode || iv.interviewId) + " existe déjà.");
+        					if (choice === "skip_all") { bulk = "skip"; mode = "skip"; }
+        					else if (choice === "replace_all") { bulk = "replace"; mode = "replace"; }
+        					else { mode = choice; }
+        				}
+        				const res = await store.importInterview(this, iv, mode);
+        				if (res === "skipped") { skipped++; }
+        				else if (res === "replaced") { replaced++; touchIds.push(iv.interviewId); }
+        			}
+        			await this.loadPage();
+        			(this.local.items || []).forEach((it: any) => {
+        				if (touchIds.indexOf(it.id) >= 0) { it.checked = true; }
+        			});
+        			this.local.selected = this.selectedCount();
+        			if (parsed.hadPhotos) {
+        				await this.toast("Photos ignorées à l''import (MVP)", "warning", 5000);
+        			}
+        			await this.toast(inserted + " ajoutée(s), " + skipped + " ignorée(s), " + replaced + " remplacée(s)", "success", 6000);
+        		} finally {
+        			this.busy = false;
+        			this.ref.markForCheck();
+        		}
+        	}
+        	public async publishSelected(): Promise<void> {
+        		if (!this.canPublish()) { return; }
+        		const store = await this.ensureStore();
+        		if (!store) { return; }
+        		this.busy = true;
+        		this.ref.markForCheck();
+        		try {
+        			const ids = this.selectedIds();
+        			const res = await store.syncSelected(this, ids);
+        			if (res.n > 0 && res.failed === 0) {
+        				await this.toast(res.n + " fiche(s) publiée(s) en BDD", "success");
+        			} else if (res.n > 0) {
+        				await this.toast(res.n + " OK, " + res.failed + " échec(s). " + (res.lastError || ""), "warning", 10000);
+        			} else {
+        				await this.toast("Publication échouée. " + (res.lastError || ""), "danger", 10000);
+        			}
+        			await this.loadPage();
+        		} finally {
+        			this.busy = false;
+        			this.ref.markForCheck();
+        		}
+        	}
+        	/*End_c8o_PageFunction*/'
+segment: interview-data-io
+title: Import / Export
+↓Content [ngx.components.UIDynamicElement-1786500001001]: 
+  beanData: '{"ionBean":"Content"}'
+  tagName: ion-content
+  ↓AttrClass [ngx.components.UIAttribute-1786500001002]: 
+    attrName: class
+    attrValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+        - MobileSmartSourceType: plain:vu-page
+  ↓Shell [ngx.components.UIElement-1786500001003]: 
+    tagName: div
+    ↓AttrClass [ngx.components.UIAttribute-1786500001004]: 
+      attrName: class
+      attrValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: plain:vu-app-shell
+    ↓PageHeader [ngx.components.UIElement-1786500001010]: 
+      tagName: div
+      ↓AttrClass [ngx.components.UIAttribute-1786500001011]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:vu-page-header vu-page-header--elevated
+      ↓BackBtn [ngx.components.UIElement-1786500001012]: 
+        tagName: button
+        ↓AttrClass [ngx.components.UIAttribute-1786500001013]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-back-btn
+        ↓Event [ngx.components.UIControlEvent-1786500001014]: 
+          ↓Back [ngx.components.UIDynamicAction-1786500001015]: 
+            beanData: '{"ionBean":"PopPageAction"}'
+        ↓Icon [ngx.components.UIDynamicElement-1786500001016]: 
+          beanData: '{"ionBean":"Icon","IconName":"plain:arrow-back"}'
+          tagName: ion-icon
+      ↓Title [ngx.components.UIElement-1786500001017]: 
+        tagName: h1
+        ↓AttrClass [ngx.components.UIAttribute-1786500001018]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-greeting-title
+        ↓Text [ngx.components.UIText-1786500001019]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:Import / Export
+    ↓Main [ngx.components.UIElement-1786500001020]: 
+      tagName: div
+      ↓AttrClass [ngx.components.UIAttribute-1786500001021]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:vu-scroll-main vu-data-io
+      ↓Count [ngx.components.UIElement-1786500001030]: 
+        tagName: p
+        ↓AttrClass [ngx.components.UIAttribute-1786500001031]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-list-count
+        ↓Text [ngx.components.UIText-1786500001032]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:(local?.totalValidated || 0) + '' validée(s) · '' + (local?.selected || 0) + '' sélectionnée(s)'''
+      ↓Bulk [ngx.components.UIElement-1786500001033]: 
+        tagName: div
+        ↓AttrClass [ngx.components.UIAttribute-1786500001034]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-data-io-bulk
+        ↓AllOn [ngx.components.UIElement-1786500001035]: 
+          tagName: span
+          ↓AttrClass [ngx.components.UIAttribute-1786500001036]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-link-action
+          ↓AttrClick [ngx.components.UIAttribute-1786500001037]: 
+            attrName: (click)
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:selectAll(true)
+          ↓Text [ngx.components.UIText-1786500001038]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Tout cocher
+        ↓AllOff [ngx.components.UIElement-1786500001039]: 
+          tagName: span
+          ↓AttrClass [ngx.components.UIAttribute-1786500001040]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-link-action vu-link-muted
+          ↓AttrClick [ngx.components.UIAttribute-1786500001041]: 
+            attrName: (click)
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:selectAll(false)
+          ↓Text [ngx.components.UIText-1786500001042]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Tout décocher
+      ↓List [ngx.components.UIElement-1786500001050]: 
+        tagName: div
+        ↓AttrClass [ngx.components.UIAttribute-1786500001051]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-data-io-list
+        ↓Row [ngx.components.UIElement-1786500001052]: 
+          tagName: div
+          ↓AttrClass [ngx.components.UIAttribute-1786500001053]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-data-io-row
+          ↓AttrFor [ngx.components.UIAttribute-1786500001054]: 
+            attrName: '*ngFor'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:let it of local.items
+          ↓AttrClick [ngx.components.UIAttribute-1786500001055]: 
+            attrName: (click)
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:toggleItem(it)
+          ↓Check [ngx.components.UIElement-1786500001056]: 
+            tagName: span
+            ↓AttrClass [ngx.components.UIAttribute-1786500001057]: 
+              attrName: '[class]'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:it.checked ? 'vu-check vu-check--on' : 'vu-check'
+            ↓Text [ngx.components.UIText-1786500001058]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: 'script:it.checked ? ''✓'' : '''''
+          ↓Body [ngx.components.UIElement-1786500001059]: 
+            tagName: div
+            ↓Name [ngx.components.UIElement-1786500001060]: 
+              tagName: div
+              ↓AttrClass [ngx.components.UIAttribute-1786500001061]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:vu-card-name
+              ↓Text [ngx.components.UIText-1786500001062]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:it.title
+            ↓Meta [ngx.components.UIElement-1786500001063]: 
+              tagName: div
+              ↓AttrClass [ngx.components.UIAttribute-1786500001064]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:vu-card-meta
+              ↓Text [ngx.components.UIText-1786500001065]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:it.statusLabel
+        ↓Empty [ngx.components.UIElement-1786500001070]: 
+          tagName: p
+          ↓AttrIf [ngx.components.UIAttribute-1786500001071]: 
+            attrName: '*ngIf'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:!local?.items?.length
+          ↓AttrClass [ngx.components.UIAttribute-1786500001072]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-empty-inline
+          ↓Text [ngx.components.UIText-1786500001073]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Aucune interview validée à exporter.
+      ↓ExportCard [ngx.components.UIElement-1786500001080]: 
+        tagName: div
+        ↓AttrClass [ngx.components.UIAttribute-1786500001081]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-data-io-card
+        ↓Title [ngx.components.UIElement-1786500001082]: 
+          tagName: div
+          ↓AttrClass [ngx.components.UIAttribute-1786500001083]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-data-io-card-title
+          ↓Text [ngx.components.UIText-1786500001084]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Exporter
+        ↓Hint [ngx.components.UIElement-1786500001085]: 
+          tagName: div
+          ↓AttrClass [ngx.components.UIAttribute-1786500001086]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-card-meta
+          ↓Text [ngx.components.UIText-1786500001087]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Télécharger la sélection
+        ↓Actions [ngx.components.UIElement-1786500001088]: 
+          tagName: div
+          ↓AttrClass [ngx.components.UIAttribute-1786500001089]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-data-io-actions
+          ↓BtnJson [ngx.components.UIElement-1786500001090]: 
+            tagName: button
+            ↓AttrClass [ngx.components.UIAttribute-1786500001091]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-btn-primary
+            ↓AttrDisabled [ngx.components.UIAttribute-1786500001092]: 
+              attrName: '[disabled]'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:!canExport()
+            ↓AttrClick [ngx.components.UIAttribute-1786500001093]: 
+              attrName: (click)
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:exportJson()
+            ↓Text [ngx.components.UIText-1786500001094]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:JSON
+          ↓BtnCsv [ngx.components.UIElement-1786500001095]: 
+            tagName: button
+            ↓AttrClass [ngx.components.UIAttribute-1786500001096]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-btn-outline
+            ↓AttrDisabled [ngx.components.UIAttribute-1786500001097]: 
+              attrName: '[disabled]'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:!canExport()
+            ↓AttrClick [ngx.components.UIAttribute-1786500001098]: 
+              attrName: (click)
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:exportCsv()
+            ↓Text [ngx.components.UIText-1786500001099]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:CSV
+      ↓ImportCard [ngx.components.UIElement-1786500001100]: 
+        tagName: div
+        ↓AttrClass [ngx.components.UIAttribute-1786500001101]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-data-io-card
+        ↓Title [ngx.components.UIElement-1786500001102]: 
+          tagName: div
+          ↓AttrClass [ngx.components.UIAttribute-1786500001103]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-data-io-card-title
+          ↓Text [ngx.components.UIText-1786500001104]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Importer
+        ↓Hint [ngx.components.UIElement-1786500001105]: 
+          tagName: div
+          ↓AttrClass [ngx.components.UIAttribute-1786500001106]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-card-meta
+          ↓Text [ngx.components.UIText-1786500001107]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Indépendant de la sélection — JSON ou CSV
+        ↓Btn [ngx.components.UIElement-1786500001108]: 
+          tagName: button
+          ↓AttrClass [ngx.components.UIAttribute-1786500001109]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-btn-soft
+          ↓AttrClick [ngx.components.UIAttribute-1786500001110]: 
+            attrName: (click)
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:pickImportFile()
+          ↓Text [ngx.components.UIText-1786500001111]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Choisir JSON / CSV
+      ↓PublishCard [ngx.components.UIElement-1786500001120]: 
+        tagName: div
+        ↓AttrClass [ngx.components.UIAttribute-1786500001121]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-data-io-card
+        ↓Title [ngx.components.UIElement-1786500001122]: 
+          tagName: div
+          ↓AttrClass [ngx.components.UIAttribute-1786500001123]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-data-io-card-title
+          ↓Text [ngx.components.UIText-1786500001124]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Publier en BDD
+        ↓Hint [ngx.components.UIElement-1786500001125]: 
+          tagName: div
+          ↓AttrClass [ngx.components.UIAttribute-1786500001126]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-card-meta
+          ↓Text [ngx.components.UIText-1786500001127]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Réseau requis · sélection courante
+        ↓Btn [ngx.components.UIElement-1786500001128]: 
+          tagName: button
+          ↓AttrClass [ngx.components.UIAttribute-1786500001129]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-btn-dark
+          ↓AttrDisabled [ngx.components.UIAttribute-1786500001130]: 
+            attrName: '[disabled]'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:!canPublish()
+          ↓AttrClick [ngx.components.UIAttribute-1786500001131]: 
+            attrName: (click)
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:publishSelected()
+          ↓Text [ngx.components.UIText-1786500001132]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: 'script:''Publier '' + (local?.selected || 0) + '' maintenant'''
+↓PageEvent [ngx.components.UIPageEvent-1786500001199]: 
+  ↓OnShow [ngx.components.UICustomAction-1786500001200]: 
+    actionValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+          →: |
+            		await page.loadPage();
+            		resolve();
+            
