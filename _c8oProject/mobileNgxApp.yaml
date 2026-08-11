@@ -1475,7 +1475,7 @@ componentScriptContent:
         						}
         						return { n: n, pushOk: pushOk, pending: pendingList.length, failed: failed, lastError: lastError };
         					},
-
+        	
         					EXPORT_FORMAT: "kitusager-interviews-v1",
         					CSV_HEADERS: [
         						"interviewId", "sheetCode", "status", "firstName", "intervieweeEmail", "intervieweeName",
@@ -1483,13 +1483,13 @@ componentScriptContent:
         						"contactMode", "consentAccepted", "recontactOk", "verbatimText", "journeyRatingsJson",
         						"salonName", "context", "createdAt", "updatedAt"
         					],
-
+        	
         					exportStamp(): string {
         						const d = new Date();
         						const p = (n: number) => (n < 10 ? "0" : "") + n;
         						return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + "-" + p(d.getHours()) + p(d.getMinutes());
         					},
-
+        	
         					stripPhotos(iv: any): any {
         						const o = Object.assign({}, iv || {});
         						delete o.salonPhotos;
@@ -1498,7 +1498,7 @@ componentScriptContent:
         						o.photoDataUrl = "";
         						return o;
         					},
-
+        	
         					normalizeImportedInterview(raw: any): any {
         						const iv = this.stripPhotos(raw || {});
         						iv.format = "salon";
@@ -1512,7 +1512,7 @@ componentScriptContent:
         						iv.updatedAt = new Date().toISOString();
         						return iv;
         					},
-
+        	
         					buildExportJson(ids: string[]): string {
         						const idSet: any = {};
         						(ids || []).forEach((id: string) => { if (id) { idSet[id] = true; } });
@@ -1528,7 +1528,7 @@ componentScriptContent:
         						};
         						return JSON.stringify(payload, null, 2);
         					},
-
+        	
         					csvEscape(v: any): string {
         						const s = v === null || v === undefined ? "" : String(v);
         						if (/[;"\n\r]/.test(s)) {
@@ -1536,7 +1536,7 @@ componentScriptContent:
         						}
         						return s;
         					},
-
+        	
         					buildExportCsv(ids: string[]): string {
         						const idSet: any = {};
         						(ids || []).forEach((id: string) => { if (id) { idSet[id] = true; } });
@@ -1570,7 +1570,7 @@ componentScriptContent:
         						}
         						return "\uFEFF" + lines.join("\r\n");
         					},
-
+        	
         					downloadTextFile(filename: string, content: string, mime: string): void {
         						const blob = new Blob([content], { type: mime || "text/plain;charset=utf-8" });
         						const url = URL.createObjectURL(blob);
@@ -1582,7 +1582,7 @@ componentScriptContent:
         						document.body.removeChild(a);
         						setTimeout(() => { try { URL.revokeObjectURL(url); } catch (e) { /* ignore */ } }, 1500);
         					},
-
+        	
         					detectImportKind(filename: string, text: string): "json" | "csv" {
         						const name = (filename || "").toLowerCase();
         						if (name.endsWith(".json")) { return "json"; }
@@ -1590,7 +1590,7 @@ componentScriptContent:
         						const t = (text || "").replace(/^\uFEFF/, "").trim();
         						return t.charAt(0) === "{" ? "json" : "csv";
         					},
-
+        	
         					parseImportJson(text: string): { interviews: any[]; hadPhotos: boolean } {
         						const raw = JSON.parse((text || "").replace(/^\uFEFF/, ""));
         						if (!raw || raw.format !== this.EXPORT_FORMAT || !Array.isArray(raw.interviews) || raw.interviews.length === 0) {
@@ -1608,7 +1608,7 @@ componentScriptContent:
         						}
         						return { interviews: Object.keys(byId).map((k: string) => byId[k]), hadPhotos: hadPhotos };
         					},
-
+        	
         					parseCsvRows(text: string): string[][] {
         						const src = (text || "").replace(/^\uFEFF/, "");
         						const rows: string[][] = [];
@@ -1631,7 +1631,7 @@ componentScriptContent:
         						if (cur.length || row.length) { row.push(cur); rows.push(row); }
         						return rows.filter((r: string[]) => r.some((c: string) => (c || "").trim().length > 0));
         					},
-
+        	
         					parseImportCsv(text: string): { interviews: any[]; hadPhotos: boolean } {
         						const rows = this.parseCsvRows(text);
         						if (!rows.length) { throw new Error("CSV vide"); }
@@ -1677,7 +1677,7 @@ componentScriptContent:
         						if (!interviews.length) { throw new Error("CSV sans lignes"); }
         						return { interviews: interviews, hadPhotos: false };
         					},
-
+        	
         					async importInterview(page: any, iv: any, mode: string): Promise<string> {
         						const data = this.load();
         						const normalized = this.normalizeImportedInterview(iv);
@@ -1704,7 +1704,7 @@ componentScriptContent:
         						try { this.saveLocalSnapshot(); } catch (e) { /* ignore */ }
         						return "replaced";
         					},
-
+        	
         					async syncSelected(page: any, ids: string[]): Promise<{ n: number; failed: number; lastError: string }> {
         						let n = 0;
         						let failed = 0;

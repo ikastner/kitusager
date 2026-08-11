@@ -1,4 +1,4 @@
-comment: Import / Export — JSON CSV et publication SQL
+comment: Import / Export - JSON CSV et publication SQL
 icon: cloud-upload
 scriptContent: 
   - xmlizable: 
@@ -351,12 +351,12 @@ title: Import / Export
               attrValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:it.checked ? 'vu-check vu-check--on' : 'vu-check'
+                  - MobileSmartSourceType: 'script:it.checked ? ''vu-check vu-check--on'' : ''vu-check'''
             ↓Text [ngx.components.UIText-1786500001058]: 
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: 'script:it.checked ? ''✓'' : '''''
+                  - MobileSmartSourceType: 'script:it.checked ? ''v'' : '''''
           ↓Body [ngx.components.UIElement-1786500001059]: 
             tagName: div
             ↓Name [ngx.components.UIElement-1786500001060]: 
@@ -529,7 +529,7 @@ title: Import / Export
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:Indépendant de la sélection — JSON ou CSV
+                - MobileSmartSourceType: plain:Indépendant de la sélection - JSON ou CSV
         ↓Btn [ngx.components.UIElement-1786500001108]: 
           tagName: button
           ↓AttrClass [ngx.components.UIAttribute-1786500001109]: 
