@@ -26,11 +26,13 @@ scriptContent:
         		const app: any = this.router && this.router.sharedObject;
         		if (app && app.ensureInterviewStore) { return app.ensureInterviewStore(this); }
         		if (app && app.initVuApp) { app.initVuApp(); }
-        		return app && app.getInterviewStore ? app.getInterviewStore() : null;
+        		return app && app.getInterviewStore ? app.getInterviewStore() : ((this.global && this.global.interviewStore) || null);
         	}
         	public async loadStep(): Promise<void> {
         		const store = await this.ensureStore();
-        		const iv = store ? store.getActiveInterview() : null;
+        		if (!store) { return; }
+        		if (store.whenReady) { await store.whenReady(); }
+        		const iv = store.getActiveInterview();
         		if (!iv || iv.format !== "salon") { return; }
         		
         		const sectorChoices = ["Artisanat", "Commerce", "Professions libérales", "Services aux entreprises", "Services à la personne"];
@@ -49,42 +51,91 @@ scriptContent:
         		this.profileCount = iv.profileCount || "";
         		this.contactMode = iv.contactMode || "";
         	}
+        	public async confirmQuit(): Promise<void> {
+        		if (this.global && this.global.confirmQuitWizard) {
+        			await this.global.confirmQuitWizard(this);
+        			return;
+        		}
+        		const app: any = this.router && this.router.sharedObject;
+        		if (app && app.confirmQuitWizard) {
+        			await app.confirmQuitWizard(this);
+        		}
+        	}
+        	public saveDraft(): void {
+        		const store = this.getStoreSync();
+        		if (!store) { return; }
+        		if (store._page !== this) { store._page = this; }
+        		if (!store.getActiveInterview()) { return; }
+        		store.updateSalonDraft({
+        			sector: this.sector || "",
+        			age: this.age || "",
+        			urssafSince: this.urssafSince || "",
+        			multiProfile: this.multiProfile,
+        			profileCount: this.profileCount || "",
+        			contactMode: this.contactMode || "",
+        			wizardStep: 4
+        		});
+        	}
+        	public touchDraft(): void {
+        		this.saveDraft();
+        		if (this.ref) { this.ref.markForCheck(); }
+        	}
+        	public flushStep(): void {
+        		this.saveDraft();
+        	}
+        	public prepareBack(): void {
+        		this.saveDraft();
+        	}
         	public onSectorChange(val: string): void {
         		if (val === "Autre") {
         			this.sectorIsOther = true;
         			this.sector = "";
+        		} else {
+        			this.sector = val || "";
         		}
+        		this.saveDraft();
         	}
         	public resetSectorToSelect(): void {
         		this.sectorIsOther = false;
         		this.sector = "";
+        		this.saveDraft();
         	}
         	public onAgeChange(val: string): void {
         		if (val === "Autre") {
         			this.ageIsOther = true;
         			this.age = "";
+        		} else {
+        			this.age = val || "";
         		}
+        		this.saveDraft();
         	}
         	public resetAgeToSelect(): void {
         		this.ageIsOther = false;
         		this.age = "";
+        		this.saveDraft();
         	}
         	public onSinceChange(val: string): void {
         		if (val === "Autre") {
         			this.urssafSinceIsOther = true;
         			this.urssafSince = "";
+        		} else {
+        			this.urssafSince = val || "";
         		}
+        		this.saveDraft();
         	}
         	public resetSinceToSelect(): void {
         		this.urssafSinceIsOther = false;
         		this.urssafSince = "";
+        		this.saveDraft();
         	}
         	public setMultiProfile(val: boolean): void {
         		this.multiProfile = val;
         		if (!val) { this.profileCount = ""; }
+        		this.saveDraft();
         	}
         	public setContactMode(mode: string): void {
         		this.contactMode = mode;
+        		this.saveDraft();
         	}
         	public getStoreSync(): any {
         		const app: any = this.router && this.router.sharedObject;
@@ -127,7 +178,8 @@ scriptContent:
         			multiProfile: null,
         			profileCount: "",
         			contactMode: "",
-        			wizardStep: 5
+        			wizardStep: 5,
+        			_forceClear: true
         		});
         		this.wizardCanProceed = true;
         	}
@@ -185,6 +237,33 @@ title: Etape 3
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
             - MobileSmartSourceType: plain:vu-wizard-header
+      ↓BtnQuit [ngx.components.UIElement-1779300099401]: 
+        tagName: button
+        ↓AttrType [ngx.components.UIAttribute-1779300099402]: 
+          attrName: type
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:button
+        ↓AttrClass [ngx.components.UIAttribute-1779300099403]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-wizard-quit-btn
+        ↓Text [ngx.components.UIText-1779300099404]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:Quitter
+        ↓Event [ngx.components.UIControlEvent-1779300099405]: 
+          ↓DoQuit [ngx.components.UICustomAction-1779300099406]: 
+            actionValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                  →: |
+                    		page.confirmQuit().then(() => resolve()).catch(() => resolve());
       ↓Sub [ngx.components.UIElement-1779300020012]: 
         tagName: p
         ↓AttrClass [ngx.components.UIAttribute-1779300020013]: 
@@ -993,7 +1072,7 @@ title: Etape 3
                     - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                     - com.twinsoft.convertigo.beans.common.FormatedContent: 
                       →: |
-                        		page.commitBack();
+                        		page.prepareBack();
                         		page.ref.markForCheck();
                         		resolve();
                         
@@ -1018,10 +1097,10 @@ title: Etape 3
                         		page.ref.markForCheck();
                         		resolve();
                         
-                ↓IfProceed [ngx.components.UIDynamicAction-1779300020170]: 
-                  beanData: '{"ionBean":"IfAction","condition":"script:page.wizardCanProceed"}'
-                  ↓PushStep4 [ngx.components.UIDynamicAction-1779300020172]: 
-                    beanData: '{"ionBean":"PushPageAction","page":"plain:InterviewStep4"}'
+              ↓IfProceed [ngx.components.UIDynamicAction-1779300020170]: 
+                beanData: '{"ionBean":"IfAction","condition":"script:page.wizardCanProceed"}'
+                ↓PushStep4 [ngx.components.UIDynamicAction-1779300020172]: 
+                  beanData: '{"ionBean":"PushPageAction","page":"plain:InterviewStep4"}'
             ↓Text [ngx.components.UIText-1779300020171]: 
               textValue: 
                 - xmlizable: 
@@ -1034,6 +1113,8 @@ title: Etape 3
         - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
         - com.twinsoft.convertigo.beans.common.FormatedContent: 
           →: |
-            		page.loadStep().then(() => page.ref.markForCheck());
-            		resolve();
+            		page.loadStep().then(() => {
+            			page.ref.markForCheck();
+            			resolve();
+            		}).catch(() => resolve());
             

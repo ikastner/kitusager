@@ -695,22 +695,6 @@ Describes the mobile application global properties
 Liste complète des interviews — voxUrssafReact allInterviews
 </p></blockquote></details>
 
-<details><summary><b>InterviewProfile</b> : Profil enquêteur — voxUrssafReact profile</summary><blockquote><p>
-
-
-### ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/ngx/components/images/pagecomponent_color_16x16.png?raw=true "PageComponent") InterviewProfile
-
-Profil enquêteur — voxUrssafReact profile
-</p></blockquote></details>
-
-<details><summary><b>InterviewQuestions</b> : Gestion des questions — voxUrssafReact manageQuestions</summary><blockquote><p>
-
-
-### ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/ngx/components/images/pagecomponent_color_16x16.png?raw=true "PageComponent") InterviewQuestions
-
-Gestion des questions — voxUrssafReact manageQuestions
-</p></blockquote></details>
-
 <details><summary><b>InterviewRecap</b> : Récapitulatif lecture seule — fiche salon validée ou synchronisée</summary><blockquote><p>
 
 
@@ -751,6 +735,14 @@ Wizard salon — étape 3/4 profil usager
 Wizard salon — étape 4/4 consentement, photo, validation
 </p></blockquote></details>
 
+<details><summary><b>InterviewStepVerbatim</b> : Wizard salon — étape 3/5 verbatim + dictée</summary><blockquote><p>
+
+
+### ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/ngx/components/images/pagecomponent_color_16x16.png?raw=true "PageComponent") InterviewStepVerbatim
+
+Wizard salon — étape 3/5 verbatim + dictée
+</p></blockquote></details>
+
 <details><summary><b>Page</b> : Accueil — interface voxUrssafReact</summary><blockquote><p>
 
 
@@ -758,35 +750,5 @@ Wizard salon — étape 4/4 consentement, photo, validation
 
 Accueil — interface voxUrssafReact
 </p></blockquote></details>
-</p></blockquote></details>
-
-<details><summary><span style="color:DarkGoldenRod"><i>Shared Components</i></span></summary><blockquote><p>
-
-
-### ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/ngx/components/images/uisharedcomponent_16x16.png?raw=true "UISharedRegularComponent") BottomNavPill
-
-Navigation pilule style voxUrssafReact (Accueil, Questions, FAB, Profil)
-
-<span style="color:DarkGoldenRod">Variables</span>
-
-<table>
-<tr>
-<th>
-name
-</th>
-<th>
-comment
-</th>
-</tr>
-<tr>
-<td>
-<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/ngx/components/images/uicompvariable_16x16.png?raw=true "  alt="UICompVariable" >&nbsp;current
-</td>
-<td>
-Onglet actif (home, questions, profile)
-</td>
-</tr>
-</table>
-
 </p></blockquote></details>
 </p></blockquote></details>

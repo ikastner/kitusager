@@ -21,14 +21,16 @@ scriptContent:
         	public urssafSince: string = "";
         	public multiProfileText: string = "";
         	public contactMode: string = "";
-        	public consentText: string = "";
         	public recontactText: string = "";
         	public photoDataUrl: string = "";
+        	public photos: string[] = [];
         	public syncError: string = "";
-        	public isDraft: boolean = false;
         	public isSalon: boolean = true;
         	public notFound: boolean = false;
         	public searchId: string = "";
+        	public photoPreviewUrl: string = "";
+        	public photoPreviewOpen: boolean = false;
+        	public maxPhotos: number = 4;
         	/*End_c8o_PageDeclaration*/
         /*Begin_c8o_PageConstructor*/
         		/*End_c8o_PageConstructor*/
@@ -144,7 +146,6 @@ scriptContent:
         		}
         		this.notFound = false;
         		this.isSalon = iv.format === "salon";
-        		this.isDraft = iv.status === "draft";
         		this.status = iv.status || "";
         		this.sheetCode = iv.sheetCode || iv.context || "";
         		this.firstName = iv.firstName || iv.intervieweeName || "";
@@ -165,20 +166,31 @@ scriptContent:
         			this.multiProfileText = "";
         		}
         		this.contactMode = this.labelContact(iv.contactMode || "");
-        		this.consentText = iv.consentAccepted ? "Accepté" : "Non accepté";
         		this.recontactText = iv.recontactOk ? "Oui" : "Non";
         		this.photoDataUrl = iv.photoDataUrl || "";
+        		this.photos = store.getSalonPhotos ? store.getSalonPhotos(iv) : [];
+        		if (!this.photos.length && this.photoDataUrl) { this.photos = [this.photoDataUrl]; }
         		this.syncError = iv.syncError || "";
         	}
-        	public async continueEdit(): Promise<void> {
-        		const store = await this.ensureStore();
-        		const iv = store ? store.getActiveInterview() : null;
-        		if (!iv || !store) { return; }
-        		const route = store.getWizardRoute(iv.wizardStep || 1);
-        		this.angularRouter.navigate([route]);
-        	}
         	public hasPhoto(): boolean {
-        		return !!(this.photoDataUrl || "").trim();
+        		return (this.photos || []).length > 0;
+        	}
+        	public photoCountLabel(): string {
+        		return (this.photos || []).length + " / " + this.maxPhotos;
+        	}
+        	public openPhotoPreview(url: string): void {
+        		if (!url) { return; }
+        		this.photoPreviewUrl = url;
+        		this.photoPreviewOpen = true;
+        		if (this.ref) { this.ref.markForCheck(); }
+        	}
+        	public closePhotoPreview(): void {
+        		this.photoPreviewOpen = false;
+        		this.photoPreviewUrl = "";
+        		if (this.ref) { this.ref.markForCheck(); }
+        	}
+        	public stopPhotoPreviewBubble(ev: any): void {
+        		if (ev && ev.stopPropagation) { ev.stopPropagation(); }
         	}
         	public hasVerbatim(): boolean {
         		return !!(this.verbatimText || "").trim();
@@ -294,19 +306,6 @@ title: Récap fiche
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: script:displayOrDash(sheetCode)
-          ↓HeroSub [ngx.components.UIElement-1779400001036]: 
-            tagName: p
-            ↓AttrClass [ngx.components.UIAttribute-1779400001037]: 
-              attrName: class
-              attrValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:vu-recap-hero-sub
-            ↓Text [ngx.components.UIText-1779400001201]: 
-              textValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: 'script:displayOrDash(firstName) + (dateLabel ? '' • '' + dateLabel : '''')'
           ↓BadgeRow [ngx.components.UIElement-1779400001038]: 
             tagName: div
             ↓AttrClass [ngx.components.UIAttribute-1779400001039]: 
@@ -626,32 +625,6 @@ title: Récap fiche
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: script:displayOrDash(intervieweeEmail)
-          ↓LblRgpd [ngx.components.UIElement-1779400001108]: 
-            tagName: p
-            ↓AttrClass [ngx.components.UIAttribute-1779400001109]: 
-              attrName: class
-              attrValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:vu-field-label
-            ↓Text [ngx.components.UIText-1779400001223]: 
-              textValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:Consentement RGPD
-          ↓ValRgpd [ngx.components.UIElement-1779400001110]: 
-            tagName: p
-            ↓AttrClass [ngx.components.UIAttribute-1779400001111]: 
-              attrName: class
-              attrValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:vu-recap-value
-            ↓Text [ngx.components.UIText-1779400001224]: 
-              textValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: script:consentText
           ↓LblRc [ngx.components.UIElement-1779400001112]: 
             tagName: p
             ↓AttrClass [ngx.components.UIAttribute-1779400001113]: 
@@ -678,46 +651,91 @@ title: Récap fiche
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: script:recontactText
-          ↓LblPh [ngx.components.UIElement-1779400001116]: 
-            tagName: p
-            ↓AttrIf [ngx.components.UIAttribute-1779400001118]: 
+          ↓PhotoSection [ngx.components.UIElement-1779400001125]: 
+            tagName: div
+            ↓AttrIf [ngx.components.UIAttribute-1779400001126]: 
               attrName: '*ngIf'
               attrValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:hasPhoto()
-            ↓AttrClass [ngx.components.UIAttribute-1779400001117]: 
+            ↓AttrClass [ngx.components.UIAttribute-1779400001127]: 
               attrName: class
               attrValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:vu-field-label
-            ↓Text [ngx.components.UIText-1779400001227]: 
-              textValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:Photo
-          ↓Photo [ngx.components.UIDynamicElement-1779400001119]: 
-            beanData: '{"ionBean":"Image"}'
-            tagName: ion-img
-            ↓AttrIf [ngx.components.UIAttribute-1779400001120]: 
-              attrName: '*ngIf'
-              attrValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:hasPhoto()
-            ↓AttrSrc [ngx.components.UIAttribute-1779400001122]: 
-              attrName: '[src]'
-              attrValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: script:photoDataUrl
-            ↓AttrClass [ngx.components.UIAttribute-1779400001121]: 
-              attrName: class
-              attrValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:vu-recap-photo
+                  - MobileSmartSourceType: plain:vu-photo-section
+            ↓HeadRow [ngx.components.UIElement-1779400001128]: 
+              tagName: div
+              ↓AttrClass [ngx.components.UIAttribute-1779400001129]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:vu-photo-section-head
+              ↓LblPh [ngx.components.UIElement-1779400001116]: 
+                tagName: label
+                ↓AttrClass [ngx.components.UIAttribute-1779400001117]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:vu-field-label
+                ↓Text [ngx.components.UIText-1779400001227]: 
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:Photos
+              ↓Counter [ngx.components.UIElement-1779400001134]: 
+                tagName: span
+                ↓AttrClass [ngx.components.UIAttribute-1779400001135]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:vu-photo-counter
+                ↓Text [ngx.components.UIText-1779400001136]: 
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:photoCountLabel()
+            ↓Gallery [ngx.components.UIElement-1779400001137]: 
+              tagName: div
+              ↓AttrClass [ngx.components.UIAttribute-1779400001138]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:vu-photo-gallery
+              ↓ThumbSlot [ngx.components.UIElement-1779400001139]: 
+                tagName: div
+                ↓AttrClass [ngx.components.UIAttribute-1779400001140]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:vu-photo-slot vu-photo-slot--filled
+                ↓AttrFor [ngx.components.UIAttribute-1779400001141]: 
+                  attrName: '*ngFor'
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:let photo of photos
+                ↓AttrClick [ngx.components.UIAttribute-1779400001142]: 
+                  attrName: (click)
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:openPhotoPreview(photo)
+                ↓ImgPrev [ngx.components.UIDynamicElement-1779400001143]: 
+                  beanData: '{"ionBean":"Image"}'
+                  tagName: ion-img
+                  ↓AttrSrc [ngx.components.UIAttribute-1779400001144]: 
+                    attrName: '[src]'
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:photo
           ↓ErrBlock [ngx.components.UIElement-1779400001130]: 
             tagName: div
             ↓AttrIf [ngx.components.UIAttribute-1779400001131]: 
@@ -739,9 +757,9 @@ title: Récap fiche
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                     - MobileSmartSourceType: plain:Erreur synchronisation
-            ↓ValErr [ngx.components.UIElement-1779400001134]: 
+            ↓ValErr [ngx.components.UIElement-1779400001150]: 
               tagName: p
-              ↓AttrClass [ngx.components.UIAttribute-1779400001135]: 
+              ↓AttrClass [ngx.components.UIAttribute-1779400001151]: 
                 attrName: class
                 attrValue: 
                   - xmlizable: 
@@ -752,35 +770,84 @@ title: Récap fiche
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                     - MobileSmartSourceType: script:syncError
-        ↓BtnEdit [ngx.components.UIDynamicElement-1779400001140]: 
-          beanData: '{"ionBean":"Button","IonColor":"plain:primary"}'
-          tagName: ion-button
-          ↓AttrClass [ngx.components.UIAttribute-1779400001141]: 
-            attrName: class
-            attrValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:vu-btn-primary
-          ↓AttrIf [ngx.components.UIAttribute-1779400001142]: 
-            attrName: '*ngIf'
-            attrValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:isDraft
-          ↓Event [ngx.components.UIControlEvent-1779400001143]: 
-            ↓GoEdit [ngx.components.UICustomAction-1779400001144]: 
-              actionValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                    →: |
-                      		page.continueEdit().then(() => resolve());
-                      
-          ↓Text [ngx.components.UIText-1779400001145]: 
-            textValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:Continuer l''édition
+  ↓Lightbox [ngx.components.UIElement-1779400001300]: 
+    tagName: div
+    ↓AttrIf [ngx.components.UIAttribute-1779400001301]: 
+      attrName: '*ngIf'
+      attrValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: plain:photoPreviewOpen
+    ↓AttrClass [ngx.components.UIAttribute-1779400001302]: 
+      attrName: class
+      attrValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: plain:vu-photo-lightbox
+    ↓AttrClick [ngx.components.UIAttribute-1779400001303]: 
+      attrName: (click)
+      attrValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: plain:closePhotoPreview()
+    ↓BtnCloseLb [ngx.components.UIElement-1779400001304]: 
+      tagName: button
+      ↓AttrType [ngx.components.UIAttribute-1779400001305]: 
+        attrName: type
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:button
+      ↓AttrClass [ngx.components.UIAttribute-1779400001306]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:vu-photo-lightbox__close
+      ↓AttrAria [ngx.components.UIAttribute-1779400001307]: 
+        attrName: aria-label
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:Fermer
+      ↓AttrClick [ngx.components.UIAttribute-1779400001308]: 
+        attrName: (click)
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:closePhotoPreview()
+      ↓IconCloseLb [ngx.components.UIDynamicElement-1779400001309]: 
+        beanData: '{"ionBean":"Icon","IconName":"plain:close"}'
+        tagName: ion-icon
+    ↓FrameLb [ngx.components.UIElement-1779400001310]: 
+      tagName: div
+      ↓AttrClass [ngx.components.UIAttribute-1779400001311]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:vu-photo-lightbox__frame
+      ↓AttrClick [ngx.components.UIAttribute-1779400001312]: 
+        attrName: (click)
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:stopPhotoPreviewBubble($event)
+      ↓ImgLb [ngx.components.UIDynamicElement-1779400001313]: 
+        beanData: '{"ionBean":"Image"}'
+        tagName: ion-img
+        ↓AttrSrc [ngx.components.UIAttribute-1779400001314]: 
+          attrName: '[src]'
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:photoPreviewUrl
+        ↓AttrClass [ngx.components.UIAttribute-1779400001316]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-photo-lightbox__img
 ↓PageEvent [ngx.components.UIPageEvent-1779400001200]: 
   ↓OnShow [ngx.components.UICustomAction-1779400001201]: 
     actionValue: 

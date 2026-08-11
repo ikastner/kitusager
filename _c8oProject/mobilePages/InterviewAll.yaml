@@ -28,14 +28,7 @@ scriptContent:
         		if (store._page !== this) { store._page = this; }
         		const r = store.resumeInterview(iv);
         		if (!r || !r.route) { return; }
-        		if (r.route === "/interview-recap") {
-        			const navController = this.getInstance(NavController);
-        			await navController.navigateForward("/interview-recap", {
-        				queryParams: { interviewId: iv.id }
-        			});
-        			return;
-        		}
-        		this.angularRouter.navigate([r.route]);
+        		await this.angularRouter.navigate([r.route]);
         	}
         	/*End_c8o_PageFunction*/'
 segment: interview-all
@@ -202,16 +195,19 @@ title: Toutes les interviews
           ↓Notes [ngx.components.UIElement-1779290003054]: 
             tagName: span
             ↓AttrClass [ngx.components.UIAttribute-1779290003055]: 
-              attrName: class
+              attrName: '[class]'
               attrValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:vu-card-notes
+                  - MobileSmartSourceType: plain:vu-card-notes vu-card-status--ok
+            ↓Icon [ngx.components.UIDynamicElement-1779290003057]: 
+              beanData: '{"ionBean":"Icon","IconName":"plain:checkmark-circle"}'
+              tagName: ion-icon
             ↓Text [ngx.components.UIText-1779290003056]: 
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: script:iv.entryCount + ' notes'
+                  - MobileSmartSourceType: script:iv.validationLabel
       ↓Empty [ngx.components.UIElement-1779290003060]: 
         tagName: p
         ↓AttrIf [ngx.components.UIAttribute-1779290003061]: 

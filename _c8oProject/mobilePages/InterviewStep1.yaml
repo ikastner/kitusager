@@ -36,16 +36,52 @@ scriptContent:
         	public async loadStep(): Promise<void> {
         		const store = await this.ensureStore();
         		if (!store) { return; }
+        		if (store.whenReady) { await store.whenReady(); }
         		let iv = store.getActiveInterview();
-        		if (!iv || iv.format !== "salon") {
-        			iv = store.createSalonDraft();
-        		}
+        		if (!iv || iv.format !== "salon") { return; }
         		this.sheetCode = iv.sheetCode || "";
-        		if (this.sheetCode.startsWith("F-") && this.sheetCode.includes(" - ")) {
+        		this.salonName = (iv.salonName || "").trim();
+        		if (!this.salonName && this.sheetCode.startsWith("F-") && this.sheetCode.includes(" - ")) {
         			this.salonName = this.sheetCode.substring(this.sheetCode.indexOf(" - ") + 3);
-        		} else {
+        		} else if (!this.salonName) {
         			this.salonName = this.sheetCode.replace(/^F-?/i, "");
         		}
+        	}
+        	public touchDraft(): void {
+        		this.saveDraft();
+        		if (this.ref) { this.ref.markForCheck(); }
+        	}
+        	public async confirmQuit(): Promise<void> {
+        		if (this.global && this.global.confirmQuitWizard) {
+        			await this.global.confirmQuitWizard(this);
+        			return;
+        		}
+        		const app: any = this.router && this.router.sharedObject;
+        		if (app && app.confirmQuitWizard) {
+        			await app.confirmQuitWizard(this);
+        		}
+        	}
+        	public saveDraft(): void {
+        		const store = this.getStoreSync();
+        		if (!store) { return; }
+        		if (store._page !== this) { store._page = this; }
+        		const iv = store.getActiveInterview();
+        		if (!iv || iv.format !== "salon") { return; }
+        		const sName = (this.salonName || "").trim();
+        		const partial: any = { salonName: sName, wizardStep: 1 };
+        		if (sName) {
+        			const d = new Date(iv.createdAt || new Date());
+        			const pad = (n: number) => n < 10 ? ''0'' + n : n;
+        			const dateStr = pad(d.getDate()) + "/" + pad(d.getMonth() + 1) + "/" + d.getFullYear() + " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+        			partial.sheetCode = "F-" + dateStr + " - " + sName;
+        		}
+        		store.updateSalonDraft(partial);
+        	}
+        	public flushStep(): void {
+        		this.saveDraft();
+        	}
+        	public prepareBack(): void {
+        		this.saveDraft();
         	}
         	public getFicheLabel(): string {
         		const store = this.getStoreSync();
@@ -72,7 +108,8 @@ scriptContent:
         		if (store._page !== this) { store._page = this; }
         		let iv = store.getActiveInterview();
         		if (!iv || iv.format !== "salon") {
-        			iv = store.createSalonDraft();
+        			this.fieldError = "Session expirée. Recommencez depuis l'accueil.";
+        			return;
         		}
         		const sName = (this.salonName || "").trim();
         		if (!sName) {
@@ -84,7 +121,7 @@ scriptContent:
         		const dateStr = pad(d.getDate()) + "/" + pad(d.getMonth() + 1) + "/" + d.getFullYear() + " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
         		const computedCode = "F-" + dateStr + " - " + sName;
         		this.sheetCode = computedCode;
-        		store.updateSalonDraft({ sheetCode: computedCode, wizardStep: 2 });
+        		store.updateSalonDraft({ sheetCode: computedCode, salonName: sName, wizardStep: 2 });
         		this.wizardCanProceed = true;
         	}
         	/*End_c8o_PageFunction*/'
@@ -115,6 +152,33 @@ title: Etape 1
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
             - MobileSmartSourceType: plain:vu-wizard-header
+      ↓BtnQuit [ngx.components.UIElement-1779300099101]: 
+        tagName: button
+        ↓AttrType [ngx.components.UIAttribute-1779300099102]: 
+          attrName: type
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:button
+        ↓AttrClass [ngx.components.UIAttribute-1779300099103]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-wizard-quit-btn
+        ↓Text [ngx.components.UIText-1779300099104]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:Quitter
+        ↓Event [ngx.components.UIControlEvent-1779300099105]: 
+          ↓DoQuit [ngx.components.UICustomAction-1779300099106]: 
+            actionValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                  →: |
+                    		page.confirmQuit().then(() => resolve()).catch(() => resolve());
       ↓Sub [ngx.components.UIElement-1779300001012]: 
         tagName: p
         ↓AttrClass [ngx.components.UIAttribute-1779300001013]: 
@@ -242,6 +306,18 @@ title: Etape 1
              "Placeholder": "plain:Saisissez le nom du salon..."
             }'
           tagName: ion-input
+          ↓Event [ngx.components.UIControlEvent-1779300099601]: 
+            attrName: (ionInput)
+            eventName: ionInput
+            ↓OnInput [ngx.components.UICustomAction-1779300099602]: 
+              actionValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                    →: |
+                      		if (event && event.detail) { page.salonName = event.detail.value || ""; }
+                      		page.touchDraft();
+                      		resolve();
           ↓AttrClass [ngx.components.UIAttribute-1779300001049]: 
             attrName: class
             attrValue: 
@@ -323,6 +399,15 @@ title: Etape 1
               }'
             tagName: ion-button
             ↓Event [ngx.components.UIControlEvent-1779300001063]: 
+              ↓SaveBack [ngx.components.UICustomAction-17793000010636]: 
+                actionValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                      →: |
+                        		page.flushStep();
+                        		resolve();
+                        
               ↓Pop [ngx.components.UIDynamicAction-1779300001064]: 
                 beanData: '{"ionBean":"PopPageAction"}'
             ↓Text [ngx.components.UIText-1779300001065]: 
@@ -349,22 +434,13 @@ title: Etape 1
                         		page.ref.markForCheck();
                         		if (page.fieldError) {
                         			page.showToast(page.fieldError);
-                        			resolve();
-                        		} else {
-                        			const app: any = page.router && page.router.sharedObject;
-                        			const store = app && app.getInterviewStore ? app.getInterviewStore() : null;
-                        			const done = () => resolve();
-                        			if (store && store.flushPersist) {
-                        				store.flushPersist().then(done).catch(done);
-                        			} else {
-                        				done();
-                        			}
                         		}
+                        		resolve();
                         '
-                ↓IfProceed [ngx.components.UIDynamicAction-1779300001069]: 
-                  beanData: '{"ionBean":"IfAction","condition":"script:page.wizardCanProceed"}'
-                  ↓PushStep2 [ngx.components.UIDynamicAction-1779901880470]: 
-                    beanData: '{"ionBean":"PushPageAction","page":"plain:InterviewStep2"}'
+              ↓IfProceed [ngx.components.UIDynamicAction-1779300001069]: 
+                beanData: '{"ionBean":"IfAction","condition":"script:page.wizardCanProceed"}'
+                ↓PushStep2 [ngx.components.UIDynamicAction-1779901880470]: 
+                  beanData: '{"ionBean":"PushPageAction","page":"plain:InterviewStep2"}'
             ↓Text [ngx.components.UIText-1779300001070]: 
               textValue: 
                 - xmlizable: 
@@ -377,6 +453,8 @@ title: Etape 1
         - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
         - com.twinsoft.convertigo.beans.common.FormatedContent: 
           →: |
-            		page.loadStep().then(() => page.ref.markForCheck());
-            		resolve();
+            		page.loadStep().then(() => {
+            			page.ref.markForCheck();
+            			resolve();
+            		}).catch(() => resolve());
             

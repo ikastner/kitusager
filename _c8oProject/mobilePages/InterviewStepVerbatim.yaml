@@ -22,14 +22,45 @@ scriptContent:
         		const app: any = this.router && this.router.sharedObject;
         		if (app && app.ensureInterviewStore) { return app.ensureInterviewStore(this); }
         		if (app && app.initVuApp) { app.initVuApp(); }
-        		return app && app.getInterviewStore ? app.getInterviewStore() : null;
+        		return app && app.getInterviewStore ? app.getInterviewStore() : ((this.global && this.global.interviewStore) || null);
         	}
         	public async loadStep(): Promise<void> {
         		const store = await this.ensureStore();
         		if (!store) { return; }
+        		if (store.whenReady) { await store.whenReady(); }
         		const iv = store.getActiveInterview();
         		if (!iv || iv.format !== "salon") { return; }
         		this.verbatimDraft = iv.verbatimText || "";
+        	}
+        	public touchDraft(): void {
+        		this.saveDraft();
+        		if (this.ref) { this.ref.markForCheck(); }
+        	}
+        	public async confirmQuit(): Promise<void> {
+        		if (this.global && this.global.confirmQuitWizard) {
+        			await this.global.confirmQuitWizard(this);
+        			return;
+        		}
+        		const app: any = this.router && this.router.sharedObject;
+        		if (app && app.confirmQuitWizard) {
+        			await app.confirmQuitWizard(this);
+        		}
+        	}
+        	public saveDraft(): void {
+        		const store = this.getStoreSync();
+        		if (!store) { return; }
+        		if (store._page !== this) { store._page = this; }
+        		if (!store.getActiveInterview()) { return; }
+        		store.updateSalonDraft({
+        			verbatimText: (this.verbatimDraft || "").trim(),
+        			wizardStep: 3
+        		});
+        	}
+        	public flushStep(): void {
+        		this.saveDraft();
+        	}
+        	public prepareBack(): void {
+        		this.saveDraft();
         	}
         	public applySpeechReceived(data: any): void {
         		if (!this.isRecording) { return; }
@@ -43,12 +74,14 @@ scriptContent:
         					display = (display ? display + " " : "") + interim + " (en cours...)";
         				}
         				this.verbatimDraft = (prefix + display).trim();
+        				this.saveDraft();
         				return;
         			}
         		}
         		const chunk = Array.isArray(data) ? data.join(" ") : String(data != null ? data : "");
         		if (!chunk.trim()) { return; }
         		this.verbatimDraft = (prefix + chunk).trim();
+        		this.saveDraft();
         	}
         	public async showOfflineAlert(): Promise<void> {
         		const alertCtrl = this.getInstance(AlertController);
@@ -181,6 +214,33 @@ title: Etape 3
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
             - MobileSmartSourceType: plain:vu-wizard-header
+      ↓BtnQuit [ngx.components.UIElement-1779300099301]: 
+        tagName: button
+        ↓AttrType [ngx.components.UIAttribute-1779300099302]: 
+          attrName: type
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:button
+        ↓AttrClass [ngx.components.UIAttribute-1779300099303]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-wizard-quit-btn
+        ↓Text [ngx.components.UIText-1779300099304]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:Quitter
+        ↓Event [ngx.components.UIControlEvent-1779300099305]: 
+          ↓DoQuit [ngx.components.UICustomAction-1779300099306]: 
+            actionValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                  →: |
+                    		page.confirmQuit().then(() => resolve()).catch(() => resolve());
       ↓Sub [ngx.components.UIElement-1779300010012]: 
         tagName: p
         ↓AttrClass [ngx.components.UIAttribute-1779300010013]: 
@@ -305,6 +365,18 @@ title: Etape 3
                "Rows": "plain:5"
               }'
             tagName: ion-textarea
+            ↓Event [ngx.components.UIControlEvent-1779300099701]: 
+              attrName: (ionInput)
+              eventName: ionInput
+              ↓OnInput [ngx.components.UICustomAction-1779300099702]: 
+                actionValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                      →: |
+                        		if (event && event.detail) { page.verbatimDraft = event.detail.value || ""; }
+                        		page.touchDraft();
+                        		resolve();
             ↓AttrClass [ngx.components.UIAttribute-1779300010133]: 
               attrName: class
               attrValue: 
@@ -393,7 +465,7 @@ title: Etape 3
                     - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                     - com.twinsoft.convertigo.beans.common.FormatedContent: 
                       →: |
-                        		page.commitBack();
+                        		page.prepareBack();
                         		page.ref.markForCheck();
                         		resolve();
                         
@@ -418,10 +490,10 @@ title: Etape 3
                         		page.ref.markForCheck();
                         		resolve();
                         
-                ↓IfProceed [ngx.components.UIDynamicAction-1779300010170]: 
-                  beanData: '{"ionBean":"IfAction","condition":"script:page.wizardCanProceed"}'
-                  ↓PushStep3 [ngx.components.UIDynamicAction-1779300010171]: 
-                    beanData: '{"ionBean":"PushPageAction","page":"plain:InterviewStep3"}'
+              ↓IfProceed [ngx.components.UIDynamicAction-1779300010170]: 
+                beanData: '{"ionBean":"IfAction","condition":"script:page.wizardCanProceed"}'
+                ↓PushStep3 [ngx.components.UIDynamicAction-1779300010171]: 
+                  beanData: '{"ionBean":"PushPageAction","page":"plain:InterviewStep3"}'
             ↓Text [ngx.components.UIText-1779300010172]: 
               textValue: 
                 - xmlizable: 
@@ -434,5 +506,8 @@ title: Etape 3
         - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
         - com.twinsoft.convertigo.beans.common.FormatedContent: 
           →: |
-            		page.loadStep().then(() => page.ref.markForCheck());
-            		resolve();
+            		page.loadStep().then(() => {
+            			page.ref.markForCheck();
+            			resolve();
+            		}).catch(() => resolve());
+            

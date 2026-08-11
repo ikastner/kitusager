@@ -73,12 +73,14 @@ componentScriptContent:
         			const store = app.getInterviewStore();
         			app.global.startSpeechListening = (p: any) => app.startSpeechListening(p);
         			app.global.stopSpeechListening = (p: any) => app.stopSpeechListening(p);
+        			app.global.confirmQuitWizard = (p: any) => app.confirmQuitWizard(p);
         			// Exposer le store tout de suite (comme VoxUrssaf V1) — le pull FullSync reste async
         			app.global.interviewStore = store;
         			if (app.router && app.router.sharedObject) {
         				app.router.sharedObject.interviewStore = store;
         				if (app.router.sharedObject.global) {
         					app.router.sharedObject.global.interviewStore = store;
+        					app.router.sharedObject.global.confirmQuitWizard = app.global.confirmQuitWizard;
         				}
         			}
         			if (store._ready) { return; }
@@ -143,6 +145,44 @@ componentScriptContent:
         			return navController.navigateRoot(url);
         		}
         	
+        		public async confirmQuitWizard(page: any): Promise<void> {
+        			const appRef: any = this;
+        			const store = await this.ensureInterviewStore(page);
+        			const goHome = async () => {
+        				if (store) { store.discardSalonDraft(page); }
+        				await appRef.wizardHome(page);
+        				try {
+        					const home = appRef.routerProvider && appRef.routerProvider.getPageByName
+        						? appRef.routerProvider.getPageByName("Page") : null;
+        					if (home && home.instance && home.instance.loadHome) {
+        						await home.instance.loadHome();
+        						home.instance.ref.markForCheck();
+        					}
+        				} catch (e) { /* ignore */ }
+        			};
+        			if (!store) {
+        				await goHome();
+        				return;
+        			}
+        			const alertCtrl = page.getInstance(AlertController);
+        			if (!alertCtrl) {
+        				await goHome();
+        				return;
+        			}
+        			const alert = await alertCtrl.create({
+        				header: "Quitter le formulaire ?",
+        				message: "Si vous quittez maintenant, votre saisie sera perdue. Voulez-vous continuer ?",
+        				buttons: [
+        					{ text: "Annuler", role: "cancel" },
+        					{
+        						text: "Quitter",
+        						handler: () => { goHome(); }
+        					}
+        				]
+        			});
+        			await alert.present();
+        		}
+        	
         		public getInterviewStore(): any {
         			const app: any = this;
         			if (!app._interviewStore) {
@@ -158,6 +198,7 @@ componentScriptContent:
         					_page: null as any,
         					_saveQueue: null as Promise<void> | null,
         					_recapViewId: null as string | null,
+        					_wizardLiveDraft: null as any,
         	
         					init() { /* compat — init réel via initWithPage */ },
         	
@@ -223,8 +264,16 @@ componentScriptContent:
         							speechLocale: snap.speechLocale || empty.speechLocale,
         							questions: (snap.questions || []).slice(),
         							interviews: snap.interviews.map((iv: any) => Object.assign({}, iv)),
-        							activeInterviewId: snap.activeInterviewId || null
+        							activeInterviewId: null
         						};
+        						// Ne pas restaurer un brouillon abandonné d'une session précédente
+        						const snapActive = (snap.activeInterviewId || "").trim();
+        						if (snapActive) {
+        							const snapIv = this._cache.interviews.find((iv: any) => iv.interviewId === snapActive);
+        							if (snapIv && this.isInterviewValidated(snapIv)) {
+        								this._cache.activeInterviewId = snapActive;
+        							}
+        						}
         						return true;
         					},
         	
@@ -239,6 +288,12 @@ componentScriptContent:
         								const copy = Object.assign({}, iv);
         								if (copy.entries) { copy.entries = copy.entries.slice(); }
         								if (copy.journeySteps) { copy.journeySteps = copy.journeySteps.slice(); }
+        								if (copy.salonPhotos) {
+        									copy.salonPhotos = (copy.salonPhotos || []).map((p: string) => {
+        										if (p && p.length > 120000) { return ""; }
+        										return p;
+        									}).filter((p: string) => !!p);
+        								}
         								if (copy.photoDataUrl && copy.photoDataUrl.length > 120000) {
         									copy._photoOmitted = true;
         									delete copy.photoDataUrl;
@@ -475,6 +530,7 @@ componentScriptContent:
         						const dateStr = pad(d.getDate()) + "/" + pad(d.getMonth() + 1) + "/" + d.getFullYear() + " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
         						return {
         							format: "salon",
+        							salonName: "",
         							sheetCode: "F-" + dateStr + " - " + eventId,
         							journeySteps: [] as string[],
         							globalSatisfaction: "",
@@ -489,6 +545,7 @@ componentScriptContent:
         							recontactOk: false,
         							firstName: "",
         							photoDataUrl: "",
+        							salonPhotos: [] as string[],
         							wizardStep: 1
         						};
         					},
@@ -512,6 +569,7 @@ componentScriptContent:
         						if (doc.format === "salon") {
         							Object.assign(base, {
         								format: "salon",
+        								salonName: doc.salonName || "",
         								sheetCode: doc.sheetCode || "",
         								journeySteps: (doc.journeySteps || []).slice(),
         								globalSatisfaction: doc.globalSatisfaction || "",
@@ -526,6 +584,7 @@ componentScriptContent:
         								recontactOk: !!doc.recontactOk,
         								firstName: doc.firstName || "",
         								photoDataUrl: doc.photoDataUrl || "",
+        								salonPhotos: (doc.salonPhotos || []).slice(),
         								wizardStep: doc.wizardStep || 1
         							});
         						}
@@ -555,6 +614,7 @@ componentScriptContent:
         						if (iv.format === "salon") {
         							Object.assign(doc, {
         								format: "salon",
+        								salonName: iv.salonName || "",
         								sheetCode: iv.sheetCode || "",
         								journeySteps: iv.journeySteps || [],
         								globalSatisfaction: iv.globalSatisfaction || "",
@@ -569,6 +629,7 @@ componentScriptContent:
         								recontactOk: !!iv.recontactOk,
         								firstName: iv.firstName || "",
         								photoDataUrl: iv.photoDataUrl || "",
+        								salonPhotos: (iv.salonPhotos || []).slice(),
         								wizardStep: iv.wizardStep || 1
         							});
         						}
@@ -663,11 +724,28 @@ componentScriptContent:
         						return out;
         					},
         	
+        					purgeDraftInterviews(interviews: any[], keepInterviewId?: string | null): any[] {
+        						const keepId = (keepInterviewId || "").trim();
+        						return (interviews || []).filter((iv: any) => {
+        							if (!iv) { return false; }
+        							if (keepId && iv.interviewId === keepId) { return true; }
+        							const st = iv.status || "draft";
+        							return st !== "draft";
+        						});
+        					},
+        	
         					async reloadCache(page: any): Promise<void> {
+        						const wizardLiveDraft = this._wizardLiveDraft
+        							? this.cloneSalonDraft(this._wizardLiveDraft) : null;
         						const memoryInterviews = (this._cache && this._cache.interviews)
         							? this._cache.interviews.slice() : [];
         						const memoryActiveId = (this._cache && this._cache.activeInterviewId)
         							? this._cache.activeInterviewId : null;
+        						const memoryActiveIv = memoryActiveId
+        							? memoryInterviews.find((iv: any) => iv && iv.interviewId === memoryActiveId) : null;
+        						const wizardInProgress = !!(memoryActiveIv
+        							&& memoryActiveIv.format === "salon"
+        							&& (memoryActiveIv.status || "draft") === "draft");
         						const recapViewId = this._recapViewId;
         						const empty = this.getEmptyData();
         						const offlineSnap = this.loadLocalSnapshot();
@@ -694,8 +772,10 @@ componentScriptContent:
         								investigatorName: config.investigatorName || empty.investigatorName,
         								speechLocale: config.speechLocale || empty.speechLocale,
         								questions: (config.questions || []).slice(),
-        								interviews: [],
-        								activeInterviewId: config.activeInterviewId || null
+        								interviews: wizardInProgress ? memoryInterviews.slice() : [],
+        								activeInterviewId: wizardInProgress && memoryActiveId
+        									? memoryActiveId
+        									: (config.activeInterviewId || null)
         							};
         						} else {
         							this._cache = empty;
@@ -742,11 +822,35 @@ componentScriptContent:
         							}
         							interviews = this.mergeInterviewsById(interviews, offlineSnap.interviews);
         						}
-        						const merged = this.mergeInterviewsById(interviews, memoryInterviews);
+        						let merged = this.mergeInterviewsById(interviews, memoryInterviews);
+        						const freshSnap = this.loadLocalSnapshot();
+        						if (freshSnap && freshSnap.interviews && freshSnap.interviews.length) {
+        							merged = this.mergeInterviewsById(merged, freshSnap.interviews);
+        						}
+        						// Réintégrer les brouillons modifiés pendant le reload async
+        						const liveInterviews = (this._cache && this._cache.interviews)
+        							? this._cache.interviews.slice() : [];
+        						if (liveInterviews.length) {
+        							merged = this.mergeInterviewsById(merged, liveInterviews);
+        						}
+        						let keepActiveId = memoryActiveId
+        							|| (this._cache && this._cache.activeInterviewId)
+        							|| null;
+        						if (wizardInProgress && memoryActiveId) {
+        							keepActiveId = memoryActiveId;
+        						}
+        						merged = this.purgeDraftInterviews(merged, keepActiveId);
+        						if (keepActiveId && !merged.find((iv: any) => iv && iv.interviewId === keepActiveId)) {
+        							const rescue = liveInterviews.find((iv: any) => iv && iv.interviewId === keepActiveId)
+        								|| memoryInterviews.find((iv: any) => iv && iv.interviewId === keepActiveId);
+        							if (rescue) { merged.unshift(rescue); }
+        						}
         						merged.sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
         						this._cache.interviews = merged;
-        						if (memoryActiveId) {
-        							this._cache.activeInterviewId = memoryActiveId;
+        						if (keepActiveId && merged.find((iv: any) => iv.interviewId === keepActiveId)) {
+        							this._cache.activeInterviewId = keepActiveId;
+        						} else {
+        							this._cache.activeInterviewId = null;
         						}
         						if (recapViewId) {
         							this._recapViewId = recapViewId;
@@ -756,6 +860,15 @@ componentScriptContent:
         						}
         						if (offlineSnap && offlineSnap.questions && (!this._cache.questions || !this._cache.questions.length)) {
         							this._cache.questions = (offlineSnap.questions || []).slice();
+        						}
+        						if (wizardLiveDraft && wizardLiveDraft.interviewId) {
+        							this._wizardLiveDraft = wizardLiveDraft;
+        							const liveIdx = this._cache.interviews.findIndex((iv: any) => iv && iv.interviewId === wizardLiveDraft.interviewId);
+        							if (liveIdx >= 0) {
+        								this.syncRowFromLiveDraft(this._cache.interviews[liveIdx], wizardLiveDraft);
+        							} else if (keepActiveId === wizardLiveDraft.interviewId) {
+        								this._cache.interviews.unshift(this.cloneSalonDraft(wizardLiveDraft));
+        							}
         						}
         						if (merged.length > 0) {
         							try { this.saveLocalSnapshot(); } catch (e) { /* ignore */ }
@@ -794,7 +907,9 @@ componentScriptContent:
         						this.saveSync(this._page);
         					},
         					listForHome() {
-        						return (this.load().interviews || []).map((iv: any) => ({
+        						return (this.load().interviews || [])
+        							.filter((iv: any) => this.isInterviewValidated(iv))
+        							.map((iv: any) => ({
         							id: iv.interviewId,
         							intervieweeName: iv.format === "salon"
         								? ((iv.firstName || iv.sheetCode || "Fiche salon").trim() || "Fiche salon")
@@ -805,14 +920,46 @@ componentScriptContent:
         							verbatimPreview: (iv.verbatimText || "").substring(0, 100),
         							globalSatisfaction: iv.globalSatisfaction || "",
         							isSalon: iv.format === "salon",
-        							isDraft: iv.status === "draft",
-        							wizardStep: iv.wizardStep || 1,
         							entryCount: iv.format === "salon"
-        								? (iv.verbatimText ? 1 : 0) + (iv.photoDataUrl ? 1 : 0)
+        								? (this.getSalonPhotos(iv).length + (iv.verbatimText ? 1 : 0))
         								: ((iv.entries || []).length),
         							dateLabel: this.formatDate(iv.updatedAt || iv.createdAt),
-        							status: iv.status || "saved"
+        							status: iv.status || "saved",
+        							isValidated: true,
+        							validationLabel: "Interview validée"
         						}));
+        					},
+        					isInterviewValidated(iv: any): boolean {
+        						if (!iv) { return false; }
+        						const st = iv.status || "draft";
+        						return st === "saved" || st === "synced" || st === "syncing";
+        					},
+        					hasSalonSheet(iv: any): boolean {
+        						if (!iv) { return false; }
+        						const salonName = (iv.salonName || "").trim();
+        						if (salonName) { return true; }
+        						const sheet = (iv.sheetCode || "").trim();
+        						if (!sheet || sheet === "F-") { return false; }
+        						if (sheet.indexOf(" - ") >= 0) {
+        							const namePart = sheet.substring(sheet.indexOf(" - ") + 3).trim();
+        							const eventId = (this.load().eventId || "salon-externe-2026");
+        							return !!namePart && namePart !== eventId;
+        						}
+        						return false;
+        					},
+        					getSalonMissingFields(iv: any): string[] {
+        						if (!iv) { return ["code fiche", "verbatim"]; }
+        						const missing: string[] = [];
+        						if (!this.hasSalonSheet(iv)) { missing.push("code fiche"); }
+        						if (!((iv.verbatimText || "").trim())) { missing.push("verbatim"); }
+        						return missing;
+        					},
+        					getInterviewValidationLabel(iv: any): string {
+        						if (!iv) { return ""; }
+        						return "Interview validée";
+        					},
+        					countValidatedInterviews() {
+        						return (this.load().interviews || []).filter((iv: any) => this.isInterviewValidated(iv)).length;
         					},
         					countTotalNotes() {
         						return (this.load().interviews || []).reduce((acc: number, iv: any) => {
@@ -840,10 +987,74 @@ componentScriptContent:
         					getInterview(id: string) {
         						return (this.load().interviews || []).find((i: any) => i.interviewId === id) || null;
         					},
+        					cloneSalonDraft(src: any): any {
+        						if (!src) { return null; }
+        						const c = Object.assign({}, src);
+        						c.journeySteps = (src.journeySteps || []).slice();
+        						c.salonPhotos = (src.salonPhotos || []).slice();
+        						if (src.entries) { c.entries = src.entries.slice(); }
+        						return c;
+        					},
+        					clearWizardLiveDraft() {
+        						this._wizardLiveDraft = null;
+        					},
+        					ensureWizardLiveDraft(row: any): any {
+        						if (!row || !row.interviewId) { return null; }
+        						if (!this._wizardLiveDraft || this._wizardLiveDraft.interviewId !== row.interviewId) {
+        							this._wizardLiveDraft = this.cloneSalonDraft(row);
+        						}
+        						return this._wizardLiveDraft;
+        					},
+        					sanitizeSalonPatch(patch: any, base: any, forceClear: boolean): any {
+        						const out = Object.assign({}, patch || {});
+        						if (forceClear) { return out; }
+        						const arrayKeys = ["journeySteps", "salonPhotos"];
+        						for (const k of arrayKeys) {
+        							if (out[k] && Array.isArray(out[k]) && out[k].length === 0) {
+        								const existing = base[k];
+        								if (Array.isArray(existing) && existing.length > 0) { delete out[k]; }
+        							}
+        						}
+        						const strKeys = ["verbatimText", "firstName", "intervieweeEmail", "sector", "age", "urssafSince", "contactMode", "profileCount", "salonName", "globalSatisfaction"];
+        						for (const k of strKeys) {
+        							if (out[k] === "" && (base[k] || "").trim()) { delete out[k]; }
+        						}
+        						if (out.photoDataUrl === "" && ((base.photoDataUrl || "").trim() || (base.salonPhotos || []).length > 0)) {
+        							delete out.photoDataUrl;
+        						}
+        						if (out.multiProfile === null && base.multiProfile !== null && base.multiProfile !== undefined) {
+        							delete out.multiProfile;
+        						}
+        						if (out.recontactOk === false && base.recontactOk === true) {
+        							const fn = Object.prototype.hasOwnProperty.call(out, "firstName")
+        								? (out.firstName || "").trim()
+        								: (base.firstName || "").trim();
+        							const em = Object.prototype.hasOwnProperty.call(out, "intervieweeEmail")
+        								? (out.intervieweeEmail || "").trim()
+        								: (base.intervieweeEmail || "").trim();
+        							if (!fn && !em && ((base.firstName || "").trim() || (base.intervieweeEmail || "").trim() || (base.salonPhotos || []).length > 0)) {
+        								delete out.recontactOk;
+        							}
+        						}
+        						return out;
+        					},
+        					syncRowFromLiveDraft(row: any, draft: any) {
+        						Object.assign(row, draft);
+        						row.journeySteps = (draft.journeySteps || []).slice();
+        						row.salonPhotos = (draft.salonPhotos || []).slice();
+        						row.format = "salon";
+        						row.status = "draft";
+        					},
         					getActiveInterview() {
         						const data = this.load();
         						if (!data.activeInterviewId) { return null; }
-        						return this.getInterview(data.activeInterviewId);
+        						const row = this.getInterview(data.activeInterviewId);
+        						if (!row) { return null; }
+        						if (row.format === "salon" && this._wizardLiveDraft
+        							&& this._wizardLiveDraft.interviewId === row.interviewId) {
+        							return this._wizardLiveDraft;
+        						}
+        						return row;
         					},
         					getRecapInterview() {
         						const data = this.load();
@@ -863,10 +1074,12 @@ componentScriptContent:
         					setActive(id: string) {
         						const data = this.load();
         						data.activeInterviewId = id;
+        						try { this.saveLocalSnapshot(); } catch (e) { /* ignore */ }
         						this.saveSync(this._page);
         					},
         					clearActive() {
         						const data = this.load();
+        						try { this.saveLocalSnapshot(); } catch (e) { /* ignore */ }
         						data.activeInterviewId = null;
         						this.persistConfigOnly(this._page);
         					},
@@ -888,14 +1101,7 @@ componentScriptContent:
         						}, this.emptySalonFields());
         						data.interviews.unshift(iv);
         						data.activeInterviewId = iv.interviewId;
-        						try { this.saveLocalSnapshot(); } catch (e) { /* ignore */ }
-        						const p = this._page;
-        						if (p) {
-        							this.enqueuePersist(p, async () => {
-        								await this.persistConfig(p);
-        								await this.persistInterview(p, iv);
-        							});
-        						}
+        						this._wizardLiveDraft = this.cloneSalonDraft(iv);
         						return iv;
         					},
         					createInterview(name: string, role: string, company: string, context: string, email?: string) {
@@ -936,22 +1142,62 @@ componentScriptContent:
         						}, this.emptySalonFields());
         						data.interviews.unshift(iv);
         						data.activeInterviewId = iv.interviewId;
-        						this.persistActiveOnly(this._page);
+        						this._wizardLiveDraft = this.cloneSalonDraft(iv);
+        						return iv;
+        					},
+        	
+        					ensureActiveSalonDraft(page?: any): any {
+        						if (page) { this._page = page; }
+        						const data = this.load();
+        						let iv: any = null;
+        						if (data.activeInterviewId) {
+        							iv = this.getInterview(data.activeInterviewId);
+        						}
+        						if (!iv || iv.format !== "salon") {
+        							return this.createSalonDraft();
+        						}
         						return iv;
         					},
         	
         					updateSalonDraft(partial: any) {
-        						const iv = this.getActiveInterview();
-        						if (!iv || iv.format !== "salon") { return null; }
         						const data = this.load();
-        						const idx = data.interviews.findIndex((i: any) => i.interviewId === iv.interviewId);
+        						const id = (data.activeInterviewId || "").trim();
+        						if (!id) { return null; }
+        						const idx = data.interviews.findIndex((i: any) => i.interviewId === id);
         						if (idx < 0) { return null; }
-        						Object.assign(data.interviews[idx], partial || {});
-        						data.interviews[idx].updatedAt = new Date().toISOString();
-        						data.interviews[idx].status = "draft";
+        						const row = data.interviews[idx];
+        						if (!row || row.format !== "salon") { return null; }
+        						const draft = this.ensureWizardLiveDraft(row);
+        						const rawPatch = Object.assign({}, partial || {});
+        						const forceClear = !!rawPatch._forceClear;
+        						if (forceClear) { delete rawPatch._forceClear; }
+        						const patch = this.sanitizeSalonPatch(rawPatch, draft, forceClear);
+        						Object.assign(draft, patch);
+        						if (Object.prototype.hasOwnProperty.call(patch, "salonPhotos")) {
+        							draft.salonPhotos = (patch.salonPhotos || []).slice();
+        							draft.photoDataUrl = draft.salonPhotos[0] || "";
+        						}
+        						draft.format = "salon";
+        						draft.updatedAt = new Date().toISOString();
+        						draft.status = "draft";
+        						this.syncRowFromLiveDraft(row, draft);
+        						data.activeInterviewId = id;
         						try { this.saveLocalSnapshot(); } catch (e) { /* ignore */ }
-        						this.persistActiveOnly(this._page);
-        						return data.interviews[idx];
+        						return draft;
+        					},
+        	
+        					discardSalonDraft(page?: any) {
+        						if (page) { this._page = page; }
+        						this.clearWizardLiveDraft();
+        						const data = this.load();
+        						const id = data.activeInterviewId;
+        						if (id) {
+        							const idx = data.interviews.findIndex((i: any) => i.interviewId === id);
+        							if (idx >= 0) { data.interviews.splice(idx, 1); }
+        						}
+        						this.clearRecapView();
+        						data.activeInterviewId = null;
+        						try { this.saveLocalSnapshot(); } catch (e) { /* ignore */ }
         					},
         	
         					getWizardRoute(step: number): string {
@@ -974,6 +1220,7 @@ componentScriptContent:
         						row.status = "saved";
         						row.updatedAt = new Date().toISOString();
         						data.activeInterviewId = null;
+        						this.clearWizardLiveDraft();
         						this.rememberInterviewId(row.interviewId);
         						try { this.saveLocalSnapshot(); } catch (e) { /* ignore */ }
         						const p = this._page;
@@ -1036,17 +1283,23 @@ componentScriptContent:
         					resumeInterview(homeItem: any) {
         						if (!homeItem || !homeItem.id) { return null; }
         						const iv = this.getInterview(homeItem.id);
-        						if (!iv) { return null; }
+        						if (!iv || !this.isInterviewValidated(iv)) { return null; }
         						this.setRecapView(homeItem.id);
-        						if (iv.format === "salon" && iv.status === "draft") {
-        							return { iv: iv, route: this.getWizardRoute(iv.wizardStep || 1) };
-        						}
         						return { iv: iv, route: "/interview-recap" };
+        					},
+        					getSalonPhotos(iv: any): string[] {
+        						if (!iv) { return []; }
+        						if (iv.salonPhotos && iv.salonPhotos.length) {
+        							return iv.salonPhotos.filter((p: string) => !!(p || "").trim()).slice(0, 4);
+        						}
+        						const single = (iv.photoDataUrl || "").trim();
+        						return single ? [single] : [];
         					},
         					buildSalonSyncPayload(iv: any) {
         						const photos: any[] = [];
-        						if (iv.photoDataUrl) {
-        							photos.push({ photoId: "salon-photo-1", order: 0, dataUrl: iv.photoDataUrl });
+        						const urls = this.getSalonPhotos(iv);
+        						for (let i = 0; i < urls.length; i++) {
+        							photos.push({ photoId: "salon-photo-" + (i + 1), order: i, dataUrl: urls[i] });
         						}
         						return {
         							payload: {
@@ -1302,15 +1555,13 @@ componentScriptContent:
         		}
         	}
         
-        	public countTotalNotes(): number {
+        	public countValidatedInterviews(): number {
         		const store = this.global.interviewStore;
-        		return store ? store.countTotalNotes() : 0;
+        		return store ? store.countValidatedInterviews() : 0;
         	}
         	/*End_c8o_AppFunction*/
         '
 tplProjectName: mobilebuilder_tpl_8_4_0_ngx
-↓Menu [ngx.components.UIDynamicMenu-1779283399740]: 🗏 mobileMenus/Menu.yaml
-↓BottomNavPill [ngx.components.UISharedRegularComponent-1779290000001]: 🗏 mobileSharedComponents/BottomNavPill.yaml
 ↓Page [ngx.components.PageComponent-1779283399741]: 🗏 mobilePages/Page.yaml
 ↓InterviewStep1 [ngx.components.PageComponent-1779300000001]: 🗏 mobilePages/InterviewStep1.yaml
 ↓InterviewStep2 [ngx.components.PageComponent-1779300000002]: 🗏 mobilePages/InterviewStep2.yaml
@@ -1512,9 +1763,9 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
             pointer-events: auto;
             background: #1c1c1e;
             border-radius: 999px;
-            padding: 8px 24px;
-            display: flex;
-            justify-content: space-between;
+            padding: 8px 20px;
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
             align-items: center;
             min-height: var(--vu-capture-pill-h);
             box-shadow: 0 20px 40px rgba(0,0,0,0.2);
@@ -1601,6 +1852,14 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
             display: inline-flex; align-items: center; gap: 6px;
             font-size: 12px; color: #64748b; background: #f8fafc;
             padding: 6px 12px; border-radius: 8px; margin-top: 12px;
+          }
+          .vu-card-status--ok {
+            color: #166534;
+            background: #dcfce7;
+          }
+          .vu-card-status--pending {
+            color: #92400e;
+            background: #fef3c7;
           }
           .vu-empty-card {
             text-align: center;
@@ -1987,12 +2246,28 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
             }
           }
           .vu-wizard-header {
+            position: relative;
             background: #15438a;
             color: #fff;
-            padding: 24px 20px 16px;
+            padding: 24px 56px 16px 20px;
             border-radius: 0 0 24px 24px;
             margin-bottom: 16px;
           }
+          .vu-wizard-quit-btn {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            z-index: 5;
+            border: 1px solid rgba(255,255,255,0.35);
+            background: rgba(255,255,255,0.12);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 999px;
+            cursor: pointer;
+          }
+          .vu-wizard-quit-btn:active { background: rgba(255,255,255,0.22); }
           .vu-wizard-header .vu-greeting-sub { color: #7aa2d6; }
           .vu-wizard-header .vu-greeting-title { color: #fff; font-size: 16px; }
           .vu-wizard-step-sub {
@@ -2119,13 +2394,166 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
           .vu-wizard-actions ion-button { flex: 1; margin: 0; }
           .vu-hint-text { font-size: 13px; color: #64748b; line-height: 1.5; margin: 8px 0 16px; }
           .vu-field-error { font-size: 13px; color: #dc2626; margin: 6px 0 0; font-weight: 500; }
-          .vu-rgpd-text { font-size: 11px; color: #64748b; line-height: 1.45; margin: 12px 0; }
           .vu-photo-preview {
             width: 100%;
             max-height: 200px;
             object-fit: cover;
             border-radius: 16px;
             margin-top: 12px;
+          }
+          .vu-photo-section { margin-top: 4px; }
+          .vu-photo-section-head {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 10px;
+          }
+          .vu-photo-counter {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            color: rgba(255, 255, 255, 0.55);
+            text-transform: uppercase;
+          }
+          .vu-photo-gallery {
+            display: flex;
+            flex-direction: row;
+            align-items: stretch;
+            gap: 12px;
+            overflow-x: auto;
+            padding: 2px 2px 8px;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+          }
+          .vu-photo-gallery::-webkit-scrollbar { display: none; }
+          .vu-photo-slot {
+            flex: 0 0 96px;
+            width: 96px;
+            height: 96px;
+            border-radius: 16px;
+            position: relative;
+            overflow: hidden;
+            box-sizing: border-box;
+          }
+          .vu-photo-slot--add {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed rgba(255, 255, 255, 0.38);
+            background: rgba(255, 255, 255, 0.04);
+            cursor: pointer;
+            padding: 0;
+            appearance: none;
+            -webkit-appearance: none;
+            color: rgba(255, 255, 255, 0.82);
+            transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+          }
+          .vu-photo-slot--add:active { transform: scale(0.97); }
+          .vu-photo-slot--add ion-icon {
+            font-size: 32px;
+            pointer-events: none;
+          }
+          .vu-photo-slot--filled {
+            border: 2px solid rgba(255, 255, 255, 0.12);
+            background: rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+          }
+          .vu-form-card .vu-photo-slot--filled {
+            border-color: rgba(15, 23, 42, 0.12);
+            background: #f1f5f9;
+          }
+          .vu-form-card .vu-photo-counter {
+            color: #64748b;
+          }
+          .vu-form-card .vu-photo-hint {
+            color: #64748b;
+          }
+          .vu-photo-slot--filled ion-img,
+          .vu-photo-slot--filled img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+          }
+          .vu-photo-remove {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 24px;
+            height: 24px;
+            border: none;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.72);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            cursor: pointer;
+            z-index: 2;
+          }
+          .vu-photo-remove ion-icon { font-size: 16px; pointer-events: none; }
+          .vu-photo-hint {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.5);
+            margin: 4px 0 0;
+            line-height: 1.4;
+          }
+          .vu-photo-lightbox {
+            position: fixed;
+            inset: 0;
+            z-index: 20000;
+            background: rgba(0, 0, 0, 0.94);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            box-sizing: border-box;
+          }
+          .vu-photo-lightbox__frame {
+            max-width: 100%;
+            max-height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          .vu-photo-lightbox__img {
+            max-width: 100%;
+            max-height: calc(100vh - 120px);
+            width: auto;
+            height: auto;
+            display: block;
+          }
+          .vu-photo-lightbox ion-img.vu-photo-lightbox__img::part(image) {
+            max-width: 100%;
+            max-height: calc(100vh - 120px);
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+          }
+          .vu-photo-lightbox__close {
+            position: absolute;
+            top: calc(12px + env(safe-area-inset-top, 0px));
+            right: 12px;
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.16);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            cursor: pointer;
+            z-index: 1;
+          }
+          .vu-photo-lightbox__close ion-icon {
+            font-size: 24px;
+            pointer-events: none;
           }
           /* === end VoxUrssaf React UI === */
           
@@ -2473,6 +2901,14 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
               .vu-card-notes {
                 background: #0f172a !important;
                 color: #94a3b8 !important;
+              }
+              .vu-card-status--ok {
+                background: rgba(22, 101, 52, 0.25) !important;
+                color: #86efac !important;
+              }
+              .vu-card-status--pending {
+                background: rgba(146, 64, 14, 0.25) !important;
+                color: #fcd34d !important;
               }
               .vu-section-title {
                 color: #f8fafc !important;
