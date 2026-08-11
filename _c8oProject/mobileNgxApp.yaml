@@ -414,10 +414,35 @@ componentScriptContent:
         					},
         	
         					callSequence(page: any, requestable: string, params?: any): Promise<any> {
-        						if (!params || typeof params !== "object") {
-        							return page.c8o.callJson(requestable);
+        						const raw = (!params || typeof params !== "object")
+        							? page.c8o.callJson(requestable)
+        							: page.c8o.callJsonObject(requestable, params);
+        						const p = (raw && typeof raw.async === "function") ? raw.async() : raw;
+        						return Promise.resolve(p).then((res: any) => {
+        							this.assertC8oOk(res, requestable);
+        							return res;
+        						});
+        					},
+        	
+        					assertC8oOk(res: any, requestable: string): void {
+        						if (res == null) { return; }
+        						const pickMsg = (o: any): string => {
+        							if (!o) { return ""; }
+        							if (typeof o === "string") { return o; }
+        							return o.errorMessage || o.errorCode || o.exception
+        								|| (o.error && (o.error.message || o.error.errorMessage || JSON.stringify(o.error)))
+        								|| "";
+        						};
+        						let msg = pickMsg(res);
+        						const doc = res.document || res;
+        						if (!msg) { msg = pickMsg(doc); }
+        						if (!msg && doc && typeof doc.sql_output === "string"
+        							&& /error|exception|refused|connection|timeout|unreachable|psql|jdbc/i.test(doc.sql_output)) {
+        							msg = doc.sql_output;
         						}
-        						return page.c8o.callJsonObject(requestable, params);
+        						if (msg) {
+        							throw new Error((requestable || "requestable") + ": " + String(msg).substring(0, 300));
+        						}
         					},
         	
         					async ensureSqlSchema(page: any): Promise<void> {
@@ -1706,13 +1731,17 @@ componentScriptContent:
         					},
         	
         					async syncSelected(page: any, ids: string[]): Promise<{ n: number; failed: number; lastError: string }> {
+        						const list = (ids || []).filter((id: string) => !!(id || "").trim());
         						let n = 0;
         						let failed = 0;
         						let lastError = "";
-        						try { await this.ensureSqlSchema(page); } catch (e) {
+        						try {
+        							await this.ensureSqlSchema(page);
+        						} catch (e) {
         							lastError = this.formatSyncError(e, "Interview_EnsureSchema");
+        							return { n: 0, failed: Math.max(list.length, 1), lastError: lastError };
         						}
-        						for (const id of (ids || [])) {
+        						for (const id of list) {
         							const iv = this.getInterview(id);
         							if (!iv) { failed++; continue; }
         							if (await this.syncInterview(page, id)) { n++; }

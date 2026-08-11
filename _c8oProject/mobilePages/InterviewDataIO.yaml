@@ -187,12 +187,14 @@ scriptContent:
         		try {
         			const ids = this.selectedIds();
         			const res = await store.syncSelected(this, ids);
-        			if (res.n > 0 && res.failed === 0) {
+        			if (res.failed > 0 && res.n === 0) {
+        				await this.toast("Publication échouée (BDD injoignable ?). " + (res.lastError || ""), "danger", 12000);
+        			} else if (res.n > 0 && res.failed === 0) {
         				await this.toast(res.n + " fiche(s) publiée(s) en BDD", "success");
         			} else if (res.n > 0) {
-        				await this.toast(res.n + " OK, " + res.failed + " échec(s). " + (res.lastError || ""), "warning", 10000);
+        				await this.toast(res.n + " OK, " + res.failed + " échec(s). " + (res.lastError || ""), "warning", 12000);
         			} else {
-        				await this.toast("Publication échouée. " + (res.lastError || ""), "danger", 10000);
+        				await this.toast("Aucune fiche publiée. " + (res.lastError || ""), "danger", 10000);
         			}
         			await this.loadPage();
         		} finally {
