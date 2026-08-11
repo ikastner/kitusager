@@ -178,6 +178,23 @@ scriptContent:
         			this.refreshActionFlags();
         		}
         	}
+        	public humanizePublishError(raw: string): string {
+        		const s = (raw || "").toLowerCase();
+        		if (!s) {
+        			return "Vérifiez que la base de données est démarrée et accessible, puis réessayez.";
+        		}
+        		if (/connection refused|connect timed out|unreachable|could not connect|connection reset|network is unreachable|psql|jdbc|connexion|refused|timeout|ensure.?schema|interview_ensureschema/.test(s)) {
+        			return "Impossible de joindre la base de données. Démarrez Postgres (Docker) puis réessayez.";
+        		}
+        		if (/authentication|password|auth|permission|denied|accès/.test(s)) {
+        			return "Accès à la base refusé (identifiants ou droits). Contactez un administrateur.";
+        		}
+        		if (/syntax|sql/.test(s)) {
+        			return "Erreur technique côté base de données. Réessayez ou contactez le support.";
+        		}
+        		const short = (raw || "").replace(/\s+/g, " ").trim();
+        		return short.length > 160 ? short.substring(0, 157) + "…" : short;
+        	}
         	public async publishSelected(): Promise<void> {
         		if (!this.canPublish()) { return; }
         		const store = await this.ensureStore();
@@ -186,15 +203,33 @@ scriptContent:
         		this.refreshActionFlags();
         		try {
         			const ids = this.selectedIds();
+        			const total = ids.length;
         			const res = await store.syncSelected(this, ids);
+        			const detail = this.humanizePublishError(res.lastError || "");
         			if (res.failed > 0 && res.n === 0) {
-        				await this.toast("Publication échouée (BDD injoignable ?). " + (res.lastError || ""), "danger", 12000);
+        				await this.toast(
+        					"Publication impossible pour les " + total + " fiche(s) sélectionnée(s). " + detail,
+        					"danger",
+        					14000
+        				);
         			} else if (res.n > 0 && res.failed === 0) {
-        				await this.toast(res.n + " fiche(s) publiée(s) en BDD", "success");
+        				await this.toast(
+        					"Publication réussie : " + res.n + " fiche(s) enregistrée(s) en base.",
+        					"success",
+        					5000
+        				);
         			} else if (res.n > 0) {
-        				await this.toast(res.n + " OK, " + res.failed + " échec(s). " + (res.lastError || ""), "warning", 12000);
+        				await this.toast(
+        					"Publication partielle : " + res.n + " OK, " + res.failed + " en échec. " + detail,
+        					"warning",
+        					14000
+        				);
         			} else {
-        				await this.toast("Aucune fiche publiée. " + (res.lastError || ""), "danger", 10000);
+        				await this.toast(
+        					"Aucune fiche n''a été publiée. " + detail,
+        					"danger",
+        					12000
+        				);
         			}
         			await this.loadPage();
         		} finally {
