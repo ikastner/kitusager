@@ -1,4 +1,4 @@
-comment: Wizard salon — étape 2/4 parcours, satisfaction, verbatim + dictée
+comment: Wizard salon — étape 2/5 parcours, ressenti par sous-étape (smileys)
 icon: chatbubbles
 scriptContent: 
   - xmlizable: 
@@ -8,9 +8,41 @@ scriptContent:
         '/*Begin_c8o_PageImport*/
         /*End_c8o_PageImport*/
         /*Begin_c8o_PageDeclaration*/
-        	public journeySteps: string[] = [];
-        	public globalSatisfaction: string = "";
+        	public journeyRatings: any[] = [];
         	public wizardCanProceed: boolean = false;
+        	public journeyFamilies: any[] = [
+        		{ id: "creation", label: "Création de l''activité", steps: [
+        			{ id: "creation_renseigne", label: "Je me renseigne sur le statut d''auto-entrepreneur" },
+        			{ id: "creation_formalites", label: "Je réalise les formalités administratives" },
+        			{ id: "creation_declarations", label: "Je fais mes premières déclarations" }
+        		]},
+        		{ id: "vie_courante", label: "Vie courante", steps: [
+        			{ id: "vc_cotisations", label: "Je gère et paie mes cotisations" },
+        			{ id: "vc_appel_offre", label: "Je réponds à un appel d''offre ou à un donneur d''ordre" },
+        			{ id: "vc_declaration_fiscale", label: "Je fais ma déclaration fiscale" },
+        			{ id: "vc_erreur_declarations", label: "J''ai fait une erreur lors de mes déclarations" },
+        			{ id: "vc_mode_reglement", label: "Je veux changer la façon de régler mes cotisations" },
+        			{ id: "vc_donnees_admin", label: "J''actualise mes données administratives" }
+        		]},
+        		{ id: "imprevus", label: "Imprévus", steps: [
+        			{ id: "imp_baisse_revenus", label: "Je suis confronté à une baisse de revenus" },
+        			{ id: "imp_absence", label: "Je suis absent (maladie, maternité, paternité...)" },
+        			{ id: "imp_sinistre", label: "Je suis victime d''un sinistre (incendie, vol, etc.)" },
+        			{ id: "imp_controle", label: "J''ai un contrôle social ou fiscal" },
+        			{ id: "imp_retard_dette", label: "J''ai du retard dans mes règlements (dette)" }
+        		]},
+        		{ id: "fin", label: "Fin de l''activité", steps: [
+        			{ id: "fin_procedure_collective", label: "J''ai une procédure collective (redressement, liquidation...)" },
+        			{ id: "fin_fermeture", label: "Je choisis de fermer mon auto-entreprise" },
+        			{ id: "fin_retraite", label: "Je pars à la retraite" }
+        		]}
+        	];
+        	public satisfactionLevels: any[] = [
+        		{ id: "tres_insatisfait", emoji: "😠", label: "Très insatisfait" },
+        		{ id: "moyen", emoji: "😕", label: "Moyen" },
+        		{ id: "satisfait", emoji: "🙂", label: "Satisfait" },
+        		{ id: "tres_satisfait", emoji: "😄", label: "Très satisfait" }
+        	];
         	/*End_c8o_PageDeclaration*/
         /*Begin_c8o_PageConstructor*/
         		/*End_c8o_PageConstructor*/
@@ -27,8 +59,7 @@ scriptContent:
         		if (store.whenReady) { await store.whenReady(); }
         		const iv = store.getActiveInterview();
         		if (!iv || iv.format !== "salon") { return; }
-        		this.journeySteps = (iv.journeySteps || []).slice();
-        		this.globalSatisfaction = iv.globalSatisfaction || "";
+        		this.journeyRatings = (iv.journeyRatings || []).map((r: any) => Object.assign({}, r));
         	}
         	public touchDraft(): void {
         		this.saveDraft();
@@ -50,8 +81,7 @@ scriptContent:
         		if (store._page !== this) { store._page = this; }
         		if (!store.getActiveInterview()) { return; }
         		store.updateSalonDraft({
-        			journeySteps: (this.journeySteps || []).slice(),
-        			globalSatisfaction: this.globalSatisfaction || "",
+        			journeyRatings: (this.journeyRatings || []).map((r: any) => Object.assign({}, r)),
         			wizardStep: 2
         		});
         	}
@@ -61,19 +91,27 @@ scriptContent:
         	public prepareBack(): void {
         		this.saveDraft();
         	}
-        	public isJourneyOn(id: string): boolean {
-        		return (this.journeySteps || []).indexOf(id) >= 0;
+        	public getRating(stepId: string): string {
+        		const r = (this.journeyRatings || []).find((x: any) => x.stepId === stepId);
+        		return r ? (r.satisfaction || "") : "";
         	}
-        	public toggleJourney(id: string): void {
-        		const steps = (this.journeySteps || []).slice();
-        		const idx = steps.indexOf(id);
-        		if (idx >= 0) { steps.splice(idx, 1); } else { steps.push(id); }
-        		this.journeySteps = steps;
+        	public rateStep(stepId: string, family: string, satisfaction: string): void {
+        		const list = (this.journeyRatings || []).slice();
+        		const idx = list.findIndex((x: any) => x.stepId === stepId);
+        		if (idx >= 0 && list[idx].satisfaction === satisfaction) {
+        			list.splice(idx, 1);
+        		} else if (idx >= 0) {
+        			list[idx] = { stepId: stepId, family: family, satisfaction: satisfaction };
+        		} else {
+        			list.push({ stepId: stepId, family: family, satisfaction: satisfaction });
+        		}
+        		this.journeyRatings = list;
         		this.saveDraft();
+        		if (this.ref) { this.ref.markForCheck(); }
         	}
-        	public setSatisfaction(id: string): void {
-        		this.globalSatisfaction = id;
-        		this.saveDraft();
+        	public smileyClass(stepId: string, level: string): string {
+        		const on = this.getRating(stepId) === level;
+        		return "vu-smiley-btn vu-smiley-btn--" + level + (on ? " vu-smiley-btn--on" : "");
         	}
         	public getStoreSync(): any {
         		const app: any = this.router && this.router.sharedObject;
@@ -88,8 +126,7 @@ scriptContent:
         		if (!store) { return; }
         		if (store._page !== this) { store._page = this; }
         		store.updateSalonDraft({
-        			journeySteps: (this.journeySteps || []).slice(),
-        			globalSatisfaction: this.globalSatisfaction || "",
+        			journeyRatings: (this.journeyRatings || []).map((r: any) => Object.assign({}, r)),
         			wizardStep: 3
         		});
         		this.wizardCanProceed = true;
@@ -99,16 +136,9 @@ scriptContent:
         		if (!store) { return; }
         		if (store._page !== this) { store._page = this; }
         		store.updateSalonDraft({
-        			journeySteps: (this.journeySteps || []).slice(),
-        			globalSatisfaction: this.globalSatisfaction || "",
+        			journeyRatings: (this.journeyRatings || []).map((r: any) => Object.assign({}, r)),
         			wizardStep: 1
         		});
-        	}
-        	public chipClass(id: string): string {
-        		return "vu-toggle-chip" + (this.isJourneyOn(id) ? " vu-toggle-chip--on" : "");
-        	}
-        	public satClass(id: string): string {
-        		return "vu-satisfaction-option" + (this.globalSatisfaction === id ? " vu-satisfaction-option--on" : "");
         	}
         	public getFicheLabel(): string {
         		const store = this.getStoreSync();
@@ -209,7 +239,7 @@ title: Etape 2
           textValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:Satisfaction et parcours URSSAF
+              - MobileSmartSourceType: plain:Votre ressenti à chaque étape du parcours
       ↓StepLbl [ngx.components.UIElement-1779300010018]: 
         tagName: span
         ↓AttrClass [ngx.components.UIAttribute-1779300010019]: 
@@ -261,139 +291,6 @@ title: Etape 2
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: plain:vu-form-card
-        ↓H2s [ngx.components.UIElement-1779300010080]: 
-          tagName: h2
-          ↓AttrClass [ngx.components.UIAttribute-1779300010081]: 
-            attrName: class
-            attrValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:vu-section-title
-          ↓Text [ngx.components.UIText-1779300010082]: 
-            textValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:Satisfaction globale
-        ↓Sat1 [ngx.components.UIElement-1779300010090]: 
-          tagName: button
-          ↓AttrType [ngx.components.UIAttribute-1779300010091]: 
-            attrName: type
-            attrValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:button
-          ↓AttrClass [ngx.components.UIAttribute-1779300010092]: 
-            attrName: '[class]'
-            attrValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: script:satClass('tres_insatisfait')
-          ↓Event [ngx.components.UIControlEvent-1779300010093]: 
-            ↓Set [ngx.components.UICustomAction-1779300010094]: 
-              actionValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                    →: |
-                      		page.setSatisfaction("tres_insatisfait");
-                      		page.ref.markForCheck();
-                      		resolve();
-                      
-          ↓Text [ngx.components.UIText-1779300010095]: 
-            textValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:Très insatisfait
-        ↓Sat2 [ngx.components.UIElement-1779300010096]: 
-          tagName: button
-          ↓AttrType [ngx.components.UIAttribute-1779300010097]: 
-            attrName: type
-            attrValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:button
-          ↓AttrClass [ngx.components.UIAttribute-1779300010098]: 
-            attrName: '[class]'
-            attrValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: script:satClass('moyen')
-          ↓Event [ngx.components.UIControlEvent-1779300010099]: 
-            ↓Set [ngx.components.UICustomAction-1779300010100]: 
-              actionValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                    →: |
-                      		page.setSatisfaction("moyen");
-                      		page.ref.markForCheck();
-                      		resolve();
-                      
-          ↓Text [ngx.components.UIText-1779300010101]: 
-            textValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:Moyen
-        ↓Sat3 [ngx.components.UIElement-1779300010102]: 
-          tagName: button
-          ↓AttrType [ngx.components.UIAttribute-1779300010103]: 
-            attrName: type
-            attrValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:button
-          ↓AttrClass [ngx.components.UIAttribute-1779300010104]: 
-            attrName: '[class]'
-            attrValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: script:satClass('satisfait')
-          ↓Event [ngx.components.UIControlEvent-1779300010105]: 
-            ↓Set [ngx.components.UICustomAction-1779300010106]: 
-              actionValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                    →: |
-                      		page.setSatisfaction("satisfait");
-                      		page.ref.markForCheck();
-                      		resolve();
-                      
-          ↓Text [ngx.components.UIText-1779300010107]: 
-            textValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:Satisfait
-        ↓Sat4 [ngx.components.UIElement-1779300010108]: 
-          tagName: button
-          ↓AttrType [ngx.components.UIAttribute-1779300010109]: 
-            attrName: type
-            attrValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:button
-          ↓AttrClass [ngx.components.UIAttribute-1779300010110]: 
-            attrName: '[class]'
-            attrValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: script:satClass('tres_satisfait')
-          ↓Event [ngx.components.UIControlEvent-1779300010111]: 
-            ↓Set [ngx.components.UICustomAction-1779300010112]: 
-              actionValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                    →: |
-                      		page.setSatisfaction("tres_satisfait");
-                      		page.ref.markForCheck();
-                      		resolve();
-                      
-          ↓Text [ngx.components.UIText-1779300010113]: 
-            textValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:Très satisfait
         ↓H2j [ngx.components.UIElement-1779300010042]: 
           tagName: h2
           ↓AttrClass [ngx.components.UIAttribute-1779300010043]: 
@@ -406,129 +303,140 @@ title: Etape 2
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:Par quelles étapes du parcours d'AE êtes vous concernés ?
-        ↓Toggles [ngx.components.UIElement-1779300010045]: 
+                - MobileSmartSourceType: plain:Notez votre satisfaction pour chaque étape qui vous concerne
+        ↓Hint [ngx.components.UIElement-1779300050001]: 
+          tagName: p
+          ↓AttrClass [ngx.components.UIAttribute-1779300050002]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-journey-hint
+          ↓Text [ngx.components.UIText-1779300050003]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Touchez un smiley pour noter une étape. Retouchez-le pour retirer la note (étape non concernée).
+        ↓FamBlock [ngx.components.UIElement-1779300050010]: 
           tagName: div
-          ↓Chip1 [ngx.components.UIElement-1779300010050]: 
-            tagName: button
-            ↓AttrType [ngx.components.UIAttribute-1779300010051]: 
-              attrName: type
+          ↓AttrFor [ngx.components.UIAttribute-1779300050011]: 
+            attrName: '*ngFor'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:let fam of journeyFamilies
+          ↓AttrClass [ngx.components.UIAttribute-1779300050012]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-journey-family
+          ↓FamTitle [ngx.components.UIElement-1779300050013]: 
+            tagName: h3
+            ↓AttrClass [ngx.components.UIAttribute-1779300050014]: 
+              attrName: class
               attrValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:button
-            ↓AttrClass [ngx.components.UIAttribute-1779300010052]: 
-              attrName: '[class]'
-              attrValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: script:chipClass('creation')
-            ↓Event [ngx.components.UIControlEvent-1779300010053]: 
-              ↓Tog [ngx.components.UICustomAction-1779300010054]: 
-                actionValue: 
-                  - xmlizable: 
-                    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-                    - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                      →: |
-                        		page.toggleJourney("creation");
-                        		page.ref.markForCheck();
-                        		resolve();
-                        
-            ↓Text [ngx.components.UIText-1779300010055]: 
+                  - MobileSmartSourceType: plain:vu-journey-family-title
+            ↓Text [ngx.components.UIText-1779300050015]: 
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:Création activité
-          ↓Chip2 [ngx.components.UIElement-1779300010056]: 
-            tagName: button
-            ↓AttrType [ngx.components.UIAttribute-1779300010057]: 
-              attrName: type
+                  - MobileSmartSourceType: script:fam.label
+          ↓StepRow [ngx.components.UIElement-1779300050016]: 
+            tagName: div
+            ↓AttrFor [ngx.components.UIAttribute-1779300050017]: 
+              attrName: '*ngFor'
               attrValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:button
-            ↓AttrClass [ngx.components.UIAttribute-1779300010058]: 
-              attrName: '[class]'
+                  - MobileSmartSourceType: plain:let st of fam.steps
+            ↓AttrClass [ngx.components.UIAttribute-1779300050018]: 
+              attrName: class
               attrValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: script:chipClass('vie_courante')
-            ↓Event [ngx.components.UIControlEvent-1779300010059]: 
-              ↓Tog [ngx.components.UICustomAction-1779300010060]: 
-                actionValue: 
+                  - MobileSmartSourceType: plain:vu-journey-row
+            ↓RowLabel [ngx.components.UIElement-1779300050019]: 
+              tagName: span
+              ↓AttrClass [ngx.components.UIAttribute-1779300050020]: 
+                attrName: class
+                attrValue: 
                   - xmlizable: 
-                    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-                    - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                      →: |
-                        		page.toggleJourney("vie_courante");
-                        		page.ref.markForCheck();
-                        		resolve();
-                        
-            ↓Text [ngx.components.UIText-1779300010061]: 
-              textValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:Vie courante
-          ↓Chip3 [ngx.components.UIElement-1779300010062]: 
-            tagName: button
-            ↓AttrType [ngx.components.UIAttribute-1779300010063]: 
-              attrName: type
-              attrValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:button
-            ↓AttrClass [ngx.components.UIAttribute-1779300010064]: 
-              attrName: '[class]'
-              attrValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: script:chipClass('imprevus')
-            ↓Event [ngx.components.UIControlEvent-1779300010065]: 
-              ↓Tog [ngx.components.UICustomAction-1779300010066]: 
-                actionValue: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:vu-journey-row-label
+              ↓Text [ngx.components.UIText-1779300050021]: 
+                textValue: 
                   - xmlizable: 
-                    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-                    - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                      →: |
-                        		page.toggleJourney("imprevus");
-                        		page.ref.markForCheck();
-                        		resolve();
-                        
-            ↓Text [ngx.components.UIText-1779300010067]: 
-              textValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:Imprévus
-          ↓Chip4 [ngx.components.UIElement-1779300010068]: 
-            tagName: button
-            ↓AttrType [ngx.components.UIAttribute-1779300010069]: 
-              attrName: type
-              attrValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:button
-            ↓AttrClass [ngx.components.UIAttribute-1779300010070]: 
-              attrName: '[class]'
-              attrValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: script:chipClass('fin')
-            ↓Event [ngx.components.UIControlEvent-1779300010071]: 
-              ↓Tog [ngx.components.UICustomAction-1779300010072]: 
-                actionValue: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:st.label
+            ↓SmileyGroup [ngx.components.UIElement-1779300050022]: 
+              tagName: div
+              ↓AttrClass [ngx.components.UIAttribute-1779300050023]: 
+                attrName: class
+                attrValue: 
                   - xmlizable: 
-                    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-                    - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                      →: |
-                        		page.toggleJourney("fin");
-                        		page.ref.markForCheck();
-                        		resolve();
-                        
-            ↓Text [ngx.components.UIText-1779300010073]: 
-              textValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:Fin de parcours
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:vu-journey-smileys
+              ↓SmileyBtn [ngx.components.UIElement-1779300050024]: 
+                tagName: button
+                ↓AttrType [ngx.components.UIAttribute-1779300050025]: 
+                  attrName: type
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:button
+                ↓AttrFor [ngx.components.UIAttribute-1779300050026]: 
+                  attrName: '*ngFor'
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:let lvl of satisfactionLevels
+                ↓AttrClass [ngx.components.UIAttribute-1779300050027]: 
+                  attrName: '[class]'
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:smileyClass(st.id, lvl.id)
+                ↓AttrTitle [ngx.components.UIAttribute-1779300050028]: 
+                  attrName: '[title]'
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:lvl.label
+                ↓AttrClick [ngx.components.UIAttribute-1779300050029]: 
+                  attrName: (click)
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:rateStep(st.id, fam.id, lvl.id)
+                ↓Face [ngx.components.UIElement-1779300050030]: 
+                  tagName: span
+                  ↓AttrClass [ngx.components.UIAttribute-1779300050031]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:vu-smiley-face
+                  ↓Text [ngx.components.UIText-1779300050032]: 
+                    textValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:lvl.emoji
+                ↓Lbl [ngx.components.UIElement-1779300050033]: 
+                  tagName: span
+                  ↓AttrClass [ngx.components.UIAttribute-1779300050034]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:vu-smiley-label
+                  ↓Text [ngx.components.UIText-1779300050035]: 
+                    textValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:lvl.label
         ↓Actions [ngx.components.UIElement-1779300010160]: 
           tagName: div
           ↓AttrClass [ngx.components.UIAttribute-1779300010161]: 

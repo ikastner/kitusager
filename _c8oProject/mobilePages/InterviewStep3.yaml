@@ -9,15 +9,26 @@ scriptContent:
         /*End_c8o_PageImport*/
         /*Begin_c8o_PageDeclaration*/
         	public sector: string = "";
+        	public sectorFamily: string = "";
         	public age: string = "";
         	public urssafSince: string = "";
         	public multiProfile: boolean | null = null;
         	public profileCount: string = "";
         	public contactMode: string = "";
         	public wizardCanProceed: boolean = false;
-        	public sectorIsOther: boolean = false;
         	public ageIsOther: boolean = false;
         	public urssafSinceIsOther: boolean = false;
+        	public OTHER_FAMILY: string = "Autre activité non listée";
+        	public sectorFamilies: string[] = ["Commerce", "Artisanat", "Services aux particuliers", "Services aux entreprises", "Professions libérales", "Transport & livraison", "Création & culture", "Autre activité non listée"];
+        	public sectorTrades: any = {
+        		"Commerce": ["Vente de marchandises", "Commerce alimentaire", "Commerce en ligne / e-commerce", "Revendeur / grossiste"],
+        		"Artisanat": ["Bâtiment & travaux (maçon, électricien, plombier…)", "Artisanat alimentaire (boulanger, traiteur…)", "Artisanat d''art (bijoutier, céramiste…)", "Coiffure & esthétique", "Réparation & maintenance"],
+        		"Services aux particuliers": ["Aide à domicile", "Garde d''enfants", "Jardinage & espaces verts", "Nettoyage & entretien", "Coaching & bien-être"],
+        		"Services aux entreprises": ["Conseil & consulting", "Formation professionnelle", "Communication & marketing", "Informatique & développement", "Comptabilité & gestion"],
+        		"Professions libérales": ["Santé (infirmier, kiné, orthophoniste…)", "Juridique (mandataire, conseil…)", "Architecture & design", "Expertise & audit"],
+        		"Transport & livraison": ["Chauffeur VTC", "Livraison de marchandises", "Transport de personnes"],
+        		"Création & culture": ["Graphisme & illustration", "Photographie & vidéo", "Rédaction & traduction", "Musique & spectacle"]
+        	};
         	/*End_c8o_PageDeclaration*/
         /*Begin_c8o_PageConstructor*/
         		/*End_c8o_PageConstructor*/
@@ -35,9 +46,15 @@ scriptContent:
         		const iv = store.getActiveInterview();
         		if (!iv || iv.format !== "salon") { return; }
         		
-        		const sectorChoices = ["Artisanat", "Commerce", "Professions libérales", "Services aux entreprises", "Services à la personne"];
         		this.sector = iv.sector || "";
-        		this.sectorIsOther = !!this.sector && !sectorChoices.includes(this.sector);
+        		this.sectorFamily = iv.sectorFamily || "";
+        		if (!this.sectorFamily && this.sector) {
+        			const fams = Object.keys(this.sectorTrades);
+        			for (const f of fams) {
+        				if ((this.sectorTrades[f] || []).indexOf(this.sector) >= 0) { this.sectorFamily = f; break; }
+        			}
+        			if (!this.sectorFamily) { this.sectorFamily = this.OTHER_FAMILY; }
+        		}
         		
         		const ageChoices = ["Moins de 25 ans", "25-34 ans", "35-44 ans", "45-54 ans", "55 ans et plus"];
         		this.age = iv.age || "";
@@ -68,6 +85,7 @@ scriptContent:
         		if (!store.getActiveInterview()) { return; }
         		store.updateSalonDraft({
         			sector: this.sector || "",
+        			sectorFamily: this.sectorFamily || "",
         			age: this.age || "",
         			urssafSince: this.urssafSince || "",
         			multiProfile: this.multiProfile,
@@ -86,17 +104,25 @@ scriptContent:
         	public prepareBack(): void {
         		this.saveDraft();
         	}
-        	public onSectorChange(val: string): void {
-        		if (val === "Autre") {
-        			this.sectorIsOther = true;
-        			this.sector = "";
-        		} else {
-        			this.sector = val || "";
-        		}
+        	public isOtherFamily(): boolean {
+        		return this.sectorFamily === this.OTHER_FAMILY;
+        	}
+        	public getTradesForFamily(): string[] {
+        		return this.sectorTrades[this.sectorFamily] || [];
+        	}
+        	public onFamilyChange(val: string): void {
+        		const fam = val || "";
+        		if (fam === this.sectorFamily) { return; }
+        		this.sectorFamily = fam;
+        		this.sector = "";
+        		this.saveDraft();
+        	}
+        	public onTradeChange(val: string): void {
+        		this.sector = val || "";
         		this.saveDraft();
         	}
         	public resetSectorToSelect(): void {
-        		this.sectorIsOther = false;
+        		this.sectorFamily = "";
         		this.sector = "";
         		this.saveDraft();
         	}
@@ -151,6 +177,7 @@ scriptContent:
         		if (store._page !== this) { store._page = this; }
         		store.updateSalonDraft({
         			sector: this.sector || "",
+        			sectorFamily: this.sectorFamily || "",
         			age: this.age || "",
         			urssafSince: this.urssafSince || "",
         			multiProfile: this.multiProfile,
@@ -166,6 +193,7 @@ scriptContent:
         		if (!store) { return; }
         		if (store._page !== this) { store._page = this; }
         		this.sector = "";
+        		this.sectorFamily = "";
         		this.age = "";
         		this.urssafSince = "";
         		this.multiProfile = null;
@@ -173,6 +201,7 @@ scriptContent:
         		this.contactMode = "";
         		store.updateSalonDraft({
         			sector: "",
+        			sectorFamily: "",
         			age: "",
         			urssafSince: "",
         			multiProfile: null,
@@ -189,6 +218,7 @@ scriptContent:
         		if (store._page !== this) { store._page = this; }
         		store.updateSalonDraft({
         			sector: this.sector || "",
+        			sectorFamily: this.sectorFamily || "",
         			age: this.age || "",
         			urssafSince: this.urssafSince || "",
         			multiProfile: this.multiProfile,
@@ -366,8 +396,76 @@ title: Etape 3
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:Secteur / métier
-        ↓InSector [ngx.components.UIDynamicElement-1779300020053]: 
+                - MobileSmartSourceType: plain:Famille de métier
+        ↓InFamily [ngx.components.UIDynamicElement-1779300060001]: 
+          beanData: |
+            '{
+             "ionBean": "Select",
+             "ControlName": "plain:sectorFamily",
+             "DoubleBinding": "script:sectorFamily",
+             "Fill": "plain:outline",
+             "Interface": "plain:popover",
+             "Placeholder": "plain:Sélectionner..."
+            }'
+          tagName: ion-select
+          ↓AttrClass [ngx.components.UIAttribute-1779300060002]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-field
+          ↓Event [ngx.components.UIControlEvent-1779300060003]: 
+            attrName: (ionChange)
+            eventName: ionChange
+            ↓ChangeAction [ngx.components.UICustomAction-1779300060004]: 
+              actionValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                    →: |
+                      		page.onFamilyChange(event.detail.value);
+                      		page.ref.markForCheck();
+                      		resolve();
+                      
+          ↓OptFamily [ngx.components.UIElement-1779300060005]: 
+            tagName: ion-select-option
+            ↓AttrFor [ngx.components.UIAttribute-1779300060006]: 
+              attrName: '*ngFor'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:let fam of sectorFamilies
+            ↓AttrValue [ngx.components.UIAttribute-1779300060007]: 
+              attrName: '[value]'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:fam
+            ↓Text [ngx.components.UIText-1779300060008]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:fam
+        ↓LblTrade [ngx.components.UIElement-1779300060010]: 
+          tagName: label
+          ↓AttrIf [ngx.components.UIAttribute-1779300060011]: 
+            attrName: '*ngIf'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:sectorFamily && !isOtherFamily()
+          ↓AttrClass [ngx.components.UIAttribute-1779300060012]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-field-label
+          ↓Text [ngx.components.UIText-1779300060013]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Métier
+        ↓InTrade [ngx.components.UIDynamicElement-1779300060014]: 
           beanData: |
             '{
              "ionBean": "Select",
@@ -378,79 +476,50 @@ title: Etape 3
              "Placeholder": "plain:Sélectionner..."
             }'
           tagName: ion-select
-          ↓AttrIf [ngx.components.UIAttribute-1779300020615]: 
+          ↓AttrIf [ngx.components.UIAttribute-1779300060015]: 
             attrName: '*ngIf'
             attrValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:!sectorIsOther
-          ↓AttrClass [ngx.components.UIAttribute-1779300020054]: 
+                - MobileSmartSourceType: plain:sectorFamily && !isOtherFamily()
+          ↓AttrClass [ngx.components.UIAttribute-1779300060016]: 
             attrName: class
             attrValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:vu-field
-          ↓Event [ngx.components.UIControlEvent-1779300020616]: 
+          ↓Event [ngx.components.UIControlEvent-1779300060017]: 
             attrName: (ionChange)
             eventName: ionChange
-            ↓ChangeAction [ngx.components.UICustomAction-1779300020617]: 
+            ↓ChangeAction [ngx.components.UICustomAction-1779300060018]: 
               actionValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                   - com.twinsoft.convertigo.beans.common.FormatedContent: 
                     →: |
-                      		page.onSectorChange(event.detail.value);
+                      		page.onTradeChange(event.detail.value);
                       		page.ref.markForCheck();
                       		resolve();
                       
-          ↓OptSec1 [ngx.components.UIDynamicElement-1779300020501]: 
-            beanData: '{"ionBean":"SelectOption","Value":"plain:Artisanat"}'
+          ↓OptTrade [ngx.components.UIElement-1779300060019]: 
             tagName: ion-select-option
-            ↓Text [ngx.components.UIText-1779300020502]: 
+            ↓AttrFor [ngx.components.UIAttribute-1779300060020]: 
+              attrName: '*ngFor'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:let trade of getTradesForFamily()
+            ↓AttrValue [ngx.components.UIAttribute-1779300060021]: 
+              attrName: '[value]'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:trade
+            ↓Text [ngx.components.UIText-1779300060022]: 
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:Artisanat
-          ↓OptSec2 [ngx.components.UIDynamicElement-1779300020503]: 
-            beanData: '{"ionBean":"SelectOption","Value":"plain:Commerce"}'
-            tagName: ion-select-option
-            ↓Text [ngx.components.UIText-1779300020504]: 
-              textValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:Commerce
-          ↓OptSec3 [ngx.components.UIDynamicElement-1779300020505]: 
-            beanData: '{"ionBean":"SelectOption","Value":"plain:Professions libérales"}'
-            tagName: ion-select-option
-            ↓Text [ngx.components.UIText-1779300020506]: 
-              textValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:Professions libérales
-          ↓OptSec4 [ngx.components.UIDynamicElement-1779300020507]: 
-            beanData: '{"ionBean":"SelectOption","Value":"plain:Services aux entreprises"}'
-            tagName: ion-select-option
-            ↓Text [ngx.components.UIText-1779300020508]: 
-              textValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:Services aux entreprises
-          ↓OptSec5 [ngx.components.UIDynamicElement-1779300020509]: 
-            beanData: '{"ionBean":"SelectOption","Value":"plain:Services à la personne"}'
-            tagName: ion-select-option
-            ↓Text [ngx.components.UIText-1779300020510]: 
-              textValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:Services à la personne
-          ↓OptSec6 [ngx.components.UIDynamicElement-1779300020511]: 
-            beanData: '{"ionBean":"SelectOption","Value":"plain:Autre"}'
-            tagName: ion-select-option
-            ↓Text [ngx.components.UIText-1779300020512]: 
-              textValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:Autre
+                  - MobileSmartSourceType: script:trade
         ↓InSectorOther [ngx.components.UIElement-1779300020601]: 
           tagName: div
           ↓AttrIf [ngx.components.UIAttribute-1779300020602]: 
@@ -458,7 +527,7 @@ title: Etape 3
             attrValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:sectorIsOther
+                - MobileSmartSourceType: plain:isOtherFamily()
           ↓AttrClass [ngx.components.UIAttribute-1779300020603]: 
             attrName: class
             attrValue: 
@@ -472,7 +541,7 @@ title: Etape 3
                "ControlName": "plain:sector",
                "DoubleBinding": "script:sector",
                "Fill": "plain:outline",
-               "Placeholder": "plain:Saisir votre secteur..."
+               "Placeholder": "plain:Saisir votre activité..."
               }'
             tagName: ion-input
             ↓AttrClass [ngx.components.UIAttribute-1779300020605]: 

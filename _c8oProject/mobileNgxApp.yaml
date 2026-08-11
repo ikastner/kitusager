@@ -287,7 +287,7 @@ componentScriptContent:
         							const interviews = (c.interviews || []).map((iv: any) => {
         								const copy = Object.assign({}, iv);
         								if (copy.entries) { copy.entries = copy.entries.slice(); }
-        								if (copy.journeySteps) { copy.journeySteps = copy.journeySteps.slice(); }
+        								if (copy.journeyRatings) { copy.journeyRatings = copy.journeyRatings.map((r: any) => Object.assign({}, r)); }
         								if (copy.salonPhotos) {
         									copy.salonPhotos = (copy.salonPhotos || []).map((p: string) => {
         										if (p && p.length > 120000) { return ""; }
@@ -532,10 +532,10 @@ componentScriptContent:
         							format: "salon",
         							salonName: "",
         							sheetCode: "F-" + dateStr + " - " + eventId,
-        							journeySteps: [] as string[],
-        							globalSatisfaction: "",
+        							journeyRatings: [] as any[],
         							verbatimText: "",
         							sector: "",
+        							sectorFamily: "",
         							age: "",
         							urssafSince: "",
         							multiProfile: null as boolean | null,
@@ -571,10 +571,10 @@ componentScriptContent:
         								format: "salon",
         								salonName: doc.salonName || "",
         								sheetCode: doc.sheetCode || "",
-        								journeySteps: (doc.journeySteps || []).slice(),
-        								globalSatisfaction: doc.globalSatisfaction || "",
+        								journeyRatings: (doc.journeyRatings || []).map((r: any) => Object.assign({}, r)),
         								verbatimText: doc.verbatimText || "",
         								sector: doc.sector || "",
+        								sectorFamily: doc.sectorFamily || "",
         								age: doc.age || "",
         								urssafSince: doc.urssafSince || "",
         								multiProfile: doc.multiProfile,
@@ -616,10 +616,10 @@ componentScriptContent:
         								format: "salon",
         								salonName: iv.salonName || "",
         								sheetCode: iv.sheetCode || "",
-        								journeySteps: iv.journeySteps || [],
-        								globalSatisfaction: iv.globalSatisfaction || "",
+        								journeyRatings: (iv.journeyRatings || []).map((r: any) => Object.assign({}, r)),
         								verbatimText: iv.verbatimText || "",
         								sector: iv.sector || "",
+        								sectorFamily: iv.sectorFamily || "",
         								age: iv.age || "",
         								urssafSince: iv.urssafSince || "",
         								multiProfile: iv.multiProfile,
@@ -918,7 +918,6 @@ componentScriptContent:
         							intervieweeCompany: iv.intervieweeCompany || "",
         							sheetCode: iv.sheetCode || "",
         							verbatimPreview: (iv.verbatimText || "").substring(0, 100),
-        							globalSatisfaction: iv.globalSatisfaction || "",
         							isSalon: iv.format === "salon",
         							entryCount: iv.format === "salon"
         								? (this.getSalonPhotos(iv).length + (iv.verbatimText ? 1 : 0))
@@ -990,7 +989,7 @@ componentScriptContent:
         					cloneSalonDraft(src: any): any {
         						if (!src) { return null; }
         						const c = Object.assign({}, src);
-        						c.journeySteps = (src.journeySteps || []).slice();
+        						c.journeyRatings = (src.journeyRatings || []).map((r: any) => Object.assign({}, r));
         						c.salonPhotos = (src.salonPhotos || []).slice();
         						if (src.entries) { c.entries = src.entries.slice(); }
         						return c;
@@ -1008,14 +1007,14 @@ componentScriptContent:
         					sanitizeSalonPatch(patch: any, base: any, forceClear: boolean): any {
         						const out = Object.assign({}, patch || {});
         						if (forceClear) { return out; }
-        						const arrayKeys = ["journeySteps", "salonPhotos"];
+        						const arrayKeys = ["journeyRatings", "salonPhotos"];
         						for (const k of arrayKeys) {
         							if (out[k] && Array.isArray(out[k]) && out[k].length === 0) {
         								const existing = base[k];
         								if (Array.isArray(existing) && existing.length > 0) { delete out[k]; }
         							}
         						}
-        						const strKeys = ["verbatimText", "firstName", "intervieweeEmail", "sector", "age", "urssafSince", "contactMode", "profileCount", "salonName", "globalSatisfaction"];
+        						const strKeys = ["verbatimText", "firstName", "intervieweeEmail", "sector", "sectorFamily", "age", "urssafSince", "contactMode", "profileCount", "salonName"];
         						for (const k of strKeys) {
         							if (out[k] === "" && (base[k] || "").trim()) { delete out[k]; }
         						}
@@ -1040,7 +1039,7 @@ componentScriptContent:
         					},
         					syncRowFromLiveDraft(row: any, draft: any) {
         						Object.assign(row, draft);
-        						row.journeySteps = (draft.journeySteps || []).slice();
+        						row.journeyRatings = (draft.journeyRatings || []).map((r: any) => Object.assign({}, r));
         						row.salonPhotos = (draft.salonPhotos || []).slice();
         						row.format = "salon";
         						row.status = "draft";
@@ -1305,10 +1304,10 @@ componentScriptContent:
         							payload: {
         								format: "salon",
         								sheetCode: iv.sheetCode,
-        								journeySteps: iv.journeySteps || [],
-        								globalSatisfaction: iv.globalSatisfaction,
+        								journeyRatings: (iv.journeyRatings || []).map((r: any) => Object.assign({}, r)),
         								verbatimText: iv.verbatimText,
         								sector: iv.sector,
+        								sectorFamily: iv.sectorFamily,
         								age: iv.age,
         								urssafSince: iv.urssafSince,
         								multiProfile: iv.multiProfile,
@@ -2001,6 +2000,21 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
           .vu-sat-medium { background: #fef3c7 !important; color: #b45309 !important; }
           .vu-sat-sad { background: #fee2e2 !important; color: #b91c1c !important; }
           .vu-recap-muted { color: #94a3b8; font-style: italic; }
+          .vu-recap-rating-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 6px 0;
+            border-bottom: 1px solid #f1f5f9;
+          }
+          .vu-recap-rating-row:last-of-type { border-bottom: none; }
+          .vu-recap-rating-label {
+            flex: 1;
+            min-width: 0;
+            font-size: 14px;
+            color: #1e293b;
+          }
           .vu-recap-photo { width: 100%; max-height: 320px; object-fit: cover; border-radius: 20px; margin-top: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
           .vu-status-synced { background: #dcfce7 !important; color: #166534 !important; }
           .vu-status-saved { background: #dbeafe !important; color: #1e40af !important; }
@@ -2334,6 +2348,102 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
             border-color: #0050AA;
             background: rgba(0,80,170,0.08);
             font-weight: 600;
+          }
+          .vu-journey-hint {
+            font-size: 13px;
+            color: #64748b;
+            margin: 4px 0 14px;
+          }
+          .vu-journey-family {
+            margin-bottom: 18px;
+          }
+          .vu-journey-family-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #0050AA;
+            margin: 12px 0 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+          }
+          .vu-journey-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 8px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            background: #fff;
+            margin-bottom: 6px;
+          }
+          .vu-journey-row-label {
+            flex: 1;
+            min-width: 0;
+            font-size: 14px;
+            color: #1e293b;
+          }
+          .vu-journey-smileys {
+            display: flex;
+            gap: 4px;
+            flex-shrink: 0;
+          }
+          .vu-smiley-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            padding: 6px 8px;
+            min-width: 58px;
+            border-radius: 10px;
+            border: 1px solid transparent;
+            background: transparent;
+            cursor: pointer;
+            opacity: 0.55;
+          }
+          .vu-smiley-face {
+            font-size: 22px;
+            line-height: 1;
+            filter: grayscale(0.6);
+          }
+          .vu-smiley-label {
+            font-size: 10px;
+            color: #64748b;
+            white-space: nowrap;
+          }
+          .vu-smiley-btn--on {
+            opacity: 1;
+          }
+          .vu-smiley-btn--on .vu-smiley-face {
+            filter: none;
+          }
+          .vu-smiley-btn--on .vu-smiley-label {
+            font-weight: 700;
+            color: #1e293b;
+          }
+          .vu-smiley-btn--tres_insatisfait.vu-smiley-btn--on {
+            background: rgba(220,38,38,0.12);
+            border-color: #dc2626;
+          }
+          .vu-smiley-btn--moyen.vu-smiley-btn--on {
+            background: rgba(234,88,12,0.12);
+            border-color: #ea580c;
+          }
+          .vu-smiley-btn--satisfait.vu-smiley-btn--on {
+            background: rgba(202,138,4,0.14);
+            border-color: #ca8a04;
+          }
+          .vu-smiley-btn--tres_satisfait.vu-smiley-btn--on {
+            background: rgba(22,163,74,0.12);
+            border-color: #16a34a;
+          }
+          @media (max-width: 640px) {
+            .vu-journey-row {
+              flex-direction: column;
+              align-items: stretch;
+            }
+            .vu-journey-smileys {
+              justify-content: space-between;
+            }
           }
           .vu-skip-container {
             text-align: center;
@@ -2865,6 +2975,12 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
               .vu-recap-value {
                 color: #cbd5e1;
               }
+              .vu-recap-rating-label {
+                color: #e2e8f0;
+              }
+              .vu-recap-rating-row {
+                border-bottom-color: #334155;
+              }
               ion-input, ion-textarea, ion-select {
                 --color: #f8fafc !important;
                 color: #f8fafc !important;
@@ -2889,6 +3005,23 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
                 background: rgba(96, 165, 250, 0.15) !important;
                 border-color: #60a5fa !important;
                 color: #60a5fa !important;
+              }
+              .vu-journey-row {
+                background: #0f172a !important;
+                border-color: #334155 !important;
+              }
+              .vu-journey-row-label {
+                color: #e2e8f0 !important;
+              }
+              .vu-journey-family-title {
+                color: #60a5fa !important;
+              }
+              .vu-journey-hint,
+              .vu-smiley-label {
+                color: #94a3b8 !important;
+              }
+              .vu-smiley-btn--on .vu-smiley-label {
+                color: #f8fafc !important;
               }
               .vu-card {
                 background: #1e293b !important;
@@ -2942,6 +3075,12 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
                 color: #cbd5e1 !important;
                 border-bottom-color: #334155 !important;
               }
+              .vu-recap-rating-label {
+                color: #e2e8f0 !important;
+              }
+              .vu-recap-rating-row {
+                border-bottom-color: #334155 !important;
+              }
               .vu-recap-verbatim {
                 background: #0f172a !important;
                 border-left-color: #60a5fa !important;
@@ -2968,6 +3107,12 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
             }
             .vu-recap-value {
               color: #cbd5e1 !important;
+              border-bottom-color: #334155 !important;
+            }
+            .vu-recap-rating-label {
+              color: #e2e8f0 !important;
+            }
+            .vu-recap-rating-row {
               border-bottom-color: #334155 !important;
             }
             .vu-recap-verbatim {
@@ -3205,6 +3350,12 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
           }
           :root.force-dark .vu-recap-value {
             color: #cbd5e1 !important;
+            border-bottom-color: #334155 !important;
+          }
+          :root.force-dark .vu-recap-rating-label {
+            color: #e2e8f0 !important;
+          }
+          :root.force-dark .vu-recap-rating-row {
             border-bottom-color: #334155 !important;
           }
           :root.force-dark .vu-recap-verbatim {

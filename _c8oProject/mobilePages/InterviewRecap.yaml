@@ -13,10 +13,10 @@ scriptContent:
         	public intervieweeEmail: string = "";
         	public status: string = "";
         	public dateLabel: string = "";
-        	public journeyText: string = "";
-        	public globalSatisfaction: string = "";
+        	public journeyRatingRows: any[] = [];
         	public verbatimText: string = "";
         	public sector: string = "";
+        	public sectorFamily: string = "";
         	public age: string = "";
         	public urssafSince: string = "";
         	public multiProfileText: string = "";
@@ -53,10 +53,32 @@ scriptContent:
         	}
         	public labelJourney(id: string): string {
         		const m: any = {
-        			creation: "Création activité",
+        			creation: "Création de l''activité",
         			vie_courante: "Vie courante",
         			imprevus: "Imprévus",
-        			fin: "Fin de parcours"
+        			fin: "Fin de l''activité"
+        		};
+        		return m[id] || id;
+        	}
+        	public labelJourneyStep(id: string): string {
+        		const m: any = {
+        			creation_renseigne: "Je me renseigne sur le statut d''auto-entrepreneur",
+        			creation_formalites: "Je réalise les formalités administratives",
+        			creation_declarations: "Je fais mes premières déclarations",
+        			vc_cotisations: "Je gère et paie mes cotisations",
+        			vc_appel_offre: "Je réponds à un appel d''offre ou à un donneur d''ordre",
+        			vc_declaration_fiscale: "Je fais ma déclaration fiscale",
+        			vc_erreur_declarations: "J''ai fait une erreur lors de mes déclarations",
+        			vc_mode_reglement: "Je veux changer la façon de régler mes cotisations",
+        			vc_donnees_admin: "J''actualise mes données administratives",
+        			imp_baisse_revenus: "Je suis confronté à une baisse de revenus",
+        			imp_absence: "Je suis absent (maladie, maternité, paternité...)",
+        			imp_sinistre: "Je suis victime d''un sinistre (incendie, vol, etc.)",
+        			imp_controle: "J''ai un contrôle social ou fiscal",
+        			imp_retard_dette: "J''ai du retard dans mes règlements (dette)",
+        			fin_procedure_collective: "J''ai une procédure collective (redressement, liquidation...)",
+        			fin_fermeture: "Je choisis de fermer mon auto-entreprise",
+        			fin_retraite: "Je pars à la retraite"
         		};
         		return m[id] || id;
         	}
@@ -68,6 +90,31 @@ scriptContent:
         			tres_satisfait: "Très satisfait"
         		};
         		return m[id] || id;
+        	}
+        	public satisfactionEmoji(id: string): string {
+        		const m: any = {
+        			tres_insatisfait: "😠",
+        			moyen: "😕",
+        			satisfait: "🙂",
+        			tres_satisfait: "😄"
+        		};
+        		return m[id] || "";
+        	}
+        	public ratingClass(id: string): string {
+        		if (id === "tres_insatisfait") { return "vu-sat-pill vu-sat-sad"; }
+        		if (id === "moyen") { return "vu-sat-pill vu-sat-medium"; }
+        		if (id === "satisfait") { return "vu-sat-pill vu-sat-happy"; }
+        		if (id === "tres_satisfait") { return "vu-sat-pill vu-sat-very-happy"; }
+        		return "vu-recap-muted";
+        	}
+        	public hasJourneyRatings(): boolean {
+        		return (this.journeyRatingRows || []).length > 0;
+        	}
+        	public sectorDisplay(): string {
+        		const s = (this.sector || "").trim();
+        		const f = (this.sectorFamily || "").trim();
+        		if (s && f && f !== s) { return f + " — " + s; }
+        		return s || f || "";
         	}
         	public labelContact(mode: string): string {
         		if (mode === "direct") { return "Contact direct Urssaf"; }
@@ -92,14 +139,6 @@ scriptContent:
         		if (s === "draft") { return "vu-badge-pill vu-status-draft"; }
         		if (s === "error") { return "vu-badge-pill vu-status-error"; }
         		return "vu-badge-pill";
-        	}
-        	public satClass(val: string): string {
-        		const s = (val || "").trim().toLowerCase();
-        		if (s.indexOf("insatisfait") >= 0) return "vu-sat-pill vu-sat-sad";
-        		if (s.indexOf("très satisfait") >= 0) return "vu-sat-pill vu-sat-very-happy";
-        		if (s.indexOf("satisfait") >= 0) return "vu-sat-pill vu-sat-happy";
-        		if (s.indexOf("moyen") >= 0) return "vu-sat-pill vu-sat-medium";
-        		return "vu-recap-muted";
         	}
         	public async loadRecap(): Promise<void> {
         		const store = await this.ensureStore();
@@ -151,11 +190,16 @@ scriptContent:
         		this.firstName = iv.firstName || iv.intervieweeName || "";
         		this.intervieweeEmail = iv.intervieweeEmail || "";
         		this.dateLabel = store.formatDate(iv.updatedAt || iv.createdAt);
-        		const steps = (iv.journeySteps || []).map((id: string) => this.labelJourney(id));
-        		this.journeyText = steps.length ? steps.join(", ") : "";
-        		this.globalSatisfaction = this.labelSatisfaction(iv.globalSatisfaction || "");
+        		this.journeyRatingRows = (iv.journeyRatings || []).map((r: any) => ({
+        			stepLabel: this.labelJourneyStep(r.stepId),
+        			familyLabel: this.labelJourney(r.family),
+        			emoji: this.satisfactionEmoji(r.satisfaction),
+        			satisfactionLabel: this.labelSatisfaction(r.satisfaction || ""),
+        			satisfaction: r.satisfaction || ""
+        		}));
         		this.verbatimText = iv.verbatimText || "";
         		this.sector = iv.sector || "";
+        		this.sectorFamily = iv.sectorFamily || "";
         		this.age = iv.age || "";
         		this.urssafSince = iv.urssafSince || "";
         		if (iv.multiProfile === true) {
@@ -360,46 +404,66 @@ title: Récap fiche
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:Parcours Urssaf
-          ↓ValJ [ngx.components.UIElement-1779400001056]: 
-            tagName: p
-            ↓AttrClass [ngx.components.UIAttribute-1779400001057]: 
-              attrName: '[class]'
+                  - MobileSmartSourceType: plain:Ressenti par étape du parcours
+          ↓RatingRow [ngx.components.UIElement-1779400002001]: 
+            tagName: div
+            ↓AttrFor [ngx.components.UIAttribute-1779400002002]: 
+              attrName: '*ngFor'
               attrValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: 'script:journeyText ? ''vu-recap-value'' : ''vu-recap-value vu-recap-muted'''
-            ↓Text [ngx.components.UIText-1779400001204]: 
-              textValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: script:displayOrDash(journeyText)
-          ↓LblS [ngx.components.UIElement-1779400001058]: 
-            tagName: p
-            ↓AttrClass [ngx.components.UIAttribute-1779400001059]: 
+                  - MobileSmartSourceType: plain:let r of journeyRatingRows
+            ↓AttrClass [ngx.components.UIAttribute-1779400002003]: 
               attrName: class
               attrValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:vu-field-label
-            ↓Text [ngx.components.UIText-1779400001205]: 
-              textValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:Satisfaction globale
-          ↓ValS [ngx.components.UIElement-1779400001060]: 
+                  - MobileSmartSourceType: plain:vu-recap-rating-row
+            ↓StepLbl [ngx.components.UIElement-1779400002004]: 
+              tagName: span
+              ↓AttrClass [ngx.components.UIAttribute-1779400002005]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:vu-recap-rating-label
+              ↓Text [ngx.components.UIText-1779400002006]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:r.stepLabel
+            ↓Pill [ngx.components.UIElement-1779400002007]: 
+              tagName: span
+              ↓AttrClass [ngx.components.UIAttribute-1779400002008]: 
+                attrName: '[class]'
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:ratingClass(r.satisfaction)
+              ↓Text [ngx.components.UIText-1779400002009]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: 'script:r.emoji + '' '' + r.satisfactionLabel'
+          ↓NoRatings [ngx.components.UIElement-1779400002010]: 
             tagName: p
-            ↓AttrClass [ngx.components.UIAttribute-1779400001061]: 
-              attrName: '[class]'
+            ↓AttrIf [ngx.components.UIAttribute-1779400002011]: 
+              attrName: '*ngIf'
               attrValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: script:satClass(globalSatisfaction)
-            ↓Text [ngx.components.UIText-1779400001206]: 
+                  - MobileSmartSourceType: plain:!hasJourneyRatings()
+            ↓AttrClass [ngx.components.UIAttribute-1779400002012]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-recap-value vu-recap-muted
+            ↓Text [ngx.components.UIText-1779400002013]: 
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: script:displayOrDash(globalSatisfaction)
+                  - MobileSmartSourceType: plain:—
           ↓LblV [ngx.components.UIElement-1779400001062]: 
             tagName: p
             ↓AttrClass [ngx.components.UIAttribute-1779400001063]: 
@@ -460,7 +524,7 @@ title: Récap fiche
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:Secteur
+                  - MobileSmartSourceType: plain:Métier
           ↓ValSec [ngx.components.UIElement-1779400001076]: 
             tagName: p
             ↓AttrClass [ngx.components.UIAttribute-1779400001077]: 
@@ -473,7 +537,7 @@ title: Récap fiche
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: script:displayOrDash(sector)
+                  - MobileSmartSourceType: script:displayOrDash(sectorDisplay())
           ↓LblAge [ngx.components.UIElement-1779400001078]: 
             tagName: p
             ↓AttrClass [ngx.components.UIAttribute-1779400001079]: 
