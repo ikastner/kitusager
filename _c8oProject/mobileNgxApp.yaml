@@ -2141,15 +2141,9 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
           .vu-section-title { font-size: 18px; font-weight: 700; color: #1e293b; margin: 0 0 16px; }
           .vu-link-action { font-size: 12px; font-weight: 700; color: #0050AA; cursor: pointer; }
           .vu-link-muted { color: #64748b !important; }
-          .vu-data-io-home-link {
-            margin: 0 0 16px;
-            background: #fff;
-            border: 1px solid #f1f5f9;
-            border-radius: 12px;
-            padding: 14px 16px;
-            font-weight: 700;
-            color: #0050AA;
-            cursor: pointer;
+          .vu-data-io-home-btn {
+            margin: 8px 0 24px;
+            width: 100%;
           }
           .vu-data-io-bulk { display: flex; gap: 16px; margin: 0 0 12px; }
           .vu-data-io-list { max-height: 220px; overflow: auto; margin-bottom: 16px; }
@@ -3377,6 +3371,10 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
                 border-color: #334155 !important;
                 box-shadow: 0 8px 30px rgba(0,0,0,0.2) !important;
               }
+              .vu-data-io-home-btn {
+                background: rgba(96, 165, 250, 0.12) !important;
+                color: #60a5fa !important;
+              }
               .vu-card-name {
                 color: #f8fafc !important;
               }
@@ -3715,7 +3713,11 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
           :root.force-dark .vu-sat-very-happy { background: #14532d !important; color: #4ade80 !important; }
           :root.force-dark .vu-sat-happy { background: #166534 !important; color: #86efac !important; }
           :root.force-dark .vu-sat-medium { background: #78350f !important; color: #fde047 !important; }
-          :root.force-dark .vu-sat-sad { background: #7f1d1d !important; color: #fca5a5 !important; }'
+          :root.force-dark .vu-sat-sad { background: #7f1d1d !important; color: #fca5a5 !important; }
+          :root.force-dark .vu-data-io-home-btn {
+            background: rgba(96, 165, 250, 0.12) !important;
+            color: #60a5fa !important;
+          }'
 ↓TailwindTheme [ngx.components.UITheme-1779283399750]: 
   comment: Utility-like design token layer mapped to Ionic components (v8.4.0.7)
   styleContent: 
