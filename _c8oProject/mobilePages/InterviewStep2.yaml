@@ -10,33 +10,9 @@ scriptContent:
         /*Begin_c8o_PageDeclaration*/
         	public journeyRatings: any[] = [];
         	public wizardCanProceed: boolean = false;
-        	public journeyFamilies: any[] = [
-        		{ id: "creation", label: "Création de l''activité", steps: [
-        			{ id: "creation_renseigne", label: "Je me renseigne sur le statut d''auto-entrepreneur" },
-        			{ id: "creation_formalites", label: "Je réalise les formalités administratives" },
-        			{ id: "creation_declarations", label: "Je fais mes premières déclarations" }
-        		]},
-        		{ id: "vie_courante", label: "Vie courante", steps: [
-        			{ id: "vc_cotisations", label: "Je gère et paie mes cotisations" },
-        			{ id: "vc_appel_offre", label: "Je réponds à un appel d''offre ou à un donneur d''ordre" },
-        			{ id: "vc_declaration_fiscale", label: "Je fais ma déclaration fiscale" },
-        			{ id: "vc_erreur_declarations", label: "J''ai fait une erreur lors de mes déclarations" },
-        			{ id: "vc_mode_reglement", label: "Je veux changer la façon de régler mes cotisations" },
-        			{ id: "vc_donnees_admin", label: "J''actualise mes données administratives" }
-        		]},
-        		{ id: "imprevus", label: "Imprévus", steps: [
-        			{ id: "imp_baisse_revenus", label: "Je suis confronté à une baisse de revenus" },
-        			{ id: "imp_absence", label: "Je suis absent (maladie, maternité, paternité...)" },
-        			{ id: "imp_sinistre", label: "Je suis victime d''un sinistre (incendie, vol, etc.)" },
-        			{ id: "imp_controle", label: "J''ai un contrôle social ou fiscal" },
-        			{ id: "imp_retard_dette", label: "J''ai du retard dans mes règlements (dette)" }
-        		]},
-        		{ id: "fin", label: "Fin de l''activité", steps: [
-        			{ id: "fin_procedure_collective", label: "J''ai une procédure collective (redressement, liquidation...)" },
-        			{ id: "fin_fermeture", label: "Je choisis de fermer mon auto-entreprise" },
-        			{ id: "fin_retraite", label: "Je pars à la retraite" }
-        		]}
-        	];
+        	public userTypology: string = "auto_entrepreneur";
+        	public typologies: any[] = [];
+        	public journeyFamilies: any[] = [];
         	public satisfactionLevels: any[] = [
         		{ id: "tres_insatisfait", emoji: "😠", label: "Très insatisfait" },
         		{ id: "moyen", emoji: "😕", label: "Moyen" },
@@ -57,9 +33,34 @@ scriptContent:
         		const store = await this.ensureStore();
         		if (!store) { return; }
         		if (store.whenReady) { await store.whenReady(); }
+        		this.typologies = store.getUserTypologies ? store.getUserTypologies() : [];
         		const iv = store.getActiveInterview();
         		if (!iv || iv.format !== "salon") { return; }
+        		this.userTypology = iv.userTypology || "auto_entrepreneur";
+        		this.journeyFamilies = store.getJourneyFamiliesForTypology
+        			? store.getJourneyFamiliesForTypology(this.userTypology) : [];
         		this.journeyRatings = (iv.journeyRatings || []).map((r: any) => Object.assign({}, r));
+        	}
+        	public hasSteps(): boolean {
+        		return (this.journeyFamilies || []).some((f: any) => (f.steps || []).length > 0);
+        	}
+        	public visibleFamilies(): any[] {
+        		return (this.journeyFamilies || []).filter((f: any) => (f.steps || []).length > 0);
+        	}
+        	public onTypologyChange(value: string): void {
+        		const next = value || "auto_entrepreneur";
+        		this.userTypology = next;
+        		const store = this.getStoreSync();
+        		this.journeyFamilies = (store && store.getJourneyFamiliesForTypology)
+        			? store.getJourneyFamiliesForTypology(next) : [];
+        		// Ne garder que les notes des étapes du nouveau parcours
+        		const validIds: any = {};
+        		for (const f of (this.journeyFamilies || [])) {
+        			for (const s of (f.steps || [])) { validIds[s.id] = true; }
+        		}
+        		this.journeyRatings = (this.journeyRatings || []).filter((r: any) => validIds[r.stepId]);
+        		this.saveDraft();
+        		if (this.ref) { this.ref.markForCheck(); }
         	}
         	public touchDraft(): void {
         		this.saveDraft();
@@ -80,7 +81,10 @@ scriptContent:
         		if (!store) { return; }
         		if (store._page !== this) { store._page = this; }
         		if (!store.getActiveInterview()) { return; }
+        		// _forceClear : la liste vide est un état légitime ici (changement de typologie, note retirée)
         		store.updateSalonDraft({
+        			_forceClear: true,
+        			userTypology: this.userTypology || "auto_entrepreneur",
         			journeyRatings: (this.journeyRatings || []).map((r: any) => Object.assign({}, r)),
         			wizardStep: 2
         		});
@@ -126,6 +130,8 @@ scriptContent:
         		if (!store) { return; }
         		if (store._page !== this) { store._page = this; }
         		store.updateSalonDraft({
+        			_forceClear: true,
+        			userTypology: this.userTypology || "auto_entrepreneur",
         			journeyRatings: (this.journeyRatings || []).map((r: any) => Object.assign({}, r)),
         			wizardStep: 3
         		});
@@ -136,6 +142,8 @@ scriptContent:
         		if (!store) { return; }
         		if (store._page !== this) { store._page = this; }
         		store.updateSalonDraft({
+        			_forceClear: true,
+        			userTypology: this.userTypology || "auto_entrepreneur",
         			journeyRatings: (this.journeyRatings || []).map((r: any) => Object.assign({}, r)),
         			wizardStep: 1
         		});
@@ -303,8 +311,95 @@ title: Etape 2
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:Notez votre satisfaction pour chaque étape qui vous concerne
+        ↓LblTypology [ngx.components.UIElement-1786540001001]: 
+          tagName: label
+          ↓AttrClass [ngx.components.UIAttribute-1786540001002]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-field-label
+          ↓Text [ngx.components.UIText-1786540001003]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Catégorie d'usager
+        ↓InTypology [ngx.components.UIDynamicElement-1786540001004]: 
+          beanData: |
+            '{
+             "ionBean": "Select",
+             "ControlName": "plain:userTypology",
+             "DoubleBinding": "script:userTypology",
+             "Fill": "plain:outline",
+             "Interface": "plain:popover",
+             "Placeholder": "plain:Sélectionner..."
+            }'
+          tagName: ion-select
+          ↓AttrClass [ngx.components.UIAttribute-1786540001005]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-field vu-typology-select
+          ↓Event [ngx.components.UIControlEvent-1786540001006]: 
+            attrName: (ionChange)
+            eventName: ionChange
+            ↓ChangeAction [ngx.components.UICustomAction-1786540001007]: 
+              actionValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                    →: |
+                      		page.onTypologyChange(event.detail.value);
+                      		page.ref.markForCheck();
+                      		resolve();
+                      
+          ↓OptTypology [ngx.components.UIElement-1786540001008]: 
+            tagName: ion-select-option
+            ↓AttrFor [ngx.components.UIAttribute-1786540001009]: 
+              attrName: '*ngFor'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:let typo of typologies
+            ↓AttrValue [ngx.components.UIAttribute-1786540001010]: 
+              attrName: '[value]'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:typo.id
+            ↓Text [ngx.components.UIText-1786540001011]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:typo.label
+        ↓EmptyTypology [ngx.components.UIElement-1786540001012]: 
+          tagName: div
+          ↓AttrIf [ngx.components.UIAttribute-1786540001013]: 
+            attrName: '*ngIf'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:!hasSteps()
+          ↓AttrClass [ngx.components.UIAttribute-1786540001014]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-typology-empty
+          ↓Text [ngx.components.UIText-1786540001015]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Les étapes du parcours pour cette catégorie d'usager seront ajoutées prochainement. Vous pouvez passer à l'étape suivante.
         ↓Hint [ngx.components.UIElement-1779300050001]: 
           tagName: p
+          ↓AttrIf [ngx.components.UIAttribute-1786540001016]: 
+            attrName: '*ngIf'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:hasSteps()
           ↓AttrClass [ngx.components.UIAttribute-1779300050002]: 
             attrName: class
             attrValue: 
@@ -323,7 +418,7 @@ title: Etape 2
             attrValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:let fam of journeyFamilies
+                - MobileSmartSourceType: plain:let fam of visibleFamilies()
           ↓AttrClass [ngx.components.UIAttribute-1779300050012]: 
             attrName: class
             attrValue: 

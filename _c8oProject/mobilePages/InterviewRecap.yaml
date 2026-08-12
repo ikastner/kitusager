@@ -33,6 +33,7 @@ scriptContent:
         	public maxPhotos: number = 4;
         	public interviewId: string = "";
         	public deleting: boolean = false;
+        	public userTypologyLabel: string = "";
         	/*End_c8o_PageDeclaration*/
         /*Begin_c8o_PageConstructor*/
         		/*End_c8o_PageConstructor*/
@@ -193,9 +194,16 @@ scriptContent:
         		this.firstName = iv.firstName || iv.intervieweeName || "";
         		this.intervieweeEmail = iv.intervieweeEmail || "";
         		this.dateLabel = store.formatDate(iv.updatedAt || iv.createdAt);
+        		this.userTypologyLabel = store.getTypologyLabel
+        			? store.getTypologyLabel(iv.userTypology)
+        			: (iv.userTypology || "");
         		this.journeyRatingRows = (iv.journeyRatings || []).map((r: any) => ({
-        			stepLabel: this.labelJourneyStep(r.stepId),
-        			familyLabel: this.labelJourney(r.family),
+        			stepLabel: store.getJourneyStepLabel
+        				? store.getJourneyStepLabel(r.stepId)
+        				: this.labelJourneyStep(r.stepId),
+        			familyLabel: store.getJourneyFamilyLabel
+        				? store.getJourneyFamilyLabel(r.family)
+        				: this.labelJourney(r.family),
         			emoji: this.satisfactionEmoji(r.satisfaction),
         			satisfactionLabel: this.labelSatisfaction(r.satisfaction || ""),
         			satisfaction: r.satisfaction || ""
@@ -456,6 +464,25 @@ title: Récap fiche
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:Ressenti par étape du parcours
+            ↓TypoChip [ngx.components.UIElement-1779400002014]: 
+              tagName: span
+              ↓AttrIf [ngx.components.UIAttribute-1779400002015]: 
+                attrName: '*ngIf'
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:userTypologyLabel
+              ↓AttrClass [ngx.components.UIAttribute-1779400002016]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:vu-recap-typo-chip
+              ↓Text [ngx.components.UIText-1779400002017]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:userTypologyLabel
           ↓RatingRow [ngx.components.UIElement-1779400002001]: 
             tagName: div
             ↓AttrFor [ngx.components.UIAttribute-1779400002002]: 
@@ -563,6 +590,32 @@ title: Récap fiche
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:Profil usager
+          ↓LblTypo [ngx.components.UIElement-1786540002001]: 
+            tagName: p
+            ↓AttrClass [ngx.components.UIAttribute-1786540002002]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-field-label
+            ↓Text [ngx.components.UIText-1786540002003]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:Catégorie d'usager
+          ↓ValTypo [ngx.components.UIElement-1786540002004]: 
+            tagName: p
+            ↓AttrClass [ngx.components.UIAttribute-1786540002005]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-recap-value
+            ↓Text [ngx.components.UIText-1786540002006]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:displayOrDash(userTypologyLabel)
           ↓LblSec [ngx.components.UIElement-1779400001074]: 
             tagName: p
             ↓AttrClass [ngx.components.UIAttribute-1779400001075]: 

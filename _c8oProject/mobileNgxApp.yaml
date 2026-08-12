@@ -610,8 +610,131 @@ componentScriptContent:
         							firstName: "",
         							photoDataUrl: "",
         							salonPhotos: [] as string[],
+        							userTypology: "auto_entrepreneur",
         							wizardStep: 1
         						};
+        					},
+        	
+        					getUserTypologies(): any[] {
+        						return [
+        							{ id: "auto_entrepreneur", label: "Auto-entrepreneur" },
+        							{ id: "ti", label: "TI" },
+        							{ id: "tiers_declarant", label: "Tiers-déclarant" },
+        							{ id: "rg", label: "RG" },
+        							{ id: "act", label: "ACT" },
+        							{ id: "paje", label: "PAJE" },
+        							{ id: "changement_situation", label: "Changement de situation" }
+        						];
+        					},
+        	
+        					getTypologyLabel(id: string): string {
+        						const tid = (id || "auto_entrepreneur");
+        						const t = this.getUserTypologies().find((x: any) => x.id === tid);
+        						return t ? t.label : tid;
+        					},
+        	
+        					getJourneyFamiliesForTypology(typologyId: string): any[] {
+        						const cat: any = {
+        							auto_entrepreneur: [
+        								{ id: "creation", label: "Création de l''activité", steps: [
+        									{ id: "creation_renseigne", label: "Je me renseigne sur le statut d''auto-entrepreneur" },
+        									{ id: "creation_formalites", label: "Je réalise les formalités administratives" },
+        									{ id: "creation_declarations", label: "Je fais mes premières déclarations" }
+        								]},
+        								{ id: "vie_courante", label: "Vie courante", steps: [
+        									{ id: "vc_cotisations", label: "Je gère et paie mes cotisations" },
+        									{ id: "vc_appel_offre", label: "Je réponds à un appel d''offre ou à un donneur d''ordre" },
+        									{ id: "vc_declaration_fiscale", label: "Je fais ma déclaration fiscale" },
+        									{ id: "vc_erreur_declarations", label: "J''ai fait une erreur lors de mes déclarations" },
+        									{ id: "vc_mode_reglement", label: "Je veux changer la façon de régler mes cotisations" },
+        									{ id: "vc_donnees_admin", label: "J''actualise mes données administratives" }
+        								]},
+        								{ id: "imprevus", label: "Imprévus", steps: [
+        									{ id: "imp_baisse_revenus", label: "Je suis confronté à une baisse de revenus" },
+        									{ id: "imp_absence", label: "Je suis absent (maladie, maternité, paternité...)" },
+        									{ id: "imp_sinistre", label: "Je suis victime d''un sinistre (incendie, vol, etc.)" },
+        									{ id: "imp_controle", label: "J''ai un contrôle social ou fiscal" },
+        									{ id: "imp_retard_dette", label: "J''ai du retard dans mes règlements (dette)" }
+        								]},
+        								{ id: "fin", label: "Fin de l''activité", steps: [
+        									{ id: "fin_procedure_collective", label: "J''ai une procédure collective (redressement, liquidation...)" },
+        									{ id: "fin_fermeture", label: "Je choisis de fermer mon auto-entreprise" },
+        									{ id: "fin_retraite", label: "Je pars à la retraite" }
+        								]}
+        							],
+        							tiers_declarant: [
+        								{ id: "creation", label: "Création de l''activité", steps: [
+        									{ id: "td_creation_cabinet", label: "Je crée un cabinet ou reprends celui d''un ancien associé" },
+        									{ id: "td_creation_forme", label: "Je me forme et rejoins un cabinet déjà en place" }
+        								]},
+        								{ id: "vie_courante", label: "Vie courante", steps: [
+        									{ id: "td_vc_collaborateurs", label: "Je gère l''arrivée ou le départ de collaborateur (accès, clients...)" },
+        									{ id: "td_vc_portefeuille", label: "Je gère mon portefeuille de clients (ajout, retrait, mise à jour...)" },
+        									{ id: "td_vc_paie", label: "Je m''occupe de la paie (bulletins...)" },
+        									{ id: "td_vc_dsn_envoi", label: "Je génère, contrôle et envoie mes DSN" },
+        									{ id: "td_vc_dsn_notifications", label: "Je reçois des notifications et traite les anomalies DSN" },
+        									{ id: "td_vc_aide", label: "Je cherche de l''aide pour une démarche ou une anomalie DSN" },
+        									{ id: "td_vc_veille", label: "Je fais ma veille réglementaire/sociale" },
+        									{ id: "td_vc_formation", label: "Je me forme en continu" }
+        								]},
+        								{ id: "imprevus", label: "Imprévus", steps: [
+        									{ id: "td_imp_dsn_bloquante", label: "J''ai une anomalie bloquante qui empêche l''envoi de ma DSN" },
+        									{ id: "td_imp_organisme_tiers", label: "J''ai des difficultés récurrentes avec un organisme tiers (caisse de retraite, prévoyance...)" },
+        									{ id: "td_imp_difficultes_cabinet", label: "Mon cabinet traverse des difficultés financières ce qui peut bloquer la venue de nouveaux collaborateurs (charge de travail trop importante) ou l''accès à la formation" }
+        								]},
+        								{ id: "fin", label: "Fin de l''activité", steps: [] }
+        							],
+        							act: [
+        								{ id: "creation", label: "Création de l''activité", steps: [
+        									{ id: "act_creation_regroupement", label: "Je crée un regroupement avec d''autres structures" },
+        									{ id: "act_creation_orga_paie", label: "Je choisis mon organisation de paie" },
+        									{ id: "act_creation_embauche", label: "J''embauche un salarié" },
+        									{ id: "act_creation_premiere_dsn", label: "Je réalise ma 1ère DSN" }
+        								]},
+        								{ id: "vie_courante", label: "Vie courante", steps: [
+        									{ id: "act_vc_espace", label: "J''accède à mon espace en ligne" },
+        									{ id: "act_vc_dpae", label: "Je réalise la DPAE" },
+        									{ id: "act_vc_interlocuteur", label: "Je suis le nouvel interlocuteur RH/paie Urssaf" },
+        									{ id: "act_vc_dsn", label: "Je réalise mes DSN régulièrement" },
+        									{ id: "act_vc_ordre_paiement", label: "Je donne l''ordre de paiement" },
+        									{ id: "act_vc_annule_remplace", label: "Je régularise par DSN annule et remplace" },
+        									{ id: "act_vc_anomalies", label: "Je régularise des anomalies DSN" },
+        									{ id: "act_vc_logiciel_paie", label: "Je change de logiciel de paie" },
+        									{ id: "act_vc_nouvelle_urssaf", label: "Je suis rattaché à une nouvelle Urssaf" }
+        								]},
+        								{ id: "imprevus", label: "Imprévus", steps: [
+        									{ id: "act_imp_crise", label: "Je fais face à une crise exceptionnelle" },
+        									{ id: "act_imp_retard_declaration", label: "J''ai du retard de déclaration" },
+        									{ id: "act_imp_difficultes_paiement", label: "J''ai des difficultés de paiement" },
+        									{ id: "act_imp_controle", label: "J''ai un contrôle" }
+        								]},
+        								{ id: "fin", label: "Fin de l''activité", steps: [] }
+        							]
+        						};
+        						return cat[typologyId || "auto_entrepreneur"] || [];
+        					},
+        	
+        					getJourneyStepLabel(stepId: string): string {
+        						if (!stepId) { return ""; }
+        						const typos = this.getUserTypologies();
+        						for (const t of typos) {
+        							const fams = this.getJourneyFamiliesForTypology(t.id);
+        							for (const f of fams) {
+        								const st = (f.steps || []).find((s: any) => s.id === stepId);
+        								if (st) { return st.label; }
+        							}
+        						}
+        						return stepId;
+        					},
+        	
+        					getJourneyFamilyLabel(familyId: string): string {
+        						const m: any = {
+        							creation: "Création de l''activité",
+        							vie_courante: "Vie courante",
+        							imprevus: "Imprévus",
+        							fin: "Fin de l''activité"
+        						};
+        						return m[familyId] || familyId || "";
         					},
         	
         					docToInterview(doc: any): any {
@@ -649,6 +772,7 @@ componentScriptContent:
         								firstName: doc.firstName || "",
         								photoDataUrl: doc.photoDataUrl || "",
         								salonPhotos: (doc.salonPhotos || []).slice(),
+        								userTypology: doc.userTypology || "auto_entrepreneur",
         								wizardStep: doc.wizardStep || 1
         							});
         						}
@@ -694,6 +818,7 @@ componentScriptContent:
         								firstName: iv.firstName || "",
         								photoDataUrl: iv.photoDataUrl || "",
         								salonPhotos: (iv.salonPhotos || []).slice(),
+        								userTypology: iv.userTypology || "auto_entrepreneur",
         								wizardStep: iv.wizardStep || 1
         							});
         						}
@@ -1085,7 +1210,7 @@ componentScriptContent:
         								if (Array.isArray(existing) && existing.length > 0) { delete out[k]; }
         							}
         						}
-        						const strKeys = ["verbatimText", "firstName", "intervieweeEmail", "sector", "sectorFamily", "age", "urssafSince", "contactMode", "profileCount", "salonName"];
+        						const strKeys = ["verbatimText", "firstName", "intervieweeEmail", "sector", "sectorFamily", "age", "urssafSince", "contactMode", "profileCount", "salonName", "userTypology"];
         						for (const k of strKeys) {
         							if (out[k] === "" && (base[k] || "").trim()) { delete out[k]; }
         						}
@@ -1247,6 +1372,13 @@ componentScriptContent:
         							draft.salonPhotos = (patch.salonPhotos || []).slice();
         							draft.photoDataUrl = draft.salonPhotos[0] || "";
         						}
+        						// Invariant : seules les notes du parcours de la typologie courante sont conservées
+        						const typoFams = this.getJourneyFamiliesForTypology(draft.userTypology || "auto_entrepreneur");
+        						const validStepIds: any = {};
+        						for (const f of typoFams) {
+        							for (const s of (f.steps || [])) { validStepIds[s.id] = true; }
+        						}
+        						draft.journeyRatings = (draft.journeyRatings || []).filter((r: any) => validStepIds[r.stepId]);
         						draft.format = "salon";
         						draft.updatedAt = new Date().toISOString();
         						draft.status = "draft";
@@ -1428,6 +1560,7 @@ componentScriptContent:
         							payload: {
         								format: "salon",
         								sheetCode: iv.sheetCode,
+        								userTypology: iv.userTypology || "auto_entrepreneur",
         								journeyRatings: (iv.journeyRatings || []).map((r: any) => Object.assign({}, r)),
         								verbatimText: iv.verbatimText,
         								sector: iv.sector,
@@ -2446,6 +2579,19 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
           .vu-sat-medium { background: #fef3c7 !important; color: #b45309 !important; }
           .vu-sat-sad { background: #fee2e2 !important; color: #b91c1c !important; }
           .vu-recap-muted { color: #94a3b8; font-style: italic; }
+          .vu-recap-typo-chip {
+            display: inline-block;
+            margin-left: 8px;
+            padding: 3px 10px;
+            border-radius: 999px;
+            background: #e0e7ff;
+            color: #3730a3;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            text-transform: none;
+            vertical-align: middle;
+          }
           .vu-recap-actions {
             display: flex;
             gap: 10px;
@@ -2833,6 +2979,19 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
           .vu-journey-hint {
             font-size: 13px;
             color: #64748b;
+            margin: 4px 0 14px;
+          }
+          .vu-typology-select {
+            margin-bottom: 16px;
+          }
+          .vu-typology-empty {
+            background: #f0f7ff;
+            border: 1px dashed #93c5fd;
+            border-radius: 14px;
+            padding: 16px;
+            font-size: 14px;
+            color: #1e40af;
+            line-height: 1.5;
             margin: 4px 0 14px;
           }
           .vu-journey-family {
@@ -3501,6 +3660,11 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
               .vu-smiley-label {
                 color: #94a3b8 !important;
               }
+              .vu-typology-empty {
+                background: rgba(96, 165, 250, 0.08) !important;
+                border-color: #3b82f6 !important;
+                color: #93c5fd !important;
+              }
               .vu-smiley-btn--on .vu-smiley-label {
                 color: #f8fafc !important;
               }
@@ -3919,6 +4083,10 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
           :root.force-dark .vu-sat-happy { background: #166534 !important; color: #86efac !important; }
           :root.force-dark .vu-sat-medium { background: #78350f !important; color: #fde047 !important; }
           :root.force-dark .vu-sat-sad { background: #7f1d1d !important; color: #fca5a5 !important; }
+          :root.force-dark .vu-recap-typo-chip {
+            background: rgba(129, 140, 248, 0.18) !important;
+            color: #a5b4fc !important;
+          }
           :root.force-dark .vu-recap-btn-delete {
             background: transparent !important;
             color: #f87171 !important;
