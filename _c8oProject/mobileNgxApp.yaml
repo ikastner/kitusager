@@ -3375,6 +3375,53 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
                 background: rgba(96, 165, 250, 0.12) !important;
                 color: #60a5fa !important;
               }
+              .vu-data-io-row {
+                background: #1e293b !important;
+                border-color: #334155 !important;
+              }
+              .vu-data-io-card {
+                background: #1e293b !important;
+                border-color: #334155 !important;
+                box-shadow: 0 8px 30px rgba(0,0,0,0.2) !important;
+              }
+              .vu-data-io-card::before {
+                background: #60a5fa !important;
+              }
+              .vu-data-io-card-title {
+                color: #f8fafc !important;
+              }
+              .vu-data-io .vu-card-name {
+                color: #f8fafc !important;
+              }
+              .vu-data-io .vu-card-meta {
+                color: #94a3b8 !important;
+              }
+              .vu-data-io .vu-list-count {
+                color: #94a3b8 !important;
+              }
+              .vu-data-io .vu-check {
+                border-color: #64748b !important;
+              }
+              .vu-data-io .vu-check--on {
+                background: #0050AA !important;
+                border-color: #0050AA !important;
+              }
+              .vu-data-io .vu-btn-outline {
+                background: transparent !important;
+                color: #60a5fa !important;
+                border-color: #60a5fa !important;
+              }
+              .vu-data-io .vu-btn-soft {
+                background: rgba(96, 165, 250, 0.12) !important;
+                color: #60a5fa !important;
+              }
+              .vu-data-io .vu-btn-dark {
+                background: #0050AA !important;
+                color: #fff !important;
+              }
+              .vu-data-io .vu-link-muted {
+                color: #64748b !important;
+              }
               .vu-card-name {
                 color: #f8fafc !important;
               }
@@ -3717,6 +3764,53 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
           :root.force-dark .vu-data-io-home-btn {
             background: rgba(96, 165, 250, 0.12) !important;
             color: #60a5fa !important;
+          }
+          :root.force-dark .vu-data-io-row {
+            background: #1e293b !important;
+            border-color: #334155 !important;
+          }
+          :root.force-dark .vu-data-io-card {
+            background: #1e293b !important;
+            border-color: #334155 !important;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.2) !important;
+          }
+          :root.force-dark .vu-data-io-card::before {
+            background: #60a5fa !important;
+          }
+          :root.force-dark .vu-data-io-card-title {
+            color: #f8fafc !important;
+          }
+          :root.force-dark .vu-data-io .vu-card-name {
+            color: #f8fafc !important;
+          }
+          :root.force-dark .vu-data-io .vu-card-meta {
+            color: #94a3b8 !important;
+          }
+          :root.force-dark .vu-data-io .vu-list-count {
+            color: #94a3b8 !important;
+          }
+          :root.force-dark .vu-data-io .vu-check {
+            border-color: #64748b !important;
+          }
+          :root.force-dark .vu-data-io .vu-check--on {
+            background: #0050AA !important;
+            border-color: #0050AA !important;
+          }
+          :root.force-dark .vu-data-io .vu-btn-outline {
+            background: transparent !important;
+            color: #60a5fa !important;
+            border-color: #60a5fa !important;
+          }
+          :root.force-dark .vu-data-io .vu-btn-soft {
+            background: rgba(96, 165, 250, 0.12) !important;
+            color: #60a5fa !important;
+          }
+          :root.force-dark .vu-data-io .vu-btn-dark {
+            background: #0050AA !important;
+            color: #fff !important;
+          }
+          :root.force-dark .vu-data-io .vu-link-muted {
+            color: #64748b !important;
           }'
 ↓TailwindTheme [ngx.components.UITheme-1779283399750]: 
   comment: Utility-like design token layer mapped to Ionic components (v8.4.0.7)
