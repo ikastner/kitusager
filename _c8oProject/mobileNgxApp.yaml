@@ -2172,6 +2172,15 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
           }
           .vu-data-io-card-title { font-weight: 700; color: #1e293b; margin-bottom: 4px; }
           .vu-data-io-actions { display: flex; gap: 8px; margin-top: 12px; }
+          .vu-data-io-actions .vu-btn-primary,
+          .vu-data-io-actions .vu-btn-outline {
+            box-sizing: border-box;
+            min-height: 48px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+          }
+          .vu-data-io-actions .vu-btn-primary { border: 2px solid transparent; }
           .vu-btn-primary, .vu-btn-outline, .vu-btn-soft, .vu-btn-dark {
             flex: 1; border-radius: 12px; padding: 12px; font-weight: 700; font-size: 14px; border: none; cursor: pointer;
           }
