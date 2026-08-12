@@ -31,12 +31,12 @@ Placeholder transaction that intentionally cancels execution
 </p></blockquote></details>
 </p></blockquote></details>
 
-<details><summary><b>voxurssaf</b> : Connecteur SQL interviews événement (HSQLDB dev — base voxurssaf_v2)</summary><blockquote><p>
+<details><summary><b>voxurssaf</b> : Connecteur SQL interviews événement (Postgres Docker — voxurssaf_v2 @ localhost:5435)</summary><blockquote><p>
 
 
 ## ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/connectors/images/sqlconnector_color_16x16.png?raw=true "SqlConnector") voxurssaf
 
-Connecteur SQL interviews événement (HSQLDB dev — base voxurssaf_v2)
+Connecteur SQL interviews événement (Postgres Docker — voxurssaf_v2 @ localhost:5435)
 
 <details><summary><span style="color:DarkGoldenRod"><i>Transactions</i></span></summary><blockquote><p>
 
@@ -695,6 +695,14 @@ Describes the mobile application global properties
 Liste complète des interviews — voxUrssafReact allInterviews
 </p></blockquote></details>
 
+<details><summary><b>InterviewDataIO</b> : Import / Export - JSON CSV et publication SQL</summary><blockquote><p>
+
+
+### ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/ngx/components/images/pagecomponent_color_16x16.png?raw=true "PageComponent") InterviewDataIO
+
+Import / Export - JSON CSV et publication SQL
+</p></blockquote></details>
+
 <details><summary><b>InterviewRecap</b> : Récapitulatif lecture seule — fiche salon validée ou synchronisée</summary><blockquote><p>
 
 
@@ -711,12 +719,12 @@ Récapitulatif lecture seule — fiche salon validée ou synchronisée
 Wizard salon — étape 1/4 code fiche
 </p></blockquote></details>
 
-<details><summary><b>InterviewStep2</b> : Wizard salon — étape 2/4 parcours, satisfaction, verbatim + dictée</summary><blockquote><p>
+<details><summary><b>InterviewStep2</b> : Wizard salon — étape 2/5 parcours, ressenti par sous-étape (smileys)</summary><blockquote><p>
 
 
 ### ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/ngx/components/images/pagecomponent_color_16x16.png?raw=true "PageComponent") InterviewStep2
 
-Wizard salon — étape 2/4 parcours, satisfaction, verbatim + dictée
+Wizard salon — étape 2/5 parcours, ressenti par sous-étape (smileys)
 </p></blockquote></details>
 
 <details><summary><b>InterviewStep3</b> : Wizard salon — étape 3/4 profil usager</summary><blockquote><p>
