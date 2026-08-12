@@ -89,6 +89,10 @@ jdbcUserPassword: x2117be6b4453abdc2996c8bbedb14274
   comment: Supprime une photo avant ré-insertion
   sqlQuery: DELETE FROM interview_photo WHERE photo_id = {photo_id}
   ↓photo_id [variables.RequestableVariable-1779371001017]: 
+↓Photo_DeleteByInterview_Tx [transactions.SqlTransaction]: 
+  comment: Supprime toutes les photos d'une interview (suppression définitive)
+  sqlQuery: DELETE FROM interview_photo WHERE interview_id = {interview_id}
+  ↓interview_id [variables.RequestableVariable-1786530001001]: 
 ↓Photo_Save_Tx [transactions.SqlTransaction]: 
   sqlQuery: |
     INSERT INTO interview_photo (photo_id, interview_id, sort_order, mime_type, content_base64)

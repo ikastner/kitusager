@@ -1,0 +1,17 @@
+comment: Supprime définitivement une interview SQL et ses photos
+↓Delete_Photos [steps.TransactionStep-1786530002001]: 
+  sourceTransaction: KitUsager.voxurssaf.Photo_DeleteByInterview_Tx
+  ↓interview_id [variables.StepVariable-1786530002002]: 
+↓Delete_Interview [steps.TransactionStep-1786530002003]: 
+  sourceTransaction: KitUsager.voxurssaf.Interview_Delete_Tx
+  ↓interview_id [variables.StepVariable-1786530002004]: 
+↓Copy [steps.XMLCopyStep-1786530002005]: 
+  sourceDefinition: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+      - com.twinsoft.convertigo.beans.common.XMLVector: 
+        - java.lang.String: 
+          - ↑value: 1786530002003
+        - java.lang.String: 
+          - ↑value: ./document/*
+↓interview_id [variables.RequestableVariable-1786530002006]: 

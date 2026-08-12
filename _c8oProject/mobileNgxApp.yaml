@@ -251,6 +251,19 @@ componentScriptContent:
         						} catch (e) { /* ignore */ }
         					},
         	
+        					forgetInterviewId(id: string) {
+        						if (!id) { return; }
+        						try {
+        							const raw = localStorage.getItem(this.INTERVIEWS_LS_KEY);
+        							const ids: string[] = raw ? JSON.parse(raw) : [];
+        							const idx = ids.indexOf(id);
+        							if (idx >= 0) {
+        								ids.splice(idx, 1);
+        								localStorage.setItem(this.INTERVIEWS_LS_KEY, JSON.stringify(ids));
+        							}
+        						} catch (e) { /* ignore */ }
+        					},
+        	
         					hydrateFromLocalSnapshot(): boolean {
         						const snap = this.loadLocalSnapshot();
         						if (!snap || !Array.isArray(snap.interviews) || snap.interviews.length === 0) {
@@ -279,11 +292,11 @@ componentScriptContent:
         						return true;
         					},
         	
-        					saveLocalSnapshot() {
+        					saveLocalSnapshot(force?: boolean) {
         						try {
         							const c = this.ensureCache();
         							const prev = this.loadLocalSnapshot();
-        							if ((c.interviews || []).length === 0 && prev && (prev.interviews || []).length > 0) {
+        							if (!force && (c.interviews || []).length === 0 && prev && (prev.interviews || []).length > 0) {
         								return;
         							}
         							const interviews = (c.interviews || []).map((iv: any) => {
@@ -507,6 +520,11 @@ componentScriptContent:
         							} catch (e2) { /* retry */ }
         							return await this.fsPost(page, doc);
         						}
+        					},
+        	
+        					async fsDelete(page: any, docid: string): Promise<any> {
+        						await page.c8o.finalizeInit();
+        						return page.c8o.callJsonObject("fs://" + this.FS_DB + ".delete", { docid: docid }).async();
         					},
         	
         					enqueuePersist(page: any, task: () => Promise<void>): Promise<void> {
@@ -961,8 +979,9 @@ componentScriptContent:
         							.map((iv: any) => ({
         							id: iv.interviewId,
         							intervieweeName: iv.format === "salon"
-        								? ((iv.firstName || iv.sheetCode || "Fiche salon").trim() || "Fiche salon")
+        								? ((iv.sheetCode || iv.firstName || "Fiche salon").trim() || "Fiche salon")
         								: (iv.intervieweeName || "Anonyme"),
+        							firstName: iv.firstName || "",
         							intervieweeRole: iv.intervieweeRole || "",
         							intervieweeCompany: iv.intervieweeCompany || "",
         							sheetCode: iv.sheetCode || "",
@@ -1337,6 +1356,59 @@ componentScriptContent:
         						if (!iv || !this.isInterviewValidated(iv)) { return null; }
         						this.setRecapView(homeItem.id);
         						return { iv: iv, route: "/interview-recap" };
+        					},
+        					reopenValidatedForEdit(id: string) {
+        						if (!id) { return null; }
+        						const data = this.load();
+        						const idx = data.interviews.findIndex((i: any) => i.interviewId === id);
+        						if (idx < 0) { return null; }
+        						const row = data.interviews[idx];
+        						if (!this.isInterviewValidated(row) || row.format !== "salon") { return null; }
+        						row.status = "draft";
+        						row.updatedAt = new Date().toISOString();
+        						data.activeInterviewId = id;
+        						this.clearRecapView();
+        						this._wizardLiveDraft = this.cloneSalonDraft(row);
+        						try { this.saveLocalSnapshot(); } catch (e) { /* ignore */ }
+        						return { iv: row, route: this.getWizardRoute(1) };
+        					},
+        					async deleteInterview(page: any, id: string): Promise<{ localOk: boolean; sqlOk: boolean; message: string }> {
+        						const p = page || this._page;
+        						if (!id) { return { localOk: false, sqlOk: false, message: "Fiche introuvable." }; }
+        						const data = this.load();
+        						const idx = data.interviews.findIndex((i: any) => i.interviewId === id);
+        						if (idx < 0) { return { localOk: false, sqlOk: false, message: "Fiche introuvable." }; }
+        						data.interviews.splice(idx, 1);
+        						if (data.activeInterviewId === id) { data.activeInterviewId = null; }
+        						if (this._recapViewId === id) { this._recapViewId = null; }
+        						this.forgetInterviewId(id);
+        						try { this.saveLocalSnapshot(true); } catch (e) { /* ignore */ }
+        						if (p) {
+        							try {
+        								await this.fsDelete(p, this.interviewDocId(id));
+        							} catch (e) {
+        								try { p.c8o.log.warn("[VoxUrssafV2] deleteInterview fsDelete " + id, e); } catch (e2) { /* ignore */ }
+        							}
+        						}
+        						let sqlOk = false;
+        						let message = "Fiche supprimée de l''appareil.";
+        						const online = (typeof navigator === "undefined") ? true : !!navigator.onLine;
+        						if (p && online) {
+        							try {
+        								await this.callSequence(p, "KitUsager.Interview_Delete", { interview_id: id });
+        								sqlOk = true;
+        								message = "Fiche supprimée (appareil + base de données).";
+        							} catch (e) {
+        								message = "Une erreur est survenue lors de la mise à jour de la base de données, mais la fiche a bien été supprimée de l''appareil.";
+        								try { p.c8o.log.warn("[VoxUrssafV2] deleteInterview SQL " + id + " — " + this.formatSyncError(e, "Interview_Delete"), e); } catch (e2) { /* ignore */ }
+        							}
+        						} else if (!online) {
+        							message = "Fiche supprimée de l''appareil (hors ligne — base de données non modifiée).";
+        						}
+        						if (p) {
+        							this.enqueuePersist(p, async () => { await this.persistConfig(p); });
+        						}
+        						return { localOk: true, sqlOk: sqlOk, message: message };
         					},
         					getSalonPhotos(iv: any): string[] {
         						if (!iv) { return []; }
@@ -2374,6 +2446,41 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
           .vu-sat-medium { background: #fef3c7 !important; color: #b45309 !important; }
           .vu-sat-sad { background: #fee2e2 !important; color: #b91c1c !important; }
           .vu-recap-muted { color: #94a3b8; font-style: italic; }
+          .vu-recap-actions {
+            display: flex;
+            gap: 10px;
+            margin: 4px 0 28px;
+          }
+          .vu-recap-actions button {
+            flex: 1 1 0;
+            box-sizing: border-box;
+            height: 48px;
+            min-height: 48px;
+            border-radius: 14px;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: opacity 0.15s ease, transform 0.15s ease;
+          }
+          .vu-recap-actions button:active { transform: scale(0.98); }
+          .vu-recap-actions button[disabled] { opacity: 0.5; pointer-events: none; }
+          .vu-recap-actions ion-icon { font-size: 18px; }
+          .vu-recap-btn-edit {
+            background: #0050AA;
+            color: #fff;
+            border: 2px solid transparent;
+            box-shadow: 0 4px 12px rgba(0, 80, 170, 0.25);
+          }
+          .vu-recap-btn-delete {
+            background: transparent;
+            color: #dc2626;
+            border: 2px solid #dc2626;
+          }
           .vu-recap-rating-row {
             display: flex;
             align-items: center;
@@ -3525,6 +3632,11 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
               .vu-sat-happy { background: #166534 !important; color: #86efac !important; }
               .vu-sat-medium { background: #78350f !important; color: #fde047 !important; }
               .vu-sat-sad { background: #7f1d1d !important; color: #fca5a5 !important; }
+              .vu-recap-btn-delete {
+                background: transparent !important;
+                color: #f87171 !important;
+                border-color: #f87171 !important;
+              }
             }
           }
           :root.force-dark {
@@ -3559,6 +3671,11 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
             .vu-sat-happy { background: #166534 !important; color: #86efac !important; }
             .vu-sat-medium { background: #78350f !important; color: #fde047 !important; }
             .vu-sat-sad { background: #7f1d1d !important; color: #fca5a5 !important; }
+            .vu-recap-btn-delete {
+              background: transparent !important;
+              color: #f87171 !important;
+              border-color: #f87171 !important;
+            }
           }
           '
 ↓AutoDarkTheme [ngx.components.UIStyle-1779283399749]: 
@@ -3802,6 +3919,11 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
           :root.force-dark .vu-sat-happy { background: #166534 !important; color: #86efac !important; }
           :root.force-dark .vu-sat-medium { background: #78350f !important; color: #fde047 !important; }
           :root.force-dark .vu-sat-sad { background: #7f1d1d !important; color: #fca5a5 !important; }
+          :root.force-dark .vu-recap-btn-delete {
+            background: transparent !important;
+            color: #f87171 !important;
+            border-color: #f87171 !important;
+          }
           :root.force-dark .vu-data-io-home-btn {
             background: rgba(96, 165, 250, 0.12) !important;
             color: #60a5fa !important;

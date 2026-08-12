@@ -55,7 +55,8 @@ scriptContent:
         		if (!iv) { return ""; }
         		if (iv.isSalon) {
         			const parts: string[] = [];
-        			if (iv.sheetCode) { parts.push(iv.sheetCode); }
+        			// La référence F-… est déjà le titre de la carte : la meta affiche le prénom
+        			if (iv.firstName) { parts.push(iv.firstName); }
         			if (iv.verbatimPreview) { parts.push(iv.verbatimPreview); }
         			return parts.join(" • ");
         		}

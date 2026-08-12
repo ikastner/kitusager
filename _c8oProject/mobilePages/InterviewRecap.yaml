@@ -31,6 +31,8 @@ scriptContent:
         	public photoPreviewUrl: string = "";
         	public photoPreviewOpen: boolean = false;
         	public maxPhotos: number = 4;
+        	public interviewId: string = "";
+        	public deleting: boolean = false;
         	/*End_c8o_PageDeclaration*/
         /*Begin_c8o_PageConstructor*/
         		/*End_c8o_PageConstructor*/
@@ -184,6 +186,7 @@ scriptContent:
         			return;
         		}
         		this.notFound = false;
+        		this.interviewId = iv.interviewId || "";
         		this.isSalon = iv.format === "salon";
         		this.status = iv.status || "";
         		this.sheetCode = iv.sheetCode || iv.context || "";
@@ -238,6 +241,54 @@ scriptContent:
         	}
         	public hasVerbatim(): boolean {
         		return !!(this.verbatimText || "").trim();
+        	}
+        	public async editInterview(): Promise<void> {
+        		const store = await this.ensureStore();
+        		if (!store || !this.interviewId || !store.reopenValidatedForEdit) { return; }
+        		if (store._page !== this) { store._page = this; }
+        		const r = store.reopenValidatedForEdit(this.interviewId);
+        		if (!r || !r.route) { return; }
+        		await this.angularRouter.navigate([r.route]);
+        	}
+        	public async confirmDelete(): Promise<void> {
+        		if (!this.interviewId || this.deleting) { return; }
+        		const alertCtrl = this.getInstance(AlertController);
+        		const alert = await alertCtrl.create({
+        			header: "Supprimer la fiche",
+        			message: "Supprimer définitivement cette fiche ? Cette action est irréversible.",
+        			buttons: [
+        				{ text: "Annuler", role: "cancel" },
+        				{ text: "Supprimer", role: "destructive", handler: () => { this.doDelete(); } }
+        			]
+        		});
+        		await alert.present();
+        	}
+        	public async doDelete(): Promise<void> {
+        		const store = await this.ensureStore();
+        		if (!store || !this.interviewId || !store.deleteInterview) { return; }
+        		if (store._page !== this) { store._page = this; }
+        		this.deleting = true;
+        		if (this.ref) { this.ref.markForCheck(); }
+        		let res: any = null;
+        		try {
+        			res = await store.deleteInterview(this, this.interviewId);
+        		} catch (e: any) {
+        			res = { localOk: false, sqlOk: false, message: "Suppression impossible : " + ((e && e.message) ? e.message : String(e)) };
+        		}
+        		this.deleting = false;
+        		const toastCtrl = this.getInstance(ToastController);
+        		const t = await toastCtrl.create({
+        			message: (res && res.message) ? res.message : "Fiche supprimée.",
+        			duration: 5000,
+        			position: "bottom",
+        			color: (res && res.sqlOk) ? "success" : ((res && res.localOk) ? "warning" : "danger")
+        		});
+        		await t.present();
+        		if (res && res.localOk) {
+        			await this.angularRouter.navigate(["/"], { replaceUrl: true });
+        		} else if (this.ref) {
+        			this.ref.markForCheck();
+        		}
         	}
         	/*End_c8o_PageFunction*/'''
 segment: interview-recap
@@ -663,6 +714,32 @@ title: Récap fiche
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:Consentement et contact
+          ↓LblPrenom [ngx.components.UIElement-1786530004001]: 
+            tagName: p
+            ↓AttrClass [ngx.components.UIAttribute-1786530004002]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-field-label
+            ↓Text [ngx.components.UIText-1786530004003]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:Prénom
+          ↓ValPrenom [ngx.components.UIElement-1786530004004]: 
+            tagName: p
+            ↓AttrClass [ngx.components.UIAttribute-1786530004005]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-recap-value
+            ↓Text [ngx.components.UIText-1786530004006]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:displayOrDash(firstName)
           ↓LblE [ngx.components.UIElement-1779400001104]: 
             tagName: p
             ↓AttrClass [ngx.components.UIAttribute-1779400001105]: 
@@ -834,6 +911,88 @@ title: Récap fiche
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                     - MobileSmartSourceType: script:syncError
+        ↓ActionsBlock [ngx.components.UIElement-1786530003001]: 
+          tagName: div
+          ↓AttrClass [ngx.components.UIAttribute-1786530003002]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-recap-actions
+          ↓BtnEdit [ngx.components.UIElement-1786530003003]: 
+            tagName: button
+            ↓AttrType [ngx.components.UIAttribute-1786530003004]: 
+              attrName: type
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:button
+            ↓AttrIf [ngx.components.UIAttribute-1786530003005]: 
+              attrName: '*ngIf'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:isSalon
+            ↓AttrClass [ngx.components.UIAttribute-1786530003006]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-recap-btn-edit
+            ↓AttrDisabled [ngx.components.UIAttribute-1786530003007]: 
+              attrName: '[disabled]'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:deleting
+            ↓AttrClick [ngx.components.UIAttribute-1786530003008]: 
+              attrName: (click)
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:editInterview()
+            ↓IconEdit [ngx.components.UIDynamicElement-1786530003009]: 
+              beanData: '{"ionBean":"Icon","IconName":"plain:create-outline"}'
+              tagName: ion-icon
+            ↓Text [ngx.components.UIText-1786530003010]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:Modifier
+          ↓BtnDelete [ngx.components.UIElement-1786530003011]: 
+            tagName: button
+            ↓AttrType [ngx.components.UIAttribute-1786530003012]: 
+              attrName: type
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:button
+            ↓AttrClass [ngx.components.UIAttribute-1786530003013]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-recap-btn-delete
+            ↓AttrDisabled [ngx.components.UIAttribute-1786530003014]: 
+              attrName: '[disabled]'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:deleting
+            ↓AttrClick [ngx.components.UIAttribute-1786530003015]: 
+              attrName: (click)
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:confirmDelete()
+            ↓IconDelete [ngx.components.UIDynamicElement-1786530003016]: 
+              beanData: '{"ionBean":"Icon","IconName":"plain:trash-outline"}'
+              tagName: ion-icon
+            ↓Text [ngx.components.UIText-1786530003017]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:Supprimer
   ↓Lightbox [ngx.components.UIElement-1779400001300]: 
     tagName: div
     ↓AttrIf [ngx.components.UIAttribute-1779400001301]: 
