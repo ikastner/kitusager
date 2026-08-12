@@ -67,6 +67,7 @@ scriptContent:
         		const hasPrev = Object.keys(prev).length > 0;
         		this.local.items = list.map((iv: any) => ({
         			id: iv.id || iv.interviewId,
+        			checkKey: "dataIo_" + (iv.id || iv.interviewId),
         			title: iv.sheetCode || iv.intervieweeName || iv.firstName || (iv.id || iv.interviewId),
         			statusLabel: iv.validationLabel || iv.status || "Validée",
         			checked: hasPrev ? (prev[iv.id || iv.interviewId] !== false) : true
@@ -77,6 +78,10 @@ scriptContent:
         	public toggleItem(it: any): void {
         		if (!it) { return; }
         		it.checked = !it.checked;
+        		this.refreshActionFlags();
+        	}
+        	public onItemCheck(it: any): void {
+        		if (!it) { return; }
         		this.refreshActionFlags();
         	}
         	public selectAll(on: boolean): void {
@@ -312,7 +317,7 @@ title: Import / Export
           textValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: 'script:(local?.totalValidated || 0) + '' validée(s) · '' + (local?.selected || 0) + '' sélectionnée(s)'''
+              - MobileSmartSourceType: script:(local?.totalValidated || 0) + ' validée(s) · ' + (local?.selected || 0) + ' sélectionnée(s)'
       ↓Bulk [ngx.components.UIElement-1786500001033]: 
         tagName: div
         ↓AttrClass [ngx.components.UIAttribute-1786500001034]: 
@@ -387,19 +392,32 @@ title: Import / Export
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:toggleItem(it)
-          ↓Check [ngx.components.UIElement-1786500001056]: 
-            tagName: span
-            ↓AttrClass [ngx.components.UIAttribute-1786500001057]: 
-              attrName: '[class]'
+          ↓CheckBox [ngx.components.UIDynamicElement-1786524950134]: 
+            beanData: |
+              '{
+               "ionBean": "CheckBox",
+               "ControlName": "script:it.checkKey",
+               "DoubleBinding": "script:it.checked"
+              }'
+            tagName: ion-checkbox
+            ↓AttrClass [ngx.components.UIAttribute-1786524950135]: 
+              attrName: class
               attrValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: 'script:it.checked ? ''vu-check vu-check--on'' : ''vu-check'''
-            ↓Text [ngx.components.UIText-1786500001058]: 
-              textValue: 
+                  - MobileSmartSourceType: plain:vu-data-io-checkbox
+            ↓AttrClickStop [ngx.components.UIAttribute-1786524950136]: 
+              attrName: (click)
+              attrValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: 'script:it.checked ? ''v'' : '''''
+                  - MobileSmartSourceType: script:$event.stopPropagation()
+            ↓AttrIonChange [ngx.components.UIAttribute-1786524950137]: 
+              attrName: (ionChange)
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:onItemCheck(it)
           ↓Body [ngx.components.UIElement-1786500001059]: 
             tagName: div
             ↓Name [ngx.components.UIElement-1786500001060]: 
@@ -650,7 +668,7 @@ title: Import / Export
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: 'script:''Publier '' + (local?.selected || 0) + '' maintenant'''
+                - MobileSmartSourceType: script:'Publier ' + (local?.selected || 0) + ' maintenant'
 ↓PageEvent [ngx.components.UIPageEvent-1786500001199]: 
   ↓OnShow [ngx.components.UICustomAction-1786500001200]: 
     actionValue: 
