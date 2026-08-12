@@ -2171,16 +2171,33 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
             content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #0050AA;
           }
           .vu-data-io-card-title { font-weight: 700; color: #1e293b; margin-bottom: 4px; }
-          .vu-data-io-actions { display: flex; gap: 8px; margin-top: 12px; }
+          .vu-data-io-actions { display: flex; gap: 8px; margin-top: 12px; align-items: stretch; }
           .vu-data-io-actions .vu-btn-primary,
           .vu-data-io-actions .vu-btn-outline {
+            flex: 1 1 0;
             box-sizing: border-box;
+            height: 48px;
             min-height: 48px;
+            padding: 0 12px;
+            margin: 0;
+            border-radius: 12px;
+            border: 2px solid #0050AA;
+            font-weight: 700;
+            font-size: 14px;
+            line-height: 1;
+            cursor: pointer;
             display: inline-flex;
             align-items: center;
             justify-content: center;
           }
-          .vu-data-io-actions .vu-btn-primary { border: 2px solid transparent; }
+          .vu-data-io-actions .vu-btn-primary {
+            background: #0050AA;
+            color: #fff;
+          }
+          .vu-data-io-actions .vu-btn-outline {
+            background: transparent;
+            color: #0050AA;
+          }
           .vu-btn-primary, .vu-btn-outline, .vu-btn-soft, .vu-btn-dark {
             flex: 1; border-radius: 12px; padding: 12px; font-weight: 700; font-size: 14px; border: none; cursor: pointer;
           }
@@ -3420,6 +3437,16 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
                 background: #0050AA !important;
                 border-color: #0050AA !important;
               }
+              .vu-data-io-actions .vu-btn-primary {
+                background: #0050AA !important;
+                color: #fff !important;
+                border-color: #0050AA !important;
+              }
+              .vu-data-io-actions .vu-btn-outline {
+                background: transparent !important;
+                color: #60a5fa !important;
+                border-color: #60a5fa !important;
+              }
               .vu-data-io .vu-btn-outline {
                 background: transparent !important;
                 color: #60a5fa !important;
@@ -3809,6 +3836,16 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
           :root.force-dark .vu-data-io .vu-check--on {
             background: #0050AA !important;
             border-color: #0050AA !important;
+          }
+          :root.force-dark .vu-data-io-actions .vu-btn-primary {
+            background: #0050AA !important;
+            color: #fff !important;
+            border-color: #0050AA !important;
+          }
+          :root.force-dark .vu-data-io-actions .vu-btn-outline {
+            background: transparent !important;
+            color: #60a5fa !important;
+            border-color: #60a5fa !important;
           }
           :root.force-dark .vu-data-io .vu-btn-outline {
             background: transparent !important;
