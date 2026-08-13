@@ -202,20 +202,15 @@ title: Profil enquêteur
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:vu-inv-photo-actions
-            ↓BtnCam [ngx.components.UIElement-1786542100052]: 
-              tagName: button
-              ↓AttrType [ngx.components.UIAttribute-1786542100053]: 
-                attrName: type
-                attrValue: 
-                  - xmlizable: 
-                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                    - MobileSmartSourceType: plain:button
-              ↓AttrClass [ngx.components.UIAttribute-1786542100054]: 
-                attrName: class
-                attrValue: 
-                  - xmlizable: 
-                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                    - MobileSmartSourceType: plain:vu-btn-secondary
+            ↓BtnCam [ngx.components.UIDynamicElement-1786542100052]: 
+              beanData: |
+                '{
+                 "ionBean": "Button",
+                 "IonColor": "plain:medium",
+                 "IonFill": "plain:outline",
+                 "IonSize": "plain:small"
+                }'
+              tagName: ion-button
               ↓Event [ngx.components.UIControlEvent-1786542100055]: 
                 ↓Camera [ngx.components.UIDynamicAction-1786542100056]: 
                   beanData: |
@@ -240,20 +235,15 @@ title: Profil enquêteur
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                     - MobileSmartSourceType: plain:Caméra
-            ↓BtnGal [ngx.components.UIElement-1786542100059]: 
-              tagName: button
-              ↓AttrType [ngx.components.UIAttribute-1786542100060]: 
-                attrName: type
-                attrValue: 
-                  - xmlizable: 
-                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                    - MobileSmartSourceType: plain:button
-              ↓AttrClass [ngx.components.UIAttribute-1786542100061]: 
-                attrName: class
-                attrValue: 
-                  - xmlizable: 
-                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                    - MobileSmartSourceType: plain:vu-btn-secondary
+            ↓BtnGal [ngx.components.UIDynamicElement-1786542100059]: 
+              beanData: |
+                '{
+                 "ionBean": "Button",
+                 "IonColor": "plain:medium",
+                 "IonFill": "plain:outline",
+                 "IonSize": "plain:small"
+                }'
+              tagName: ion-button
               ↓Event [ngx.components.UIControlEvent-1786542100062]: 
                 ↓Camera [ngx.components.UIDynamicAction-1786542100063]: 
                   beanData: |
@@ -278,26 +268,21 @@ title: Profil enquêteur
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                     - MobileSmartSourceType: plain:Galerie
-            ↓BtnClear [ngx.components.UIElement-1786542100066]: 
-              tagName: button
+            ↓BtnClear [ngx.components.UIDynamicElement-1786542100066]: 
+              beanData: |
+                '{
+                 "ionBean": "Button",
+                 "IonColor": "plain:medium",
+                 "IonFill": "plain:clear",
+                 "IonSize": "plain:small"
+                }'
+              tagName: ion-button
               ↓AttrIf [ngx.components.UIAttribute-1786542100067]: 
                 attrName: '*ngIf'
                 attrValue: 
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                     - MobileSmartSourceType: plain:investigatorPhoto
-              ↓AttrType [ngx.components.UIAttribute-1786542100068]: 
-                attrName: type
-                attrValue: 
-                  - xmlizable: 
-                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                    - MobileSmartSourceType: plain:button
-              ↓AttrClass [ngx.components.UIAttribute-1786542100069]: 
-                attrName: class
-                attrValue: 
-                  - xmlizable: 
-                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                    - MobileSmartSourceType: plain:vu-btn-secondary
               ↓Event [ngx.components.UIControlEvent-1786542100070]: 
                 ↓Clear [ngx.components.UICustomAction-1786542100071]: 
                   actionValue: 
@@ -381,20 +366,14 @@ title: Profil enquêteur
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:vu-wizard-actions
-          ↓BtnBack [ngx.components.UIElement-1786542100102]: 
-            tagName: button
-            ↓AttrType [ngx.components.UIAttribute-1786542100103]: 
-              attrName: type
-              attrValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:button
-            ↓AttrClass [ngx.components.UIAttribute-1786542100104]: 
-              attrName: class
-              attrValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:vu-btn-secondary
+          ↓BtnBack [ngx.components.UIDynamicElement-1786542100102]: 
+            beanData: |
+              '{
+               "ionBean": "Button",
+               "IonColor": "plain:medium",
+               "IonFill": "plain:outline"
+              }'
+            tagName: ion-button
             ↓Event [ngx.components.UIControlEvent-1786542100105]: 
               ↓Pop [ngx.components.UIDynamicAction-1786542100106]: 
                 beanData: '{"ionBean":"PopPageAction"}'
@@ -403,20 +382,14 @@ title: Profil enquêteur
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:Annuler
-          ↓BtnSave [ngx.components.UIElement-1786542100108]: 
-            tagName: button
-            ↓AttrType [ngx.components.UIAttribute-1786542100109]: 
-              attrName: type
-              attrValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:button
-            ↓AttrClass [ngx.components.UIAttribute-1786542100110]: 
-              attrName: class
-              attrValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:vu-btn-primary
+          ↓BtnSave [ngx.components.UIDynamicElement-1786542100108]: 
+            beanData: |
+              '{
+               "ionBean": "Button",
+               "IonColor": "plain:primary",
+               "IonExpand": "plain:block"
+              }'
+            tagName: ion-button
             ↓Event [ngx.components.UIControlEvent-1786542100111]: 
               ↓Save [ngx.components.UICustomAction-1786542100112]: 
                 actionValue: 
@@ -425,7 +398,6 @@ title: Profil enquêteur
                     - com.twinsoft.convertigo.beans.common.FormatedContent: 
                       →: |
                         		page.saveProfile().then(() => {
-                        			if (!page.fieldError) { /* ok */ }
                         			page.ref.markForCheck();
                         			resolve();
                         		});

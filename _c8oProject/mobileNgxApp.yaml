@@ -2349,6 +2349,18 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
             flex-wrap: wrap;
             gap: 8px;
             justify-content: center;
+            align-items: center;
+          }
+          .vu-inv-photo-actions ion-button {
+            margin: 0;
+            --padding-start: 14px;
+            --padding-end: 14px;
+            height: 36px;
+          }
+          .vu-wizard-actions > ion-button {
+            flex: 1;
+            margin: 0;
+            height: 48px;
           }
           .vu-avatar ion-icon { font-size: 24px; color: #94a3b8; }
           .vu-greeting-sub { font-size: 12px; color: #64748b; margin: 0; font-weight: 500; }
