@@ -86,6 +86,7 @@ componentScriptContent:
         			if (store._ready) { return; }
         			store._ready = store.initWithPage(app).then(() => {
         				app.global.investigatorName = store.getInvestigatorName();
+        				app.global.investigatorPhoto = store.getInvestigatorPhoto();
         				app.global.speechLocale = store.getSpeechLocale();
         			}).catch((e: any) => {
         				app.c8o.log.error("[VoxUrssafV2] init FullSync store", e);
@@ -116,7 +117,8 @@ componentScriptContent:
         				"InterviewStep4": "/interview-step-4",
         				"InterviewRecap": "/interview-recap",
         				"InterviewDataIO": "/interview-data-io",
-        				"InterviewAll": "/interview-all"
+        				"InterviewAll": "/interview-all",
+        				"InvestigatorProfile": "/investigator-profile"
         			};
         			return fallback[pageName] || "/";
         		}
@@ -276,6 +278,7 @@ componentScriptContent:
         							deviceId: deviceId,
         							eventId: snap.eventId || empty.eventId,
         							investigatorName: snap.investigatorName || empty.investigatorName,
+        							investigatorPhoto: snap.investigatorPhoto || empty.investigatorPhoto || "",
         							speechLocale: snap.speechLocale || empty.speechLocale,
         							questions: (snap.questions || []).slice(),
         							interviews: snap.interviews.map((iv: any) => Object.assign({}, iv)),
@@ -319,6 +322,7 @@ componentScriptContent:
         								deviceId: c.deviceId,
         								eventId: c.eventId,
         								investigatorName: c.investigatorName,
+        								investigatorPhoto: c.investigatorPhoto || "",
         								speechLocale: c.speechLocale,
         								questions: (c.questions || []).slice(),
         								interviews: interviews,
@@ -467,6 +471,7 @@ componentScriptContent:
         							deviceId: this.newId(),
         							eventId: "salon-externe-2026",
         							investigatorName: "Enquêteur Terrain",
+        							investigatorPhoto: "",
         							speechLocale: "fr-FR",
         							questions: [
         								"Général / Contexte",
@@ -611,6 +616,8 @@ componentScriptContent:
         							photoDataUrl: "",
         							salonPhotos: [] as string[],
         							userTypology: "auto_entrepreneur",
+        							investigatorName: "",
+        							investigatorPhoto: "",
         							wizardStep: 1
         						};
         					},
@@ -773,6 +780,8 @@ componentScriptContent:
         								photoDataUrl: doc.photoDataUrl || "",
         								salonPhotos: (doc.salonPhotos || []).slice(),
         								userTypology: doc.userTypology || "auto_entrepreneur",
+        								investigatorName: doc.investigatorName || "",
+        								investigatorPhoto: doc.investigatorPhoto || "",
         								wizardStep: doc.wizardStep || 1
         							});
         						}
@@ -819,6 +828,8 @@ componentScriptContent:
         								photoDataUrl: iv.photoDataUrl || "",
         								salonPhotos: (iv.salonPhotos || []).slice(),
         								userTypology: iv.userTypology || "auto_entrepreneur",
+        								investigatorName: iv.investigatorName || "",
+        								investigatorPhoto: iv.investigatorPhoto || "",
         								wizardStep: iv.wizardStep || 1
         							});
         						}
@@ -833,6 +844,7 @@ componentScriptContent:
         							deviceId: c.deviceId,
         							eventId: c.eventId,
         							investigatorName: c.investigatorName,
+        							investigatorPhoto: c.investigatorPhoto || "",
         							speechLocale: c.speechLocale,
         							questions: c.questions || [],
         							activeInterviewId: c.activeInterviewId
@@ -959,6 +971,7 @@ componentScriptContent:
         								deviceId: config.deviceId,
         								eventId: config.eventId || empty.eventId,
         								investigatorName: config.investigatorName || empty.investigatorName,
+        								investigatorPhoto: config.investigatorPhoto || empty.investigatorPhoto || "",
         								speechLocale: config.speechLocale || empty.speechLocale,
         								questions: (config.questions || []).slice(),
         								interviews: wizardInProgress ? memoryInterviews.slice() : [],
@@ -1050,6 +1063,9 @@ componentScriptContent:
         						if (offlineSnap && offlineSnap.investigatorName && !this._cache.investigatorName) {
         							this._cache.investigatorName = offlineSnap.investigatorName;
         						}
+        						if (offlineSnap && offlineSnap.investigatorPhoto && !this._cache.investigatorPhoto) {
+        							this._cache.investigatorPhoto = offlineSnap.investigatorPhoto;
+        						}
         						if (offlineSnap && offlineSnap.questions && (!this._cache.questions || !this._cache.questions.length)) {
         							this._cache.questions = (offlineSnap.questions || []).slice();
         						}
@@ -1086,10 +1102,18 @@ componentScriptContent:
         					},
         	
         					getInvestigatorName() { return this.load().investigatorName || "Enquêteur Terrain"; },
+        					getInvestigatorPhoto() { return this.load().investigatorPhoto || ""; },
         					setInvestigatorName(name: string) {
+        						this.setInvestigatorProfile(name, this.getInvestigatorPhoto());
+        					},
+        					setInvestigatorProfile(name: string, photo: string) {
         						const data = this.load();
-        						data.investigatorName = name || "Enquêteur Terrain";
+        						data.investigatorName = (name || "").trim() || "Enquêteur Terrain";
+        						let p = photo || "";
+        						if (p && p.length > 200000) { p = ""; }
+        						data.investigatorPhoto = p;
         						this.saveSync(this._page);
+        						this.persistConfigOnly(this._page);
         					},
         					getSpeechLocale() { return this.load().speechLocale || "fr-FR"; },
         					getQuestions() { return (this.load().questions || []).slice(); },
@@ -1116,6 +1140,7 @@ componentScriptContent:
         								? (this.getSalonPhotos(iv).length + (iv.verbatimText ? 1 : 0))
         								: ((iv.entries || []).length),
         							dateLabel: this.formatDate(iv.updatedAt || iv.createdAt),
+        							investigatorName: (iv.investigatorName || "").trim() || "Enquêteur Terrain",
         							status: iv.status || "saved",
         							isValidated: true,
         							validationLabel: (iv.status === "error")
@@ -1403,7 +1428,7 @@ componentScriptContent:
         					},
         	
         					getWizardRoute(step: number): string {
-        						const routes: string[] = ["", "/interview-step-1", "/interview-step-2", "/interview-step-verbatim", "/interview-step-3", "/interview-step-4"];
+        						const routes: string[] = ["", "/interview-step-1", "/interview-step-verbatim", "/interview-step-2", "/interview-step-3", "/interview-step-4"];
         						const s = Math.max(1, Math.min(5, step || 1));
         						return routes[s] || "/interview-step-1";
         					},
@@ -1419,6 +1444,8 @@ componentScriptContent:
         						row.intervieweeEmail = row.intervieweeEmail || "";
         						row.context = row.sheetCode || "";
         						row.wizardStep = 5;
+        						row.investigatorName = this.getInvestigatorName();
+        						row.investigatorPhoto = this.getInvestigatorPhoto();
         						row.status = "saved";
         						row.updatedAt = new Date().toISOString();
         						data.activeInterviewId = null;
@@ -1715,7 +1742,7 @@ componentScriptContent:
         						"interviewId", "sheetCode", "status", "firstName", "intervieweeEmail", "intervieweeName",
         						"sector", "sectorFamily", "age", "urssafSince", "multiProfile", "profileCount",
         						"contactMode", "consentAccepted", "recontactOk", "verbatimText", "journeyRatingsJson",
-        						"salonName", "context", "createdAt", "updatedAt"
+        						"salonName", "context", "investigatorName", "createdAt", "updatedAt"
         					],
         	
         					exportStamp(): string {
@@ -1797,6 +1824,7 @@ componentScriptContent:
         								journeyRatingsJson: JSON.stringify(iv.journeyRatings || []),
         								salonName: iv.salonName || "",
         								context: iv.context || "",
+        								investigatorName: iv.investigatorName || "",
         								createdAt: iv.createdAt || "",
         								updatedAt: iv.updatedAt || ""
         							};
@@ -1901,6 +1929,7 @@ componentScriptContent:
         								journeyRatings: ratings,
         								salonName: obj.salonName,
         								context: obj.context,
+        								investigatorName: obj.investigatorName,
         								createdAt: obj.createdAt,
         								updatedAt: obj.updatedAt
         							});
@@ -2082,6 +2111,7 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
 ↓InterviewAll [ngx.components.PageComponent-1779290000004]: 🗏 mobilePages/InterviewAll.yaml
 ↓InterviewRecap [ngx.components.PageComponent-1779400000001]: 🗏 mobilePages/InterviewRecap.yaml
 ↓InterviewDataIO [ngx.components.PageComponent-1786500000001]: 🗏 mobilePages/InterviewDataIO.yaml
+↓InvestigatorProfile [ngx.components.PageComponent-1786542100000]: 🗏 mobilePages/InvestigatorProfile.yaml
 ↓Style [ngx.components.UIStyle-1779283399742]: 
   comment: You can add some global application styles here
   styleContent: 
@@ -2298,6 +2328,27 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
             justify-content: center;
             border: 2px solid #fff;
             box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            overflow: hidden;
+          }
+          .vu-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+          }
+          .vu-avatar--tap, .vu-greeting--tap { cursor: pointer; }
+          .vu-inv-photo-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+          }
+          .vu-inv-photo-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
           }
           .vu-avatar ion-icon { font-size: 24px; color: #94a3b8; }
           .vu-greeting-sub { font-size: 12px; color: #64748b; margin: 0; font-weight: 500; }

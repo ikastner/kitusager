@@ -229,7 +229,7 @@ title: Etape 1
           textValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:Etape 1/4
+              - MobileSmartSourceType: plain:Etape 1/5
       ↓Progress [ngx.components.UIElement-1779300001021]: 
         tagName: div
         ↓AttrClass [ngx.components.UIAttribute-1779300001022]: 
@@ -251,7 +251,7 @@ title: Etape 1
             attrValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:width:25%;
+                - MobileSmartSourceType: plain:width:20%;
     ↓Main [ngx.components.UIElement-1779300001030]: 
       tagName: div
       ↓AttrClass [ngx.components.UIAttribute-1779300001031]: 
@@ -439,7 +439,7 @@ title: Etape 1
               ↓IfProceed [ngx.components.UIDynamicAction-1779300001069]: 
                 beanData: '{"ionBean":"IfAction","condition":"script:page.wizardCanProceed"}'
                 ↓PushStep2 [ngx.components.UIDynamicAction-1779901880470]: 
-                  beanData: '{"ionBean":"PushPageAction","page":"plain:InterviewStep2"}'
+                  beanData: '{"ionBean":"PushPageAction","page":"plain:InterviewStepVerbatim"}'
             ↓Text [ngx.components.UIText-1779300001070]: 
               textValue: 
                 - xmlizable: 

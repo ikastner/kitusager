@@ -55,7 +55,7 @@ scriptContent:
         		if (!iv) { return ""; }
         		if (iv.isSalon) {
         			const parts: string[] = [];
-        			// La référence F-… est déjà le titre de la carte : la meta affiche le prénom
+        			if (iv.investigatorName) { parts.push(iv.investigatorName); }
         			if (iv.firstName) { parts.push(iv.firstName); }
         			if (iv.verbatimPreview) { parts.push(iv.verbatimPreview); }
         			return parts.join(" • ");
@@ -183,12 +183,50 @@ title: Accueil
           attrValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:vu-avatar
+              - MobileSmartSourceType: plain:vu-avatar vu-avatar--tap
+        ↓Event [ngx.components.UIControlEvent-1786542100201]: 
+          ↓GoProfile [ngx.components.UIDynamicAction-1786542100202]: 
+            beanData: '{"ionBean":"PushPageAction","page":"plain:InvestigatorProfile"}'
+        ↓Img [ngx.components.UIElement-1786542100203]: 
+          tagName: img
+          ↓AttrIf [ngx.components.UIAttribute-1786542100204]: 
+            attrName: '*ngIf'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:global?.investigatorPhoto
+          ↓AttrSrc [ngx.components.UIAttribute-1786542100205]: 
+            attrName: '[src]'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:global?.investigatorPhoto
+          ↓AttrAlt [ngx.components.UIAttribute-1786542100206]: 
+            attrName: alt
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Photo enquêteur
         ↓Icon [ngx.components.UIDynamicElement-1779290001014]: 
           beanData: '{"ionBean":"Icon","IconName":"plain:person"}'
           tagName: ion-icon
+          ↓AttrIf [ngx.components.UIAttribute-1786542100207]: 
+            attrName: '*ngIf'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:!global?.investigatorPhoto
       ↓Greeting [ngx.components.UIElement-1779290001015]: 
         tagName: div
+        ↓AttrClass [ngx.components.UIAttribute-1786542100208]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-greeting vu-greeting--tap
+        ↓Event [ngx.components.UIControlEvent-1786542100209]: 
+          ↓GoProfile2 [ngx.components.UIDynamicAction-1786542100210]: 
+            beanData: '{"ionBean":"PushPageAction","page":"plain:InvestigatorProfile"}'
         ↓Sub [ngx.components.UIElement-1779290001016]: 
           tagName: p
           ↓AttrClass [ngx.components.UIAttribute-1779290001017]: 

@@ -53,7 +53,7 @@ scriptContent:
         		if (!store.getActiveInterview()) { return; }
         		store.updateSalonDraft({
         			verbatimText: (this.verbatimDraft || "").trim(),
-        			wizardStep: 3
+        			wizardStep: 2
         		});
         	}
         	public flushStep(): void {
@@ -97,8 +97,8 @@ scriptContent:
         	public async handleSpeechError(e: any): Promise<void> {
         		this.isRecording = false;
         		const msg = (typeof e === "string") ? e : ((e && (e.message || e.error)) ? (e.message || e.error) : String(e));
-        		if (msg && (msg.indexOf("not-allowed") >= 0 || msg.indexOf("NotAllowed") >= 0)) {
-        			this.micErrorMessage = "Accès micro refusé. Autorisez le microphone pour ce site.";
+        		if (msg && (msg.indexOf("not-allowed") >= 0 || msg.indexOf("NotAllowed") >= 0 || msg.indexOf("permission") >= 0 || msg.indexOf("Permission") >= 0)) {
+        			this.micErrorMessage = "Accès micro refusé. Autorisez le microphone dans les réglages de l''application.";
         		} else if (msg && msg.indexOf("no-speech") >= 0) {
         			this.micErrorMessage = "Aucun son détecté. Parlez après avoir démarré la dictée.";
         		} else {
@@ -144,7 +144,7 @@ scriptContent:
         		if (store._page !== this) { store._page = this; }
         		store.updateSalonDraft({
         			verbatimText: (this.verbatimDraft || "").trim(),
-        			wizardStep: 4
+        			wizardStep: 3
         		});
         		this.wizardCanProceed = true;
         	}
@@ -154,7 +154,7 @@ scriptContent:
         		if (store._page !== this) { store._page = this; }
         		store.updateSalonDraft({
         			verbatimText: (this.verbatimDraft || "").trim(),
-        			wizardStep: 2
+        			wizardStep: 1
         		});
         	}
         	public getFicheLabel(): string {
@@ -165,7 +165,7 @@ scriptContent:
         	}
         	/*End_c8o_PageFunction*/'
 segment: interview-step-verbatim
-title: Etape 3
+title: Etape 2
 ↓Subscribe_Handler_Speech [ngx.components.UIEventSubscriber-1779300010998]: 
   topic: speechReceived
   ↓ApplySpeech [ngx.components.UICustomAction-1779300010999]: 
@@ -291,7 +291,7 @@ title: Etape 3
           textValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:Etape 3/5
+              - MobileSmartSourceType: plain:Etape 2/5
       ↓Progress [ngx.components.UIElement-1779300010021]: 
         tagName: div
         ↓AttrClass [ngx.components.UIAttribute-1779300010022]: 
@@ -313,7 +313,7 @@ title: Etape 3
             attrValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:width:60%;
+                - MobileSmartSourceType: plain:width:40%;
     ↓Main [ngx.components.UIElement-1779300010030]: 
       tagName: div
       ↓AttrClass [ngx.components.UIAttribute-1779300010031]: 
@@ -492,7 +492,7 @@ title: Etape 3
               ↓IfProceed [ngx.components.UIDynamicAction-1779300010170]: 
                 beanData: '{"ionBean":"IfAction","condition":"script:page.wizardCanProceed"}'
                 ↓PushStep3 [ngx.components.UIDynamicAction-1779300010171]: 
-                  beanData: '{"ionBean":"PushPageAction","page":"plain:InterviewStep3"}'
+                  beanData: '{"ionBean":"PushPageAction","page":"plain:InterviewStep2"}'
             ↓Text [ngx.components.UIText-1779300010172]: 
               textValue: 
                 - xmlizable: 

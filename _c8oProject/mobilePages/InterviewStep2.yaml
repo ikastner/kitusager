@@ -86,7 +86,7 @@ scriptContent:
         			_forceClear: true,
         			userTypology: this.userTypology || "auto_entrepreneur",
         			journeyRatings: (this.journeyRatings || []).map((r: any) => Object.assign({}, r)),
-        			wizardStep: 2
+        			wizardStep: 3
         		});
         	}
         	public flushStep(): void {
@@ -133,7 +133,7 @@ scriptContent:
         			_forceClear: true,
         			userTypology: this.userTypology || "auto_entrepreneur",
         			journeyRatings: (this.journeyRatings || []).map((r: any) => Object.assign({}, r)),
-        			wizardStep: 3
+        			wizardStep: 4
         		});
         		this.wizardCanProceed = true;
         	}
@@ -145,7 +145,7 @@ scriptContent:
         			_forceClear: true,
         			userTypology: this.userTypology || "auto_entrepreneur",
         			journeyRatings: (this.journeyRatings || []).map((r: any) => Object.assign({}, r)),
-        			wizardStep: 1
+        			wizardStep: 2
         		});
         	}
         	public getFicheLabel(): string {
@@ -156,7 +156,7 @@ scriptContent:
         	}
         	/*End_c8o_PageFunction*/'
 segment: interview-step-2
-title: Etape 2
+title: Etape 3
 ↓Content [ngx.components.UIDynamicElement-1779300010001]: 
   beanData: '{"ionBean":"Content"}'
   tagName: ion-content
@@ -259,7 +259,7 @@ title: Etape 2
           textValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:Etape 2/5
+              - MobileSmartSourceType: plain:Etape 3/5
       ↓Progress [ngx.components.UIElement-1779300010021]: 
         tagName: div
         ↓AttrClass [ngx.components.UIAttribute-1779300010022]: 
@@ -281,7 +281,7 @@ title: Etape 2
             attrValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:width:40%;
+                - MobileSmartSourceType: plain:width:60%;
     ↓Main [ngx.components.UIElement-1779300010030]: 
       tagName: div
       ↓AttrClass [ngx.components.UIAttribute-1779300010031]: 
@@ -582,7 +582,7 @@ title: Etape 2
               ↓IfProceed [ngx.components.UIDynamicAction-1779300010170]: 
                 beanData: '{"ionBean":"IfAction","condition":"script:page.wizardCanProceed"}'
                 ↓PushStep3 [ngx.components.UIDynamicAction-1779300010171]: 
-                  beanData: '{"ionBean":"PushPageAction","page":"plain:InterviewStepVerbatim"}'
+                  beanData: '{"ionBean":"PushPageAction","page":"plain:InterviewStep3"}'
             ↓Text [ngx.components.UIText-1779300010172]: 
               textValue: 
                 - xmlizable: 

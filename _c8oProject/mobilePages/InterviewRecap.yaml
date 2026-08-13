@@ -34,6 +34,8 @@ scriptContent:
         	public interviewId: string = "";
         	public deleting: boolean = false;
         	public userTypologyLabel: string = "";
+        	public investigatorName: string = "";
+        	public investigatorPhoto: string = "";
         	/*End_c8o_PageDeclaration*/
         /*Begin_c8o_PageConstructor*/
         		/*End_c8o_PageConstructor*/
@@ -197,6 +199,8 @@ scriptContent:
         		this.userTypologyLabel = store.getTypologyLabel
         			? store.getTypologyLabel(iv.userTypology)
         			: (iv.userTypology || "");
+        		this.investigatorName = (iv.investigatorName || "").trim() || "Enquêteur Terrain";
+        		this.investigatorPhoto = iv.investigatorPhoto || "";
         		this.journeyRatingRows = (iv.journeyRatings || []).map((r: any) => ({
         			stepLabel: store.getJourneyStepLabel
         				? store.getJourneyStepLabel(r.stepId)
@@ -767,6 +771,32 @@ title: Récap fiche
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:Consentement et contact
+          ↓LblInv [ngx.components.UIElement-1786542100301]: 
+            tagName: p
+            ↓AttrClass [ngx.components.UIAttribute-1786542100302]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-field-label
+            ↓Text [ngx.components.UIText-1786542100303]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:Enquêteur
+          ↓ValInv [ngx.components.UIElement-1786542100304]: 
+            tagName: p
+            ↓AttrClass [ngx.components.UIAttribute-1786542100305]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:vu-recap-value
+            ↓Text [ngx.components.UIText-1786542100306]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:displayOrDash(investigatorName)
           ↓LblPrenom [ngx.components.UIElement-1786530004001]: 
             tagName: p
             ↓AttrClass [ngx.components.UIAttribute-1786530004002]: 
