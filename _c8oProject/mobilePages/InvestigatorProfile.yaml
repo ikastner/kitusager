@@ -28,7 +28,7 @@ scriptContent:
         		if (store && store.whenReady) { await store.whenReady(); }
         		return store;
         	}
-        	public async ionViewWillEnter(): Promise<void> {
+        	public async loadProfile(): Promise<void> {
         		const store = await this.ensureStore();
         		if (!store) { return; }
         		if (store._page !== this) { store._page = this; }
@@ -164,8 +164,9 @@ title: Profil enquêteur
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:vu-avatar vu-avatar--xl vu-inv-photo
-            ↓Img [ngx.components.UIElement-1786542100044]: 
-              tagName: img
+            ↓Img [ngx.components.UIDynamicElement-1786542100044]: 
+              beanData: '{"ionBean":"Image"}'
+              tagName: ion-img
               ↓AttrIf [ngx.components.UIAttribute-1786542100045]: 
                 attrName: '*ngIf'
                 attrValue: 
@@ -437,3 +438,12 @@ title: Profil enquêteur
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:Enregistrer
+↓PageEvent [ngx.components.UIPageEvent-1786542100199]: 
+  ↓OnShow [ngx.components.UICustomAction-1786542100200]: 
+    actionValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+          →: |
+            		page.loadProfile().then(() => page.ref.markForCheck());
+            		resolve();

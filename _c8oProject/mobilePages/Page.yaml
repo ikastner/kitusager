@@ -187,8 +187,9 @@ title: Accueil
         ↓Event [ngx.components.UIControlEvent-1786542100201]: 
           ↓GoProfile [ngx.components.UIDynamicAction-1786542100202]: 
             beanData: '{"ionBean":"PushPageAction","page":"plain:InvestigatorProfile"}'
-        ↓Img [ngx.components.UIElement-1786542100203]: 
-          tagName: img
+        ↓Img [ngx.components.UIDynamicElement-1786542100203]: 
+          beanData: '{"ionBean":"Image"}'
+          tagName: ion-img
           ↓AttrIf [ngx.components.UIAttribute-1786542100204]: 
             attrName: '*ngIf'
             attrValue: 
