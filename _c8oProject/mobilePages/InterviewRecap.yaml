@@ -193,7 +193,11 @@ scriptContent:
         		this.isSalon = iv.format === "salon";
         		this.status = iv.status || "";
         		this.sheetCode = iv.sheetCode || iv.context || "";
-        		this.firstName = iv.firstName || iv.intervieweeName || "";
+        		let fn = (iv.firstName || "").trim();
+        		const salon = (iv.salonName || "").trim();
+        		const sheet = (iv.sheetCode || "").trim();
+        		if (fn && (fn === salon || fn === sheet)) { fn = ""; }
+        		this.firstName = fn;
         		this.intervieweeEmail = iv.intervieweeEmail || "";
         		this.dateLabel = store.formatDate(iv.updatedAt || iv.createdAt);
         		this.userTypologyLabel = store.getTypologyLabel
@@ -251,6 +255,10 @@ scriptContent:
         	public stopPhotoPreviewBubble(ev: any): void {
         		if (ev && ev.stopPropagation) { ev.stopPropagation(); }
         	}
+        	public photoBg(src: string): string {
+        		const s = (src || "").trim();
+        		return s ? ("url(\"" + s + "\")") : "none";
+        	}
         	public hasVerbatim(): boolean {
         		return !!(this.verbatimText || "").trim();
         	}
@@ -289,14 +297,15 @@ scriptContent:
         		}
         		this.deleting = false;
         		const toastCtrl = this.getInstance(ToastController);
+        		const ok = !!(res && res.localOk);
         		const t = await toastCtrl.create({
-        			message: (res && res.message) ? res.message : "Fiche supprimée.",
-        			duration: 5000,
+        			message: ok ? "Fiche supprimée." : "Suppression impossible.",
+        			duration: 3500,
         			position: "bottom",
-        			color: (res && res.sqlOk) ? "success" : ((res && res.localOk) ? "warning" : "danger")
+        			color: ok ? "success" : "danger"
         		});
         		await t.present();
-        		if (res && res.localOk) {
+        		if (ok) {
         			await this.angularRouter.navigate(["/"], { replaceUrl: true });
         		} else if (this.ref) {
         			this.ref.markForCheck();
@@ -951,15 +960,20 @@ title: Récap fiche
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                       - MobileSmartSourceType: plain:openPhotoPreview(photo)
-                ↓ImgPrev [ngx.components.UIDynamicElement-1779400001143]: 
-                  beanData: '{"ionBean":"Image"}'
-                  tagName: ion-img
-                  ↓AttrSrc [ngx.components.UIAttribute-1779400001144]: 
-                    attrName: '[src]'
+                ↓ImgPrev [ngx.components.UIElement-1779400001143]: 
+                  tagName: div
+                  ↓AttrClass [ngx.components.UIAttribute-1779400001145]: 
+                    attrName: class
                     attrValue: 
                       - xmlizable: 
                         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                        - MobileSmartSourceType: script:photo
+                        - MobileSmartSourceType: plain:vu-photo-bg
+                  ↓AttrStyle [ngx.components.UIAttribute-1779400001144]: 
+                    attrName: '[style.backgroundImage]'
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:photoBg(photo)
           ↓ErrBlock [ngx.components.UIElement-1779400001130]: 
             tagName: div
             ↓AttrIf [ngx.components.UIAttribute-1779400001131]: 
@@ -1139,15 +1153,14 @@ title: Récap fiche
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
             - MobileSmartSourceType: plain:stopPhotoPreviewBubble($event)
-      ↓ImgLb [ngx.components.UIDynamicElement-1779400001313]: 
-        beanData: '{"ionBean":"Image"}'
-        tagName: ion-img
-        ↓AttrSrc [ngx.components.UIAttribute-1779400001314]: 
-          attrName: '[src]'
+      ↓ImgLb [ngx.components.UIElement-1779400001313]: 
+        tagName: div
+        ↓AttrStyle [ngx.components.UIAttribute-1779400001314]: 
+          attrName: '[style.backgroundImage]'
           attrValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: script:photoPreviewUrl
+              - MobileSmartSourceType: script:photoBg(photoPreviewUrl)
         ↓AttrClass [ngx.components.UIAttribute-1779400001316]: 
           attrName: class
           attrValue: 

@@ -45,13 +45,23 @@ scriptContent:
         		}
         		raw = (raw || "").trim();
         		if (!raw) { return; }
-        		const imageUrl = raw.indexOf("data:") === 0 ? raw : "data:image/jpeg;base64," + raw;
+        		const app: any = this.router && this.router.sharedObject;
+        		let imageUrl = (app && app.normalizeImageDataUrl)
+        			? app.normalizeImageDataUrl(raw)
+        			: (raw.indexOf("data:") === 0 ? raw : ("data:image/jpeg;base64," + raw.replace(/\s+/g, "")));
+        		if (app && app.compressImageDataUrl) {
+        			imageUrl = await app.compressImageDataUrl(imageUrl, 400, 0.72);
+        		}
         		this.investigatorPhoto = imageUrl;
         		if (this.ref) { this.ref.markForCheck(); }
         	}
         	public clearPhoto(): void {
         		this.investigatorPhoto = "";
         		if (this.ref) { this.ref.markForCheck(); }
+        	}
+        	public photoBg(src: string): string {
+        		const s = (src || "").trim();
+        		return s ? ("url(\"" + s + "\")") : "none";
         	}
         	public async saveProfile(): Promise<void> {
         		this.fieldError = "";
@@ -67,7 +77,12 @@ scriptContent:
         			if (this.ref) { this.ref.markForCheck(); }
         			return;
         		}
-        		store.setInvestigatorProfile(name, this.investigatorPhoto || "");
+        		if (store.setInvestigatorProfileAsync) {
+        			await store.setInvestigatorProfileAsync(name, this.investigatorPhoto || "", this);
+        		} else {
+        			store.setInvestigatorProfile(name, this.investigatorPhoto || "");
+        		}
+        		this.investigatorPhoto = store.getInvestigatorPhoto();
         		if (this.global) {
         			this.global.investigatorName = store.getInvestigatorName();
         			this.global.investigatorPhoto = store.getInvestigatorPhoto();
@@ -164,27 +179,26 @@ title: Profil enquêteur
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:vu-avatar vu-avatar--xl vu-inv-photo
-            ↓Img [ngx.components.UIDynamicElement-1786542100044]: 
-              beanData: '{"ionBean":"Image"}'
-              tagName: ion-img
+            ↓PhotoBg [ngx.components.UIElement-1786542100044]: 
+              tagName: div
               ↓AttrIf [ngx.components.UIAttribute-1786542100045]: 
                 attrName: '*ngIf'
                 attrValue: 
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                     - MobileSmartSourceType: plain:investigatorPhoto
-              ↓AttrSrc [ngx.components.UIAttribute-1786542100046]: 
-                attrName: '[src]'
+              ↓AttrClass [ngx.components.UIAttribute-1786542100111]: 
+                attrName: class
                 attrValue: 
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                    - MobileSmartSourceType: script:investigatorPhoto
-              ↓AttrAlt [ngx.components.UIAttribute-1786542100047]: 
-                attrName: alt
+                    - MobileSmartSourceType: plain:vu-photo-bg
+              ↓AttrStyle [ngx.components.UIAttribute-1786542100046]: 
+                attrName: '[style.backgroundImage]'
                 attrValue: 
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                    - MobileSmartSourceType: plain:Photo enquêteur
+                    - MobileSmartSourceType: script:photoBg(investigatorPhoto)
             ↓Icon [ngx.components.UIDynamicElement-1786542100048]: 
               beanData: '{"ionBean":"Icon","IconName":"plain:person"}'
               tagName: ion-icon
@@ -216,11 +230,13 @@ title: Profil enquêteur
                   beanData: |
                     '{
                      "ionBean": "CameraAction",
-                     "quality": "plain:70",
+                     "quality": "plain:55",
                      "destinationType": "plain:DATA_URL",
                      "sourceType": "plain:CAMERA",
-                     "targetWidth": "plain:512",
-                     "targetHeight": "plain:512"
+                     "encodingType": "plain:JPEG",
+                     "correctOrientation": "plain:true",
+                     "targetWidth": "plain:400",
+                     "targetHeight": "plain:400"
                     }'
                   ↓Apply [ngx.components.UICustomAction-1786542100057]: 
                     actionValue: 
@@ -249,11 +265,13 @@ title: Profil enquêteur
                   beanData: |
                     '{
                      "ionBean": "CameraAction",
-                     "quality": "plain:70",
+                     "quality": "plain:55",
                      "destinationType": "plain:DATA_URL",
                      "sourceType": "plain:PHOTOLIBRARY",
-                     "targetWidth": "plain:512",
-                     "targetHeight": "plain:512"
+                     "encodingType": "plain:JPEG",
+                     "correctOrientation": "plain:true",
+                     "targetWidth": "plain:400",
+                     "targetHeight": "plain:400"
                     }'
                   ↓Apply [ngx.components.UICustomAction-1786542100064]: 
                     actionValue: 

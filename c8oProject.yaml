@@ -4,7 +4,7 @@
   contextTimeout: 59
   corsOrigin: =Origin
   httpSessionTimeout: 60
-  version: 1.0.1
+  version: 1.0.2
   ↓void [connectors.SqlConnector]: 🗏 connectors/void.yaml
   ↓voxurssaf [connectors.SqlConnector]: 🗏 connectors/voxurssaf.yaml
   ↓voxurssafv2_fullsync [connectors.FullSyncConnector-1779350680837]: 🗏 connectors/voxurssafv2_fullsync.yaml

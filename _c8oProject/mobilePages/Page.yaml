@@ -14,6 +14,16 @@ scriptContent:
         /*Begin_c8o_PageConstructor*/
         		/*End_c8o_PageConstructor*/
         /*Begin_c8o_PageFunction*/
+        	public appVersion(): string {
+        		const app: any = this.router && this.router.sharedObject;
+        		return (app && app.getAppVersion) ? app.getAppVersion() : "1.0.2";
+        	}
+        	public appSignature(): string {
+        		const app: any = this.router && this.router.sharedObject;
+        		return (app && app.getAppSignature)
+        			? app.getAppSignature()
+        			: "Urssaf Caisse nationale DRH/DSI-FITT-Studio RAD 2025-2026";
+        	}
         	public async getStore(): Promise<any> {
         		const app: any = this.router && this.router.sharedObject;
         		if (app && app.ensureInterviewStore) {
@@ -21,16 +31,51 @@ scriptContent:
         		}
         		return this.global.interviewStore || null;
         	}
+        	public peekInvestigatorFromSnapshot(): void {
+        		try {
+        			const app: any = this.router && this.router.sharedObject;
+        			const store = (app && app.getInterviewStore) ? app.getInterviewStore() : null;
+        			const snap = store && store.loadLocalSnapshot ? store.loadLocalSnapshot() : null;
+        			if (!snap) { return; }
+        			const name = (snap.investigatorName || "").trim();
+        			if (name) { this.local.investigatorName = name; }
+        			if (snap.investigatorPhoto) { this.local.investigatorPhoto = snap.investigatorPhoto; }
+        		} catch (e) { /* ignore */ }
+        	}
+        	public photoBg(src: string): string {
+        		const s = (src || "").trim();
+        		return s ? ("url(\"" + s + "\")") : "none";
+        	}
         	public async loadHome(): Promise<void> {
+        		this.peekInvestigatorFromSnapshot();
         		const store = await this.getStore();
         		if (!store) {
         			this.local.interviews = [];
         			this.local.recent = [];
         			this.local.totalValidated = 0;
+        			this.local.investigatorName = (this.global && this.global.investigatorName) || this.local.investigatorName || "Enquêteur Terrain";
+        			this.local.investigatorPhoto = (this.global && this.global.investigatorPhoto) || this.local.investigatorPhoto || "";
         			return;
         		}
-        		if (store.listForHome().length === 0 && store.hydrateFromLocalSnapshot) {
+        		if (store.whenReady) { await store.whenReady(); }
+        		if ((!store.listForHome || store.listForHome().length === 0) && store.hydrateFromLocalSnapshot) {
         			store.hydrateFromLocalSnapshot();
+        		}
+        		if (store.applyInvestigatorFromSnap && store.loadLocalSnapshot) {
+        			store.applyInvestigatorFromSnap(store.loadLocalSnapshot());
+        		}
+        		const name = store.getInvestigatorName ? store.getInvestigatorName() : "Enquêteur Terrain";
+        		const photo = store.getInvestigatorPhoto ? store.getInvestigatorPhoto() : "";
+        		this.local.investigatorName = name;
+        		this.local.investigatorPhoto = photo;
+        		if (this.global) {
+        			this.global.investigatorName = name;
+        			this.global.investigatorPhoto = photo;
+        		}
+        		const app: any = this.router && this.router.sharedObject;
+        		if (app && app.global) {
+        			app.global.investigatorName = name;
+        			app.global.investigatorPhoto = photo;
         		}
         		this.local.interviews = store.listForHome();
         		this.local.recent = (this.local.interviews || []).slice(0, 3);
@@ -187,27 +232,26 @@ title: Accueil
         ↓Event [ngx.components.UIControlEvent-1786542100201]: 
           ↓GoProfile [ngx.components.UIDynamicAction-1786542100202]: 
             beanData: '{"ionBean":"PushPageAction","page":"plain:InvestigatorProfile"}'
-        ↓Img [ngx.components.UIDynamicElement-1786542100203]: 
-          beanData: '{"ionBean":"Image"}'
-          tagName: ion-img
+        ↓PhotoBg [ngx.components.UIElement-1786542100203]: 
+          tagName: div
           ↓AttrIf [ngx.components.UIAttribute-1786542100204]: 
             attrName: '*ngIf'
             attrValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:global?.investigatorPhoto
-          ↓AttrSrc [ngx.components.UIAttribute-1786542100205]: 
-            attrName: '[src]'
+                - MobileSmartSourceType: plain:local?.investigatorPhoto
+          ↓AttrClass [ngx.components.UIAttribute-1786542100211]: 
+            attrName: class
             attrValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: script:global?.investigatorPhoto
-          ↓AttrAlt [ngx.components.UIAttribute-1786542100206]: 
-            attrName: alt
+                - MobileSmartSourceType: plain:vu-photo-bg
+          ↓AttrStyle [ngx.components.UIAttribute-1786542100205]: 
+            attrName: '[style.backgroundImage]'
             attrValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:Photo enquêteur
+                - MobileSmartSourceType: script:photoBg(local?.investigatorPhoto)
         ↓Icon [ngx.components.UIDynamicElement-1779290001014]: 
           beanData: '{"ionBean":"Icon","IconName":"plain:person"}'
           tagName: ion-icon
@@ -216,7 +260,7 @@ title: Accueil
             attrValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:!global?.investigatorPhoto
+                - MobileSmartSourceType: plain:!local?.investigatorPhoto
       ↓Greeting [ngx.components.UIElement-1779290001015]: 
         tagName: div
         ↓AttrClass [ngx.components.UIAttribute-1786542100208]: 
@@ -253,7 +297,7 @@ title: Accueil
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: script:global?.investigatorName || 'Enquêteur Terrain'
+                - MobileSmartSourceType: 'script:local?.investigatorName || global?.investigatorName || ''Enquêteur Terrain'''
     ↓Main [ngx.components.UIElement-1779290001030]: 
       tagName: div
       ↓AttrClass [ngx.components.UIAttribute-1779290001031]: 
@@ -613,6 +657,40 @@ title: Accueil
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: plain:Import / Export
+      ↓AppCredit [ngx.components.UIElement-1786721000001]: 
+        tagName: div
+        ↓AttrClass [ngx.components.UIAttribute-1786721000002]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:vu-app-credit
+        ↓Sig [ngx.components.UIElement-1786721000003]: 
+          tagName: p
+          ↓AttrClass [ngx.components.UIAttribute-1786721000004]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-app-credit-sig
+          ↓Text [ngx.components.UIText-1786721000005]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:appSignature()
+        ↓Ver [ngx.components.UIElement-1786721000006]: 
+          tagName: p
+          ↓AttrClass [ngx.components.UIAttribute-1786721000007]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:vu-app-credit-ver
+          ↓Text [ngx.components.UIText-1786721000008]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: 'script:''Version '' + appVersion()'
 ↓BottomNav [ngx.components.UIUseShared-1779290001199]: 
   sharedcomponent: KitUsager.Application.NgxApp.BottomNavPill
   ↓current [ngx.components.UIUseVariable-1779290001198]: 

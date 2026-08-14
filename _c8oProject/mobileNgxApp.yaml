@@ -101,7 +101,47 @@ componentScriptContent:
         			if (store && store.whenReady) { await store.whenReady(); }
         			return store;
         		}
-        	
+        
+        		public normalizeImageDataUrl(raw: string): string {
+        			let s = (raw || "").trim().replace(/\s+/g, "");
+        			if (!s) { return ""; }
+        			if (s.indexOf("data:") === 0) { return s; }
+        			return "data:image/jpeg;base64," + s;
+        		}
+        
+        		public getAppVersion(): string {
+        			return "1.0.2";
+        		}
+        
+        		public getAppSignature(): string {
+        			return "Urssaf Caisse nationale DRH/DSI-FITT-Studio RAD 2025-2026";
+        		}
+        
+        		public compressImageDataUrl(dataUrl: string, maxEdge: number = 400, quality: number = 0.72): Promise<string> {
+        			return new Promise((resolve) => {
+        				const src = this.normalizeImageDataUrl(dataUrl);
+        				if (!src || src.indexOf("data:image") !== 0) { resolve(src); return; }
+        				const img = new Image();
+        				img.onload = () => {
+        					try {
+        						const edge = Math.max(1, maxEdge || 400);
+        						const scale = Math.min(1, edge / Math.max(img.width || 1, img.height || 1));
+        						const w = Math.max(1, Math.round((img.width || 1) * scale));
+        						const h = Math.max(1, Math.round((img.height || 1) * scale));
+        						const canvas = document.createElement("canvas");
+        						canvas.width = w;
+        						canvas.height = h;
+        						const ctx = canvas.getContext("2d");
+        						if (!ctx) { resolve(src); return; }
+        						ctx.drawImage(img, 0, 0, w, h);
+        						resolve(canvas.toDataURL("image/jpeg", quality));
+        					} catch (e) { resolve(src); }
+        				};
+        				img.onerror = () => resolve(src);
+        				img.src = src;
+        			});
+        		}
+        
         		public wizardPageUrl(pageName: string): string {
         			const pages = (this.routerProvider && this.routerProvider.pagesArray)
         				? this.routerProvider.pagesArray : [];
@@ -266,11 +306,31 @@ componentScriptContent:
         						} catch (e) { /* ignore */ }
         					},
         	
+        					isDefaultInvestigatorName(name: string): boolean {
+        						const n = (name || "").trim();
+        						return !n || n === "Enquêteur Terrain";
+        					},
+        	
+        					applyInvestigatorFromSnap(snap: any) {
+        						if (!snap || !this._cache) { return; }
+        						const snapName = (snap.investigatorName || "").trim();
+        						if (snapName && !this.isDefaultInvestigatorName(snapName)) {
+        							this._cache.investigatorName = snapName;
+        						} else if (snapName && this.isDefaultInvestigatorName(this._cache.investigatorName)) {
+        							this._cache.investigatorName = snapName;
+        						}
+        						const snapPhoto = snap.investigatorPhoto || "";
+        						if (snapPhoto && (!this._cache.investigatorPhoto || snapPhoto.length >= (this._cache.investigatorPhoto || "").length)) {
+        							this._cache.investigatorPhoto = snapPhoto;
+        						}
+        					},
+        	
         					hydrateFromLocalSnapshot(): boolean {
         						const snap = this.loadLocalSnapshot();
-        						if (!snap || !Array.isArray(snap.interviews) || snap.interviews.length === 0) {
-        							return false;
-        						}
+        						if (!snap) { return false; }
+        						const hasInterviews = Array.isArray(snap.interviews) && snap.interviews.length > 0;
+        						const hasProfile = !!(snap.investigatorName || snap.investigatorPhoto);
+        						if (!hasInterviews && !hasProfile) { return false; }
         						const empty = this.getEmptyData();
         						const deviceId = snap.deviceId || this.readDeviceIdFromLocal() || empty.deviceId;
         						this.rememberDeviceId(deviceId);
@@ -280,8 +340,8 @@ componentScriptContent:
         							investigatorName: snap.investigatorName || empty.investigatorName,
         							investigatorPhoto: snap.investigatorPhoto || empty.investigatorPhoto || "",
         							speechLocale: snap.speechLocale || empty.speechLocale,
-        							questions: (snap.questions || []).slice(),
-        							interviews: snap.interviews.map((iv: any) => Object.assign({}, iv)),
+        							questions: (snap.questions || empty.questions || []).slice(),
+        							interviews: hasInterviews ? snap.interviews.map((iv: any) => Object.assign({}, iv)) : [],
         							activeInterviewId: null
         						};
         						// Ne pas restaurer un brouillon abandonné d''une session précédente
@@ -308,13 +368,16 @@ componentScriptContent:
         								if (copy.journeyRatings) { copy.journeyRatings = copy.journeyRatings.map((r: any) => Object.assign({}, r)); }
         								if (copy.salonPhotos) {
         									copy.salonPhotos = (copy.salonPhotos || []).map((p: string) => {
-        										if (p && p.length > 120000) { return ""; }
+        										if (p && p.length > 500000) { return ""; }
         										return p;
         									}).filter((p: string) => !!p);
         								}
-        								if (copy.photoDataUrl && copy.photoDataUrl.length > 120000) {
+        								if (copy.photoDataUrl && copy.photoDataUrl.length > 500000) {
         									copy._photoOmitted = true;
         									delete copy.photoDataUrl;
+        								}
+        								if (copy.investigatorPhoto && copy.investigatorPhoto.length > 500000) {
+        									copy.investigatorPhoto = "";
         								}
         								return copy;
         							});
@@ -1060,12 +1123,9 @@ componentScriptContent:
         						if (recapViewId) {
         							this._recapViewId = recapViewId;
         						}
-        						if (offlineSnap && offlineSnap.investigatorName && !this._cache.investigatorName) {
-        							this._cache.investigatorName = offlineSnap.investigatorName;
-        						}
-        						if (offlineSnap && offlineSnap.investigatorPhoto && !this._cache.investigatorPhoto) {
-        							this._cache.investigatorPhoto = offlineSnap.investigatorPhoto;
-        						}
+        						if (offlineSnap) { this.applyInvestigatorFromSnap(offlineSnap); }
+        						const freshProfileSnap = this.loadLocalSnapshot();
+        						if (freshProfileSnap) { this.applyInvestigatorFromSnap(freshProfileSnap); }
         						if (offlineSnap && offlineSnap.questions && (!this._cache.questions || !this._cache.questions.length)) {
         							this._cache.questions = (offlineSnap.questions || []).slice();
         						}
@@ -1109,11 +1169,19 @@ componentScriptContent:
         					setInvestigatorProfile(name: string, photo: string) {
         						const data = this.load();
         						data.investigatorName = (name || "").trim() || "Enquêteur Terrain";
-        						let p = photo || "";
-        						if (p && p.length > 200000) { p = ""; }
-        						data.investigatorPhoto = p;
+        						data.investigatorPhoto = photo || "";
+        						try { this.saveLocalSnapshot(true); } catch (e) { /* ignore */ }
         						this.saveSync(this._page);
         						this.persistConfigOnly(this._page);
+        					},
+        					async setInvestigatorProfileAsync(name: string, photo: string, page?: any): Promise<void> {
+        						const p = page || this._page;
+        						let compressed = photo || "";
+        						const app: any = p && p.router && p.router.sharedObject;
+        						if (compressed && app && app.compressImageDataUrl) {
+        							compressed = await app.compressImageDataUrl(compressed, 400, 0.72);
+        						}
+        						this.setInvestigatorProfile(name, compressed);
         					},
         					getSpeechLocale() { return this.load().speechLocale || "fr-FR"; },
         					getQuestions() { return (this.load().questions || []).slice(); },
@@ -1440,7 +1508,12 @@ componentScriptContent:
         						const idx = data.interviews.findIndex((i: any) => i.interviewId === iv.interviewId);
         						if (idx < 0) { return null; }
         						const row = data.interviews[idx];
-        						row.intervieweeName = (row.firstName || row.sheetCode || "Fiche salon").trim();
+        						row.intervieweeName = (row.firstName || "").trim()
+        							|| (row.salonName || "").trim()
+        							|| (row.sheetCode || "").trim()
+        							|| "Fiche salon";
+        						// firstName reste vide si non saisi — ne jamais y coller le code/nom de fiche
+        						row.firstName = (row.firstName || "").trim();
         						row.intervieweeEmail = row.intervieweeEmail || "";
         						row.context = row.sheetCode || "";
         						row.wizardStep = 5;
@@ -1550,19 +1623,15 @@ componentScriptContent:
         							}
         						}
         						let sqlOk = false;
-        						let message = "Fiche supprimée de l''appareil.";
+        						let message = "Fiche supprimée.";
         						const online = (typeof navigator === "undefined") ? true : !!navigator.onLine;
         						if (p && online) {
         							try {
         								await this.callSequence(p, "KitUsager.Interview_Delete", { interview_id: id });
         								sqlOk = true;
-        								message = "Fiche supprimée (appareil + base de données).";
         							} catch (e) {
-        								message = "Une erreur est survenue lors de la mise à jour de la base de données, mais la fiche a bien été supprimée de l''appareil.";
         								try { p.c8o.log.warn("[VoxUrssafV2] deleteInterview SQL " + id + " — " + this.formatSyncError(e, "Interview_Delete"), e); } catch (e2) { /* ignore */ }
         							}
-        						} else if (!online) {
-        							message = "Fiche supprimée de l''appareil (hors ligne — base de données non modifiée).";
         						}
         						if (p) {
         							this.enqueuePersist(p, async () => { await this.persistConfig(p); });
@@ -1833,16 +1902,88 @@ componentScriptContent:
         						return "\uFEFF" + lines.join("\r\n");
         					},
         	
-        					downloadTextFile(filename: string, content: string, mime: string): void {
-        						const blob = new Blob([content], { type: mime || "text/plain;charset=utf-8" });
-        						const url = URL.createObjectURL(blob);
-        						const a = document.createElement("a");
-        						a.href = url;
-        						a.download = filename;
-        						document.body.appendChild(a);
-        						a.click();
-        						document.body.removeChild(a);
-        						setTimeout(() => { try { URL.revokeObjectURL(url); } catch (e) { /* ignore */ } }, 1500);
+        					downloadTextFile(filename: string, content: string, mime: string): Promise<{ ok: boolean; path: string; mode: string }> {
+        						const name = (filename || "export.txt").replace(/[\\/:*?"<>|]/g, "_");
+        						const type = mime || "text/plain;charset=utf-8";
+        						const text = content == null ? "" : String(content);
+        						const w: any = typeof window !== "undefined" ? window : null;
+        						const blob = new Blob([text], { type: type });
+        						const shareNative = async (): Promise<boolean> => {
+        							try {
+        								if (!w || !w.navigator || !w.navigator.share || typeof w.File === "undefined") { return false; }
+        								const file = new w.File([blob], name, { type: type });
+        								const payload: any = { files: [file], title: name, text: name };
+        								if (w.navigator.canShare && !w.navigator.canShare(payload)) { return false; }
+        								await w.navigator.share(payload);
+        								return true;
+        							} catch (e: any) {
+        								if (e && (e.name === "AbortError" || String(e.message || "").toLowerCase().indexOf("abort") >= 0)) {
+        									return true;
+        								}
+        								return false;
+        							}
+        						};
+        						const writeCordova = (): Promise<{ ok: boolean; path: string; mode: string } | null> => {
+        							return new Promise((resolve) => {
+        								try {
+        									const cordova = w && w.cordova;
+        									if (!cordova || !cordova.file || !w.resolveLocalFileSystemURL) {
+        										resolve(null);
+        										return;
+        									}
+        									const roots: string[] = [];
+        									const ext = cordova.file.externalRootDirectory;
+        									if (ext) {
+        										roots.push(ext + "Download/");
+        										roots.push(ext + "Downloads/");
+        									}
+        									if (cordova.file.externalDataDirectory) { roots.push(cordova.file.externalDataDirectory); }
+        									if (cordova.file.dataDirectory) { roots.push(cordova.file.dataDirectory); }
+        									const tryRoot = (idx: number) => {
+        										if (idx >= roots.length) { resolve(null); return; }
+        										const root = roots[idx];
+        										w.resolveLocalFileSystemURL(root, (dirEntry: any) => {
+        											dirEntry.getFile(name, { create: true, exclusive: false }, (fileEntry: any) => {
+        												fileEntry.createWriter((writer: any) => {
+        													writer.onwriteend = () => {
+        														const path = (fileEntry.toURL && fileEntry.toURL())
+        															|| fileEntry.nativeURL
+        															|| (root + name);
+        														resolve({ ok: true, path: path, mode: "file" });
+        													};
+        													writer.onerror = () => tryRoot(idx + 1);
+        													try { writer.write(blob); } catch (e) { tryRoot(idx + 1); }
+        												}, () => tryRoot(idx + 1));
+        											}, () => tryRoot(idx + 1));
+        										}, () => tryRoot(idx + 1));
+        									};
+        									tryRoot(0);
+        								} catch (e) { resolve(null); }
+        							});
+        						};
+        						const downloadAnchor = (): { ok: boolean; path: string; mode: string } => {
+        							try {
+        								const url = URL.createObjectURL(blob);
+        								const a = document.createElement("a");
+        								a.href = url;
+        								a.download = name;
+        								document.body.appendChild(a);
+        								a.click();
+        								document.body.removeChild(a);
+        								setTimeout(() => { try { URL.revokeObjectURL(url); } catch (e) { /* ignore */ } }, 2000);
+        								return { ok: true, path: name, mode: "browser" };
+        							} catch (e) {
+        								return { ok: false, path: "", mode: "none" };
+        							}
+        						};
+        						return (async () => {
+        							if (await shareNative()) {
+        								return { ok: true, path: name, mode: "share" };
+        							}
+        							const written = await writeCordova();
+        							if (written) { return written; }
+        							return downloadAnchor();
+        						})();
         					},
         	
         					detectImportKind(filename: string, text: string): "json" | "csv" {
@@ -2410,11 +2551,34 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
             box-shadow: 0 1px 3px rgba(0,0,0,0.08);
             overflow: hidden;
           }
-          .vu-avatar img, .vu-avatar ion-img {
+          .vu-avatar img, .vu-avatar ion-img, .vu-avatar .vu-photo-bg {
             width: 100%;
             height: 100%;
             object-fit: cover;
             display: block;
+          }
+          .vu-photo-bg {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            border-radius: inherit;
+          }
+          .vu-photo-slot--filled .vu-photo-bg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: inherit;
+          }
+          .vu-photo-slot--filled ion-img::part(image) {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
           }
           .vu-avatar--tap, .vu-greeting--tap { cursor: pointer; }
           .vu-inv-photo-wrap {
@@ -2490,8 +2654,27 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
           .vu-link-action { font-size: 12px; font-weight: 700; color: #0050AA; cursor: pointer; }
           .vu-link-muted { color: #64748b !important; }
           .vu-data-io-home-btn {
-            margin: 8px 0 24px;
+            margin: 8px 0 16px;
             width: 100%;
+          }
+          .vu-app-credit {
+            margin: 0 0 88px;
+            padding: 8px 4px 0;
+            text-align: center;
+          }
+          .vu-app-credit-sig {
+            margin: 0;
+            font-size: 11px;
+            line-height: 1.35;
+            color: #94a3b8;
+            font-weight: 500;
+          }
+          .vu-app-credit-ver {
+            margin: 4px 0 0;
+            font-size: 11px;
+            line-height: 1.3;
+            color: #64748b;
+            font-weight: 600;
           }
           .vu-data-io-bulk { display: flex; gap: 16px; margin: 0 0 12px; }
           .vu-data-io-list { max-height: 220px; overflow: auto; margin-bottom: 16px; }
@@ -3414,9 +3597,14 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
           .vu-photo-lightbox__img {
             max-width: 100%;
             max-height: calc(100vh - 120px);
-            width: auto;
-            height: auto;
+            width: min(92vw, 720px);
+            height: min(70vh, 720px);
             display: block;
+            background-size: contain;
+            background-position: center;
+            background-repeat: no-repeat;
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
           }
           .vu-photo-lightbox ion-img.vu-photo-lightbox__img::part(image) {
             max-width: 100%;

@@ -92,25 +92,45 @@ scriptContent:
         		if (!this.canExport()) { return; }
         		const store = await this.ensureStore();
         		const ids = this.selectedIds();
+        		const filename = "interviews-" + store.exportStamp() + ".json";
         		const content = store.buildExportJson(ids);
-        		store.downloadTextFile("interviews-" + store.exportStamp() + ".json", content, "application/json");
-        		await this.toast(ids.length + " fiche(s) exportée(s) en JSON", "success");
+        		const res = await store.downloadTextFile(filename, content, "application/json");
+        		await this.toastExportResult(ids.length, "JSON", filename, res);
         	}
         	public async exportCsv(): Promise<void> {
         		if (!this.canExport()) { return; }
         		const store = await this.ensureStore();
         		const ids = this.selectedIds();
+        		const filename = "interviews-" + store.exportStamp() + ".csv";
         		const content = store.buildExportCsv(ids);
-        		store.downloadTextFile("interviews-" + store.exportStamp() + ".csv", content, "text/csv;charset=utf-8");
-        		await this.toast(ids.length + " fiche(s) exportée(s) en CSV", "success");
+        		// text/plain : sur Android, text/csv est souvent refusé par le partage / téléchargements
+        		const res = await store.downloadTextFile(filename, content, "text/plain;charset=utf-8");
+        		await this.toastExportResult(ids.length, "CSV", filename, res);
+        	}
+        	public async toastExportResult(n: number, kind: string, filename: string, res: any): Promise<void> {
+        		if (!res || !res.ok) {
+        			await this.toast("Export impossible", "danger", 5000);
+        			return;
+        		}
+        		await this.toast("Export terminé. Le fichier se trouve dans Téléchargements.", "success", 5000);
         	}
         	public pickImportFile(): void {
         		const input = document.createElement("input");
         		input.type = "file";
-        		input.accept = ".json,.csv,text/csv,application/json";
+        		// Pas de filtre MIME strict : sur Android les .csv sont souvent grisés (text/plain / excel)
+        		input.accept = "*/*";
         		input.onchange = async () => {
         			const file = input.files && input.files[0];
         			if (!file) { return; }
+        			const name = (file.name || "").toLowerCase();
+        			const mime = (file.type || "").toLowerCase();
+        			const looksJson = name.endsWith(".json") || mime.indexOf("json") >= 0;
+        			const looksCsv = name.endsWith(".csv") || mime.indexOf("csv") >= 0
+        				|| mime === "text/plain" || mime.indexOf("excel") >= 0;
+        			if (name && !(looksJson || looksCsv || name.endsWith(".txt"))) {
+        				await this.toast("Choisissez un fichier .json ou .csv", "warning", 5000);
+        				return;
+        			}
         			try {
         				const text = await file.text();
         				await this.runImport(file.name || "", text);
@@ -189,7 +209,7 @@ scriptContent:
         			return "Vérifiez que la base de données est démarrée (Docker Postgres), puis réessayez.";
         		}
         		if (/connection refused|connect timed out|could not connect|failed to connect|connection reset|network is unreachable|unreachable|connexion refus|psqlexception|jdbc|ensure.?schema|interview_ensureschema|connection to .*refus/.test(s)) {
-        			return "La base de données n''est pas joignable. Relancez le container Docker Postgres, puis réessayez.";
+        			return "La base de données n''est pas joignable.";
         		}
         		if (/authentication|password|permission denied|accès refusé|auth/.test(s)) {
         			return "Accès à la base refusé (identifiants ou droits). Contactez un administrateur.";

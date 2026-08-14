@@ -33,7 +33,12 @@ scriptContent:
         		const iv = store.getActiveInterview();
         		if (!iv || iv.format !== "salon") { return; }
         		this.recontactOk = !!iv.recontactOk;
-        		this.firstName = iv.firstName || "";
+        		let fn = (iv.firstName || "").trim();
+        		const salon = (iv.salonName || "").trim();
+        		const sheet = (iv.sheetCode || "").trim();
+        		// Ne jamais préremplir le prénom avec le nom/code de fiche
+        		if (fn && (fn === salon || fn === sheet)) { fn = ""; }
+        		this.firstName = fn;
         		this.intervieweeEmail = iv.intervieweeEmail || "";
         		this.photos = store.getSalonPhotos ? store.getSalonPhotos(iv) : ((iv.salonPhotos || []).slice());
         		if (!this.photos.length && iv.photoDataUrl) { this.photos = [iv.photoDataUrl]; }
@@ -97,11 +102,22 @@ scriptContent:
         		}
         		raw = (raw || "").trim();
         		if (!raw) { return; }
-        		const imageUrl = raw.indexOf("data:") === 0 ? raw : "data:image/jpeg;base64," + raw;
+        		const app: any = this.router && this.router.sharedObject;
+        		let imageUrl = (app && app.normalizeImageDataUrl)
+        			? app.normalizeImageDataUrl(raw)
+        			: (raw.indexOf("data:") === 0 ? raw : ("data:image/jpeg;base64," + raw.replace(/\s+/g, "")));
+        		if (app && app.compressImageDataUrl) {
+        			imageUrl = await app.compressImageDataUrl(imageUrl, 800, 0.7);
+        		}
         		if (!this.canAddPhoto()) { return; }
         		this.photos = (this.photos || []).slice();
         		this.photos.push(imageUrl);
         		this.persistPhotos();
+        		if (this.ref) { this.ref.markForCheck(); }
+        	}
+        	public photoBg(src: string): string {
+        		const s = (src || "").trim();
+        		return s ? ("url(\"" + s + "\")") : "none";
         	}
         	public async showToast(msg: string, color: string = "success"): Promise<void> {
         		const toastCtrl = this.getInstance(ToastController);
@@ -523,15 +539,20 @@ title: Etape 4
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                     - MobileSmartSourceType: plain:openPhotoPreview(photo)
-              ↓ImgPrev [ngx.components.UIDynamicElement-1779300030085]: 
-                beanData: '{"ionBean":"Image"}'
-                tagName: ion-img
-                ↓AttrSrc [ngx.components.UIAttribute-1779300030086]: 
-                  attrName: '[src]'
+              ↓ImgPrev [ngx.components.UIElement-1779300030085]: 
+                tagName: div
+                ↓AttrClass [ngx.components.UIAttribute-1779300030321]: 
+                  attrName: class
                   attrValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: script:photo
+                      - MobileSmartSourceType: plain:vu-photo-bg
+                ↓AttrStyle [ngx.components.UIAttribute-1779300030086]: 
+                  attrName: '[style.backgroundImage]'
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:photoBg(photo)
               ↓BtnRemove [ngx.components.UIElement-1779300030087]: 
                 tagName: button
                 ↓AttrType [ngx.components.UIAttribute-1779300030088]: 
@@ -592,10 +613,12 @@ title: Etape 4
                   beanData: |
                     '{
                      "ionBean": "CameraAction",
-                     "quality": "plain:80",
+                     "quality": "plain:60",
                      "destinationType": "plain:DATA_URL",
-                     "targetWidth": "plain:1024",
-                     "targetHeight": "plain:1024"
+                     "encodingType": "plain:JPEG",
+                     "correctOrientation": "plain:true",
+                     "targetWidth": "plain:800",
+                     "targetHeight": "plain:800"
                     }'
                   ↓AddPhoto [ngx.components.UICustomAction-1779300030101]: 
                     actionValue: 
@@ -781,15 +804,14 @@ title: Etape 4
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
             - MobileSmartSourceType: plain:stopPhotoPreviewBubble($event)
-      ↓ImgLb [ngx.components.UIDynamicElement-1779300030313]: 
-        beanData: '{"ionBean":"Image"}'
-        tagName: ion-img
-        ↓AttrSrc [ngx.components.UIAttribute-1779300030314]: 
-          attrName: '[src]'
+      ↓ImgLb [ngx.components.UIElement-1779300030313]: 
+        tagName: div
+        ↓AttrStyle [ngx.components.UIAttribute-1779300030314]: 
+          attrName: '[style.backgroundImage]'
           attrValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: script:photoPreviewUrl
+              - MobileSmartSourceType: script:photoBg(photoPreviewUrl)
         ↓AttrClass [ngx.components.UIAttribute-1779300030316]: 
           attrName: class
           attrValue: 
