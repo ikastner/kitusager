@@ -26,8 +26,8 @@
 	<engine name="$(CordovaPlatform)$" spec="14.0.1" />
 
 	
-	<!--  Startup page is FlashUpdate  -->
-	<content src="$(EndpointScheme)$://$(EndpointHostname)$:1234/index-fu.html" />
+	<!-- Standalone APK: load app assets directly (skip FlashUpdate remote check) -->
+	<content src="index.html" />
 	
 	<!-- Customize your app and platform with the preference element. -->
 	<preference name="nodejs-version"             value="v24.14.0" />       <!-- all: version of NodeJS that run Cordova -->
@@ -38,15 +38,15 @@
 	<preference name="StatusBarOverlaysWebView"   value="false" />
 	<preference name="SplashScreen"               value="screen" />         <!-- all: the splash screen resource if built without phonegap build -->
 	<preference name="ShowSplashScreenSpinner"    value="false"/>           <!-- all: show the splash screen spinner -->
-	<preference name="AutoHideSplashScreen"       value="false" />
-	<preference name="SplashScreenDelay"          value="-1" />             <!-- android: sets the default delay of how long the splashscreen appears in milliseconds, this should be the maximum expected start time -->
+	<preference name="AutoHideSplashScreen"       value="true" />
+	<preference name="SplashScreenDelay"          value="3000" />             <!-- android: sets the default delay of how long the splashscreen appears in milliseconds, this should be the maximum expected start time -->
 	<preference name="android-minSdkVersion"      value="22" />             <!-- android: MIN SDK version supported on the target device. MAX version is blank by default. -->
 	<preference name="android-installLocation"    value="auto" />           <!-- android: app install location. 'auto' will choose. 'internalOnly' is device memory. 'preferExternal' is SDCard. -->
 	<preference name="prefered-android-build-tools" value="35.0.0" />       <!-- android: version of the android build-tools in case of SDK installation at build time, empty use the latest -->
 	<preference name="prefered-android-jdk"       value="17" /> 
 	<preference name="android-build-tool"         value="gradle" />
-	<preference name="Hostname"                   value="$(EndpointHostname)$:1234"/> 
-	<preference name="Scheme"                     value="$(EndpointScheme)$" />
+	<preference name="Hostname"                   value="localhost"/> 
+	<preference name="Scheme"                     value="https" />
 	<preference name="MixedContentMode"           value="0" />
 	
 	
