@@ -2012,21 +2012,20 @@ componentScriptContent:
         					}
         					page.speechWebRecognition = new Ctor();
         					page.speechWebRecognition.lang = locale;
-        					page.speechWebRecognition.continuous = true;
-        					page.speechWebRecognition.interimResults = true;
+        					// Une phrase à la fois : évite les interim qui bégayent (tu-tu-tu…)
+        					page.speechWebRecognition.continuous = false;
+        					page.speechWebRecognition.interimResults = false;
+        					page.speechWebRecognition.maxAlternatives = 1;
         					page.speechWebRecognition.onresult = (ev: any) => {
         						let finalTranscript = "";
-        						let interimTranscript = "";
         						for (let i = 0; i < ev.results.length; ++i) {
-        							const t = ev.results[i][0].transcript;
         							if (ev.results[i].isFinal) {
-        								finalTranscript += t;
-        							} else {
-        								interimTranscript += t;
+        								finalTranscript += ev.results[i][0].transcript;
         							}
         						}
-        						if (finalTranscript || interimTranscript) {
-        							page.events.publish("speechReceived", { final: finalTranscript, interim: interimTranscript, mode: "snapshot" });
+        						finalTranscript = (finalTranscript || "").trim();
+        						if (finalTranscript) {
+        							page.events.publish("speechReceived", { final: finalTranscript, interim: "", mode: "append" });
         						}
         					};
         					page.speechWebRecognition.onerror = (ev: any) => {
@@ -2035,6 +2034,10 @@ componentScriptContent:
         						page.events.publish("speechError", ev && ev.error ? ev.error : ev);
         						reject(ev && ev.error ? ev.error : ev);
         					};
+        					page.speechWebRecognition.onend = () => {
+        						page.speechWebRecognition = null;
+        						page.events.publish("speechEnded", {});
+        					};
         					page.speechWebRecognition.onstart = () => resolve();
         					page.speechWebRecognition.start();
         				} catch (e) {
@@ -2042,39 +2045,112 @@ componentScriptContent:
         				}
         			};
         
-        			if (isCordova) {
-        				let stt: any = null;
-        				try { stt = page.getInstance(SpeechRecognition); } catch (e) { stt = null; }
-        				if (!stt || typeof stt.startListening !== "function") {
-        					startWebSpeech();
-        					return;
-        				}
-        				stt.isRecognitionAvailable().then((available: boolean) => {
-        					if (!available) { reject("Speech recognition not available"); return; }
-        
-        					const doStart = () => {
-        						const options = { locale, language: locale, matches: 5, showPopup: true, showPartial: true };
-        						page.speechCordovaListening = true;
-        						page.speechCordovaSub = stt.startListening(options).subscribe(
-        							(matches: string[]) => {
-        								const text = (Array.isArray(matches) && matches.length > 0) ? matches[0] : String(matches || "");
-        								page.events.publish("speechReceived", text);
-        							},
-        							(err: any) => {
-        								page.events.publish("speechError", err);
+        			const startCordovaPlugin = (sr: any) => {
+        				const ensurePermission = (): Promise<void> => {
+        					return new Promise((res, rej) => {
+        						const ask = () => {
+        							try {
+        								sr.requestPermission(
+        									() => res(),
+        									(err: any) => rej(err || "permission")
+        								);
+        							} catch (e) {
+        								if (sr.requestPermission && typeof sr.requestPermission().then === "function") {
+        									sr.requestPermission().then(() => res()).catch(rej);
+        								} else { rej(e); }
         							}
-        						);
-        						resolve();
-        					};
-        
-        					stt.hasPermission().then(doStart).catch(() => {
-        						if (typeof stt.requestPermission === "function") {
-        							stt.requestPermission().then(doStart).catch(reject);
-        						} else {
-        							reject("Speech recognition permission missing");
+        						};
+        						try {
+        							sr.hasPermission(
+        								(has: boolean) => { if (has) { res(); } else { ask(); } },
+        								() => ask()
+        							);
+        						} catch (e) {
+        							if (sr.hasPermission && typeof sr.hasPermission().then === "function") {
+        								sr.hasPermission().then((has: boolean) => {
+        									if (has) { res(); }
+        									else { return sr.requestPermission(); }
+        								}).then(() => res()).catch(() => ask());
+        							} else { ask(); }
         						}
         					});
-        				}).catch(reject);
+        				};
+        
+        				const doStart = () => {
+        					page.speechCordovaListening = true;
+        					page._speechSessionText = "";
+        					const onResult = (matches: any) => {
+        						const text = (Array.isArray(matches) && matches.length > 0)
+        							? String(matches[0] || "").trim()
+        							: String(matches || "").trim();
+        						if (!text) { return; }
+        						page._speechSessionText = text;
+        						page.events.publish("speechReceived", { final: text, interim: "", mode: "replaceSession" });
+        						// Popup Android : une prise = un résultat, puis arrêt
+        						page.speechCordovaListening = false;
+        						page.events.publish("speechEnded", {});
+        					};
+        					const onErr = (err: any) => {
+        						page.speechCordovaListening = false;
+        						page.events.publish("speechError", err);
+        					};
+        					const opts = {
+        						language: locale,
+        						locale: locale,
+        						matches: 1,
+        						showPartial: false,
+        						showPopup: true,
+        						prompt: "Parlez maintenant…"
+        					};
+        					try {
+        						if (typeof sr.startListening === "function" && sr.startListening.length >= 2) {
+        							// API Cordova native window.plugins.speechRecognition
+        							sr.startListening(onResult, onErr, opts);
+        							resolve();
+        						} else {
+        							// API Ionic Native (Observable)
+        							page.speechCordovaSub = sr.startListening(opts).subscribe(onResult, onErr);
+        							resolve();
+        						}
+        					} catch (e) { reject(e); }
+        				};
+        
+        				const availableThenStart = () => {
+        					ensurePermission().then(doStart).catch((err: any) => {
+        						reject(err || "permission");
+        						page.events.publish("speechError", err || "permission");
+        					});
+        				};
+        
+        				try {
+        					if (typeof sr.isRecognitionAvailable === "function" && sr.isRecognitionAvailable.length >= 1) {
+        						sr.isRecognitionAvailable((ok: boolean) => {
+        							if (!ok) { reject("Speech recognition not available"); return; }
+        							availableThenStart();
+        						}, reject);
+        					} else if (sr.isRecognitionAvailable && typeof sr.isRecognitionAvailable().then === "function") {
+        						sr.isRecognitionAvailable().then((ok: boolean) => {
+        							if (!ok) { reject("Speech recognition not available"); return; }
+        							availableThenStart();
+        						}).catch(reject);
+        					} else {
+        						availableThenStart();
+        					}
+        				} catch (e) { availableThenStart(); }
+        			};
+        
+        			if (isCordova) {
+        				const pluginSr = w && w.plugins && w.plugins.speechRecognition;
+        				let ionicSr: any = null;
+        				try { ionicSr = page.getInstance(SpeechRecognition); } catch (e) { ionicSr = null; }
+        				const sr = pluginSr || ionicSr;
+        				if (!sr) {
+        					reject("Speech recognition plugin missing");
+        					page.events.publish("speechError", "permission");
+        					return;
+        				}
+        				// Pas de fallback Web Speech sur Android Cordova : résultats souvent inexploitables
+        				startCordovaPlugin(sr);
         			} else {
         				startWebSpeech();
         			}
@@ -2087,6 +2163,10 @@ componentScriptContent:
         		if (isCordova) {
         			page.speechCordovaListening = false;
         			if (page.speechCordovaSub) { page.speechCordovaSub.unsubscribe(); page.speechCordovaSub = null; }
+        			try {
+        				const pluginSr = w && w.plugins && w.plugins.speechRecognition;
+        				if (pluginSr && pluginSr.stopListening) { pluginSr.stopListening(() => {}, () => {}); }
+        			} catch (e) {}
         			try { page.getInstance(SpeechRecognition).stopListening(); } catch (e) {}
         		} else if (page.speechWebRecognition) {
         			try { page.speechWebRecognition.stop(); } catch (e) {}

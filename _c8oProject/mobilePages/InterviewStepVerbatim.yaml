@@ -66,21 +66,35 @@ scriptContent:
         		if (!this.isRecording) { return; }
         		const prefix = this.previousText ? this.previousText.trim() + " " : "";
         		if (data != null && typeof data === "object" && !Array.isArray(data)) {
-        			if (data.mode === "snapshot" || "final" in data || "interim" in data) {
-        				const committed = (data.final || "").trim();
-        				const interim = (data.interim || "").trim();
-        				let display = committed;
-        				if (interim) {
-        					display = (display ? display + " " : "") + interim + " (en cours...)";
-        				}
-        				this.verbatimDraft = (prefix + display).trim();
+        			const mode = data.mode || "snapshot";
+        			const committed = (data.final || "").trim();
+        			const interim = (data.interim || "").trim();
+        			if (mode === "replaceSession") {
+        				if (!committed) { return; }
+        				this.verbatimDraft = (prefix + committed).trim();
         				this.saveDraft();
         				return;
         			}
+        			if (mode === "append") {
+        				if (!committed) { return; }
+        				const base = (this.verbatimDraft || "").replace(/\s*\(en cours...\)$/i, "").trim();
+        				this.verbatimDraft = (base ? base + " " : "") + committed;
+        				this.previousText = this.verbatimDraft;
+        				this.saveDraft();
+        				return;
+        			}
+        			let display = committed;
+        			if (interim) {
+        				display = (display ? display + " " : "") + interim + " (en cours...)";
+        			}
+        			if (!display) { return; }
+        			this.verbatimDraft = (prefix + display).trim();
+        			this.saveDraft();
+        			return;
         		}
         		const chunk = Array.isArray(data) ? data.join(" ") : String(data != null ? data : "");
         		if (!chunk.trim()) { return; }
-        		this.verbatimDraft = (prefix + chunk).trim();
+        		this.verbatimDraft = (prefix + chunk.trim()).trim();
         		this.saveDraft();
         	}
         	public async showOfflineAlert(): Promise<void> {
@@ -97,8 +111,8 @@ scriptContent:
         	public async handleSpeechError(e: any): Promise<void> {
         		this.isRecording = false;
         		const msg = (typeof e === "string") ? e : ((e && (e.message || e.error)) ? (e.message || e.error) : String(e));
-        		if (msg && (msg.indexOf("not-allowed") >= 0 || msg.indexOf("NotAllowed") >= 0 || msg.indexOf("permission") >= 0 || msg.indexOf("Permission") >= 0)) {
-        			this.micErrorMessage = "Accès micro refusé. Autorisez le microphone dans les réglages de l''application.";
+        		if (msg && (msg.indexOf("not-allowed") >= 0 || msg.indexOf("NotAllowed") >= 0 || msg.indexOf("permission") >= 0 || msg.indexOf("Permission") >= 0 || msg.indexOf("Missing permission") >= 0)) {
+        			this.micErrorMessage = "Micro non autorisé. Une demande d''autorisation doit s''afficher ; sinon activez le micro dans Paramètres → Applications → KitUsager → Autorisations.";
         		} else if (msg && msg.indexOf("no-speech") >= 0) {
         			this.micErrorMessage = "Aucun son détecté. Parlez après avoir démarré la dictée.";
         		} else {
@@ -126,6 +140,7 @@ scriptContent:
         			this.previousText = (this.verbatimDraft || "").trim();
         			await this.global.startSpeechListening(this);
         			this.isRecording = true;
+        			if (this.ref) { this.ref.markForCheck(); }
         		} catch (e) {
         			await this.handleSpeechError(e);
         		}
@@ -187,6 +202,19 @@ title: Etape 2
         - com.twinsoft.convertigo.beans.common.FormatedContent: 
           →: |
             		page.handleSpeechError(event);
+            		resolve();
+            
+↓Subscribe_Handler_SpeechEnded [ngx.components.UIEventSubscriber-1786542200990]: 
+  topic: speechEnded
+  ↓EndSpeech [ngx.components.UICustomAction-1786542200991]: 
+    actionValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+          →: |
+            		page.isRecording = false;
+            		page.verbatimDraft = (page.verbatimDraft || "").replace(/\s*\(en cours...\)$/i, "").trim();
+            		page.ref.markForCheck();
             		resolve();
             
 ↓Content [ngx.components.UIDynamicElement-1779300010001]: 
