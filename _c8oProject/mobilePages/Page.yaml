@@ -16,7 +16,7 @@ scriptContent:
         /*Begin_c8o_PageFunction*/
         	public appVersion(): string {
         		const app: any = this.router && this.router.sharedObject;
-        		return (app && app.getAppVersion) ? app.getAppVersion() : "1.0.2";
+        		return (app && app.getAppVersion) ? app.getAppVersion() : "1.4.0";
         	}
         	public appSignature(): string {
         		const app: any = this.router && this.router.sharedObject;
